@@ -34,6 +34,21 @@ export interface Database {
         Insert: Omit<Neighborhood, 'id' | 'created_at'>;
         Update: Partial<Omit<Neighborhood, 'id'>>;
       };
+      feed_posts: {
+        Row: FeedPost;
+        Insert: Omit<FeedPost, 'id' | 'created_at'>;
+        Update: Partial<Omit<FeedPost, 'id' | 'created_at' | 'user_id'>>;
+      };
+      marketplace_items: {
+        Row: MarketplaceItem;
+        Insert: Omit<MarketplaceItem, 'id' | 'created_at'>;
+        Update: Partial<Omit<MarketplaceItem, 'id' | 'created_at' | 'seller_id'>>;
+      };
+      corre_shop_items: {
+        Row: ShopItem;
+        Insert: Omit<ShopItem, 'id' | 'created_at'>;
+        Update: Partial<Omit<ShopItem, 'id' | 'created_at'>>;
+      };
     };
   };
 }
@@ -100,5 +115,47 @@ export interface Neighborhood {
   id: string;
   name: string;
   city: string;
+  created_at: string;
+}
+
+export interface FeedPost {
+  id: string;
+  user_id: string;
+  activity_type: 'run' | 'check_in' | 'post';
+  content: string | null;
+  media_url: string | null;
+  meta_data: {
+    distance?: string;
+    time?: string;
+    pace?: string;
+    event_id?: string;
+    location?: string;
+  } | null;
+  created_at: string;
+  // Joins
+  users?: Partial<User>;
+}
+
+export interface MarketplaceItem {
+  id: string;
+  seller_id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category: string;
+  status: 'active' | 'sold';
+  created_at: string;
+  // Joins
+  users?: Partial<User>;
+}
+
+export interface ShopItem {
+  id: string;
+  title: string;
+  description: string | null;
+  points_price: number;
+  image_url: string | null;
+  stock: number;
   created_at: string;
 }

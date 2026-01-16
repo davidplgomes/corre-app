@@ -7,8 +7,10 @@ import {
     ScrollView,
     TouchableOpacity,
     StatusBar,
+    Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
@@ -24,6 +26,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
         return null;
     }
 
+    const handleRedeem = () => {
+        // Mock redeem action
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Sucesso', 'Solicitação de resgate enviada!');
+    };
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -31,10 +39,13 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
             <ScrollView style={styles.scrollView} bounces={false}>
                 {/* Image Section */}
                 <View style={styles.imageContainer}>
-                    <Image source={{ uri: product.image }} style={styles.image} />
+                    <Image source={{ uri: product.image_url || product.image }} style={styles.image} />
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => navigation.goBack()}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            navigation.goBack();
+                        }}
                     >
                         <ChevronRightIcon size={24} color="#000" />
                     </TouchableOpacity>
@@ -52,8 +63,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                             <Text style={styles.title}>{product.title}</Text>
                         </View>
                         <View style={styles.pointsBadge}>
-                            <Text style={styles.pointsValue}>{product.points}</Text>
-                            <Text style={styles.pointsLabel}>pts</Text>
+                            <Text style={styles.pointsValue}>{product.points || product.price}</Text>
+                            <Text style={styles.pointsLabel}>{product.points ? 'pts' : 'EUR'}</Text>
                         </View>
                     </View>
 
@@ -62,7 +73,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>DESCRIÇÃO</Text>
                         <Text style={styles.description}>
-                            Produto exclusivo para membros do Corre App. Troque seus pontos por este item incrível e melhore sua performance. Disponível por tempo limitado.
+                            {product.description || 'Produto exclusivo para membros do Corre App. Troque seus pontos por este item incrível e melhore sua performance. Disponível por tempo limitado.'}
                         </Text>
                     </View>
 
@@ -82,7 +93,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
 
             {/* Bottom Action */}
             <SafeAreaView edges={['bottom']} style={styles.footer}>
-                <TouchableOpacity style={styles.redeemButton}>
+                <TouchableOpacity
+                    style={styles.redeemButton}
+                    onPress={handleRedeem}
+                >
                     <Text style={styles.redeemText}>RESGATAR AGORA</Text>
                 </TouchableOpacity>
             </SafeAreaView>
@@ -136,8 +150,8 @@ const styles = StyleSheet.create({
         padding: theme.spacing[6],
         marginTop: -40,
         backgroundColor: theme.colors.background.primary,
-        borderTopLeftRadius: theme.radius.xl,
-        borderTopRightRadius: theme.radius.xl,
+        borderTopLeftRadius: theme.radius.lg, // 16px soft corners
+        borderTopRightRadius: theme.radius.lg,
     },
     header: {
         flexDirection: 'row',

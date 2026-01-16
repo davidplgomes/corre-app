@@ -6,17 +6,22 @@ import {
     ScrollView,
     SafeAreaView,
     Alert,
+    TouchableOpacity,
+    StatusBar,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { Button, Card, LoadingSpinner } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { useAuth } from '../../contexts/AuthContext';
+import { theme } from '../../constants/theme';
 import {
     getEventById,
     joinEvent,
     leaveEvent,
     hasUserJoinedEvent,
     getEventParticipants,
+    deleteEvent,
 } from '../../services/supabase/events';
 import { hasUserCheckedIn } from '../../services/supabase/checkins';
 import { Event, EventParticipant } from '../../types';
@@ -73,14 +78,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     };
 
     const handleJoin = async () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (!profile?.id) return;
         setActionLoading(true);
         try {
             await joinEvent(eventId, profile.id);
             setHasJoined(true);
-            Alert.alert(t('common.success'), t('events.joinSuccess'));
+            // Alert.alert(t('common.success'), t('events.joinSuccess')); // Removed Alert for cleaner UX
             loadEventData();
         } catch (error) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             console.error('Error joining event:', error);
             Alert.alert(t('common.error'), t('errors.unknownError'));
         } finally {
@@ -89,12 +96,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     };
 
     const handleLeave = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         if (!profile?.id) return;
         setActionLoading(true);
         try {
             await leaveEvent(eventId, profile.id);
             setHasJoined(false);
-            Alert.alert(t('common.success'), t('events.leaveSuccess'));
+            // Alert.alert(t('common.success'), t('events.leaveSuccess')); // Removed Alert for cleaner UX
             loadEventData();
         } catch (error) {
             console.error('Error leaving event:', error);
@@ -105,15 +113,16 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     };
 
     const handleCheckIn = () => {
+        Haptics.selectionAsync();
         navigation.navigate('CheckIn', { eventId, event });
     };
 
     const getEventTypeColor = (type: string) => {
         switch (type) {
-            case 'routine': return '#10B981';
-            case 'special': return '#F59E0B';
-            case 'race': return '#EF4444';
-            default: return '#6B7280';
+            case 'routine': return theme.colors.success; // Green
+            case 'special': return theme.colors.warning; // Gold
+            case 'race': return theme.colors.brand.primary; // Orange
+            default: return theme.colors.text.disabled;
         }
     };
 
@@ -135,20 +144,61 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#000" />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Event Header */}
-                <View style={[styles.header, { backgroundColor: eventColor + '20' }]}>
+                <View style={styles.header}>
                     <Text style={styles.title}>{event.title}</Text>
                     <View style={[styles.typeBadge, { backgroundColor: eventColor }]}>
                         <Text style={styles.typeBadgeText}>
                             {t(`events.eventTypes.${event.event_type}`)} • {EVENT_POINTS[event.event_type as keyof typeof EVENT_POINTS]} pts
                         </Text>
                     </View>
+
+                    {/* Creator Actions */}
+                    {profile?.id === event.creator_id && (
+                        <View style={styles.creatorActions}>
+                            <Button
+                                title={t('common.edit')}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    navigation.navigate('CreateEvent', { event });
+                                }}
+                                variant="secondary"
+                                size="small"
+                                style={styles.actionButton}
+                            />
+                            <Button
+                                title={t('common.delete')}
+                                onPress={() => {
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                                    Alert.alert(
+                                        t('events.deleteEvent'),
+                                        t('events.confirmDelete'),
+                                        [
+                                            { text: t('common.cancel'), style: 'cancel' },
+                                            {
+                                                text: t('common.delete'),
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    await deleteEvent(event.id);
+                                                    navigation.goBack();
+                                                }
+                                            }
+                                        ]
+                                    );
+                                }}
+                                variant="ghost"
+                                size="small"
+                                style={[styles.actionButton, styles.deleteButton]}
+                            />
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.content}>
                     {/* Event Info */}
-                    <Card variant="outlined" style={styles.infoCard}>
+                    <Card variant="default" style={styles.infoCard}>
                         <View style={styles.infoRow}>
                             <Text style={styles.infoIcon}>📅</Text>
                             <View>
@@ -171,14 +221,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 
                     {/* Description */}
                     {event.description && (
-                        <Card variant="outlined" style={styles.descriptionCard}>
+                        <Card variant="default" style={styles.descriptionCard}>
                             <Text style={styles.sectionTitle}>{t('events.description')}</Text>
                             <Text style={styles.description}>{event.description}</Text>
                         </Card>
                     )}
 
                     {/* Participants */}
-                    <Card variant="outlined" style={styles.participantsCard}>
+                    <Card variant="default" style={styles.participantsCard}>
                         <Text style={styles.sectionTitle}>
                             {t('events.participants')} ({participants.length})
                         </Text>
@@ -195,9 +245,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                             <Text style={styles.noParticipants}>No participants yet</Text>
                         )}
                         {participants.length > 5 && (
-                            <Text style={styles.moreParticipants}>
-                                +{participants.length - 5} more
-                            </Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('EventParticipants', { eventId, eventTitle: event.title })}>
+                                <Text style={styles.moreParticipants}>
+                                    +{participants.length - 5} more ({t('events.viewAll')})
+                                </Text>
+                            </TouchableOpacity>
                         )}
                     </Card>
 
@@ -209,12 +261,14 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                 onPress={() => { }}
                                 disabled
                                 variant="secondary"
+                                fullWidth
                             />
                         ) : canCheckIn ? (
                             <Button
                                 title={t('events.checkIn')}
                                 onPress={handleCheckIn}
                                 loading={actionLoading}
+                                fullWidth
                             />
                         ) : hasJoined ? (
                             <>
@@ -224,6 +278,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                         onPress={handleLeave}
                                         loading={actionLoading}
                                         variant="ghost"
+                                        fullWidth
                                     />
                                 )}
                             </>
@@ -232,6 +287,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                 title={t('events.joinEvent')}
                                 onPress={handleJoin}
                                 loading={actionLoading}
+                                fullWidth
+                                size="large"
                             />
                         ) : null}
                     </View>
@@ -244,38 +301,41 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background.primary, // OLED Black
     },
     scrollContent: {
         flexGrow: 1,
+        paddingBottom: 120, // Increased to avoid navbar overlap
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: theme.colors.background.primary,
     },
     errorText: {
         fontSize: 16,
-        color: '#EF4444',
+        color: theme.colors.error,
     },
     header: {
         padding: 24,
         alignItems: 'center',
+        paddingTop: theme.spacing[8],
     },
     title: {
-        fontSize: 28,
+        fontSize: theme.typography.size.h2,
         fontWeight: '700',
-        color: '#374151',
+        color: theme.colors.text.primary,
         textAlign: 'center',
         marginBottom: 12,
     },
     typeBadge: {
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 20,
+        borderRadius: theme.radius.full,
     },
     typeBadgeText: {
-        color: '#FFFFFF',
+        color: theme.colors.white,
         fontWeight: '600',
         fontSize: 14,
     },
@@ -284,6 +344,9 @@ const styles = StyleSheet.create({
     },
     infoCard: {
         marginBottom: 16,
+        backgroundColor: theme.colors.background.card, // Surface color
+        borderRadius: theme.radius.lg, // 16px
+        borderWidth: 0,
     },
     infoRow: {
         flexDirection: 'row',
@@ -296,29 +359,35 @@ const styles = StyleSheet.create({
     },
     infoLabel: {
         fontSize: 12,
-        color: '#6B7280',
+        color: theme.colors.text.tertiary,
     },
     infoValue: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#374151',
+        color: theme.colors.text.primary,
     },
     descriptionCard: {
         marginBottom: 16,
+        backgroundColor: theme.colors.background.card,
+        borderRadius: theme.radius.lg,
+        borderWidth: 0,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#374151',
+        color: theme.colors.text.primary,
         marginBottom: 8,
     },
     description: {
         fontSize: 14,
-        color: '#6B7280',
+        color: theme.colors.text.secondary,
         lineHeight: 22,
     },
     participantsCard: {
         marginBottom: 24,
+        backgroundColor: theme.colors.background.card,
+        borderRadius: theme.radius.lg,
+        borderWidth: 0,
     },
     participantRow: {
         flexDirection: 'row',
@@ -326,23 +395,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 8,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: theme.colors.border.subtle,
     },
     participantName: {
         fontSize: 14,
-        color: '#374151',
+        color: theme.colors.text.primary,
     },
     noParticipants: {
         fontSize: 14,
-        color: '#9CA3AF',
+        color: theme.colors.text.tertiary,
         fontStyle: 'italic',
     },
     moreParticipants: {
         fontSize: 12,
-        color: '#7C3AED',
+        color: theme.colors.brand.primary,
         marginTop: 8,
     },
     actions: {
         gap: 12,
+        marginBottom: 50,
     },
+    creatorActions: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    actionButton: {
+        minWidth: 80,
+    },
+    deleteButton: {
+    }
 });

@@ -4,29 +4,24 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
+    ScrollView,
 } from 'react-native';
 import { Screen } from '../../components/common/Screen';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
-import Svg, { Rect, Path } from 'react-native-svg';
+import { DigitalCard } from '../../components/loyalty/DigitalCard';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type LoyaltyCardProps = {
     navigation: any;
 };
 
-// Simple QR Code placeholder component
-const QRCodePlaceholder: React.FC<{ size: number }> = ({ size }) => (
-    <View style={[styles.qrPlaceholder, { width: size, height: size }]}>
-        <Svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24">
-            <Rect x="3" y="3" width="7" height="7" fill="#000" />
-            <Rect x="14" y="3" width="7" height="7" fill="#000" />
-            <Rect x="3" y="14" width="7" height="7" fill="#000" />
-            <Rect x="14" y="14" width="3" height="3" fill="#000" />
-            <Rect x="18" y="14" width="3" height="3" fill="#000" />
-            <Rect x="14" y="18" width="3" height="3" fill="#000" />
-            <Rect x="18" y="18" width="3" height="3" fill="#000" />
-        </Svg>
-        <Text style={styles.qrText}>QR CODE</Text>
+// Reusable Stat Component
+const StatBox = ({ label, value, subLabel }: { label: string, value: string | number, subLabel?: string }) => (
+    <View style={styles.statBox}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+        {subLabel && <Text style={styles.statSub}>{subLabel}</Text>}
     </View>
 );
 
@@ -39,24 +34,29 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
 
     const memberData = {
         name: profile?.fullName || user?.email?.split('@')[0] || 'Membro CORRE',
-        memberId: profile?.id?.slice(0, 10) || '0123456789',
-        points: profile?.currentMonthPoints || 1250,
-        lifetimePoints: profile?.totalLifetimePoints || 4850,
+        id: profile?.id?.slice(0, 10).toUpperCase() || '0123456789',
         tier: tierConfig.label,
         tierColor: tierConfig.primary,
     };
 
+    const stats = {
+        points: profile?.currentMonthPoints || 1250,
+        lifetime: profile?.totalLifetimePoints || 4850,
+        nextTier: 5000,
+    };
+
+    const progress = Math.min((stats.lifetime / stats.nextTier) * 100, 100);
+
     const benefits = [
-        { id: '1', text: '10% desconto em lojas parceiras', active: true },
-        { id: '2', text: 'Acesso a todos eventos', active: true },
-        { id: '3', text: 'Prioridade em inscrições', active: true },
-        { id: '4', text: 'Recompensas mensais', active: true },
+        { id: '1', text: '10% OFF em parceiros', active: true, icon: '🛍️' },
+        { id: '2', text: 'Acesso VIP a eventos', active: true, icon: '🎫' },
+        { id: '3', text: 'Prioridade na fila', active: true, icon: '⚡' },
     ];
 
     const recentActivity = [
         { id: '1', type: 'earn', points: 150, description: 'Corrida Noturna', date: '14 Jan' },
         { id: '2', type: 'earn', points: 100, description: 'Treino Semanal', date: '12 Jan' },
-        { id: '3', type: 'redeem', points: -200, description: 'Desconto Loja X', date: '10 Jan' },
+        { id: '3', type: 'redeem', points: -200, description: 'Resgate Store', date: '10 Jan' },
     ];
 
     return (
@@ -64,334 +64,327 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
             preset="scroll"
             safeAreaEdges={['top']}
             contentContainerStyle={styles.scrollContent}
+            style={styles.container}
         >
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerLabel}>CARTÃO</Text>
-                <Text style={styles.headerTitle}>Fidelidade</Text>
+                <View>
+                    <Text style={styles.headerLabel}>SUA CARTEIRA</Text>
+                    <Text style={styles.headerTitle}>Fidelidade</Text>
+                </View>
+                {/* Optional: Add a settings or info icon here */}
             </View>
 
-            {/* Membership Card */}
-            <View style={[styles.membershipCard, { borderColor: memberData.tierColor + '40' }]}>
-                {/* Card Header */}
-                <View style={styles.cardHeader}>
-                    <View style={styles.brandSection}>
-                        <Text style={styles.brandName}>CORRE</Text>
-                        <View style={styles.clubBadge}>
-                            <Text style={styles.clubText}>RUNNING CLUB</Text>
-                        </View>
-                    </View>
-                    <View style={[styles.tierBadge, { backgroundColor: memberData.tierColor }]}>
-                        <Text style={styles.tierBadgeText}>{memberData.tier}</Text>
-                    </View>
-                </View>
-
-                {/* Member Info */}
-                <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>{memberData.name}</Text>
-                    <Text style={styles.memberId}>Member ID: {memberData.memberId}</Text>
-                </View>
-
-                {/* Points Display */}
-                <View style={styles.pointsRow}>
-                    <View style={styles.pointsBlock}>
-                        <Text style={styles.pointsNumber}>{memberData.points}</Text>
-                        <Text style={styles.pointsLabel}>Pontos do Mês</Text>
-                    </View>
-                    <View style={styles.pointsDivider} />
-                    <View style={styles.pointsBlock}>
-                        <Text style={styles.pointsNumberSmall}>{memberData.lifetimePoints}</Text>
-                        <Text style={styles.pointsLabel}>Total Acumulado</Text>
-                    </View>
-                </View>
-
-                {/* Decorative accent */}
-                <View style={[styles.cardAccent, { backgroundColor: memberData.tierColor }]} />
+            {/* Digital Card Section - Center Stage */}
+            <View style={styles.cardSection}>
+                <DigitalCard member={memberData} />
             </View>
 
-            {/* QR Code Section */}
-            <View style={styles.qrSection}>
-                <View style={styles.qrContainer}>
-                    <QRCodePlaceholder size={160} />
+            {/* Stats Grid */}
+            <View style={styles.statsContainer}>
+                <StatBox label="PONTOS MÊS" value={stats.points} />
+                <View style={styles.divider} />
+                <StatBox label="TOTAL GERAL" value={stats.lifetime} />
+            </View>
+
+            {/* Progress to Next Tier */}
+            <View style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                    <Text style={styles.progressLabel}>Próximo Nível: ELITE</Text>
+                    <Text style={styles.progressValue}>{Math.floor(progress)}%</Text>
                 </View>
-                <Text style={styles.qrHint}>Escaneie para acumular pontos</Text>
-                <TouchableOpacity style={styles.scanButton}>
-                    <Text style={styles.scanButtonText}>Escanear QR de Parceiro</Text>
+                <View style={styles.progressBarBg}>
+                    <LinearGradient
+                        colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
+                        style={[styles.progressBarFill, { width: `${progress}%` }]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                    />
+                </View>
+                <Text style={styles.progressSub}>
+                    Faltam {stats.nextTier - stats.lifetime} pontos para subir de nível
+                </Text>
+            </View>
+
+            {/* Menu / Actions */}
+            <View style={styles.actionGrid}>
+                <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('MerchantScanner')}
+                >
+                    <View style={styles.actionIcon}>
+                        <Text style={{ fontSize: 24 }}>📷</Text>
+                    </View>
+                    <Text style={styles.actionText}>Escanear</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton}>
+                    <View style={styles.actionIcon}>
+                        <Text style={{ fontSize: 24 }}>🎁</Text>
+                    </View>
+                    <Text style={styles.actionText}>Resgatar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton}>
+                    <View style={styles.actionIcon}>
+                        <Text style={{ fontSize: 24 }}>📜</Text>
+                    </View>
+                    <Text style={styles.actionText}>Histórico</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Recent Activity */}
+            {/* Recent Activity List */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>ATIVIDADE RECENTE</Text>
-                {recentActivity.map((activity) => (
-                    <View key={activity.id} style={styles.activityItem}>
-                        <View style={styles.activityInfo}>
-                            <Text style={styles.activityDescription}>{activity.description}</Text>
-                            <Text style={styles.activityDate}>{activity.date}</Text>
-                        </View>
-                        <Text style={[
-                            styles.activityPoints,
-                            activity.type === 'redeem' && styles.activityPointsNegative
+                <Text style={styles.sectionTitle}>ÚLTIMAS ATIVIDADES</Text>
+                <View style={styles.listContainer}>
+                    {recentActivity.map((activity, index) => (
+                        <View key={activity.id} style={[
+                            styles.activityRow,
+                            index !== recentActivity.length - 1 && styles.borderBottom
                         ]}>
-                            {activity.points > 0 ? '+' : ''}{activity.points}
-                        </Text>
-                    </View>
-                ))}
+                            <View style={styles.activityLeft}>
+                                <View style={[
+                                    styles.activityDot,
+                                    { backgroundColor: activity.type === 'earn' ? theme.colors.success : theme.colors.brand.primary }
+                                ]} />
+                                <View>
+                                    <Text style={styles.activityDesc}>{activity.description}</Text>
+                                    <Text style={styles.activityDate}>{activity.date}</Text>
+                                </View>
+                            </View>
+                            <Text style={[
+                                styles.activityPoints,
+                                activity.type === 'redeem' ? styles.negativePoints : styles.positivePoints
+                            ]}>
+                                {activity.points > 0 ? '+' : ''}{activity.points}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
             </View>
 
-            {/* Benefits Section */}
+            {/* Benefits List */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>SEUS BENEFÍCIOS</Text>
-                <View style={styles.benefitsList}>
+                <View style={styles.benefitsGrid}>
                     {benefits.map((benefit) => (
-                        <View key={benefit.id} style={styles.benefitItem}>
-                            <View style={styles.benefitCheck}>
-                                <Text style={styles.benefitCheckText}>✓</Text>
-                            </View>
+                        <View key={benefit.id} style={styles.benefitCard}>
+                            <Text style={styles.benefitIcon}>{benefit.icon}</Text>
                             <Text style={styles.benefitText}>{benefit.text}</Text>
                         </View>
                     ))}
                 </View>
             </View>
+
         </Screen>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: theme.colors.background.primary,
-    },
-    safeArea: {
-        flex: 1,
-    },
-    scrollView: {
-        flex: 1,
     },
     scrollContent: {
         paddingBottom: 120,
     },
-
-    // Header
     header: {
         paddingHorizontal: theme.spacing[6],
         paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[6],
+        marginBottom: theme.spacing[6],
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 10,
+        fontWeight: '600',
         color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
+        marginBottom: 4,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 32,
+        fontWeight: '800',
         color: theme.colors.text.primary,
+        letterSpacing: -0.5,
     },
-
-    // Membership Card
-    membershipCard: {
+    cardSection: {
+        alignItems: 'center',
+        marginBottom: theme.spacing[8],
+        zIndex: 10, // Ensure card flips over other elements if needed
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        marginHorizontal: theme.spacing[6],
+        backgroundColor: theme.colors.background.card,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: theme.spacing[6],
+        borderWidth: 1,
+        borderColor: theme.colors.border.subtle,
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    divider: {
+        width: 1,
+        backgroundColor: theme.colors.border.default,
+        marginHorizontal: 16,
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: theme.colors.text.primary,
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: theme.colors.text.tertiary,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    statSub: {
+        fontSize: 10,
+        color: theme.colors.success,
+        marginTop: 2,
+    },
+    progressSection: {
         marginHorizontal: theme.spacing[6],
         marginBottom: theme.spacing[8],
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.xl,
-        padding: theme.spacing[6],
-        borderWidth: 1,
-        overflow: 'hidden',
     },
-    cardHeader: {
+    progressHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: theme.spacing[6],
+        marginBottom: 8,
     },
-    brandSection: {
-        flexDirection: 'column',
+    progressLabel: {
+        fontSize: 12,
+        color: theme.colors.text.secondary,
+        fontWeight: '600',
     },
-    brandName: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.black as any,
+    progressValue: {
+        fontSize: 12,
         color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.wider,
+        fontWeight: '700',
     },
-    clubBadge: {
-        marginTop: theme.spacing[1],
+    progressBarBg: {
+        height: 8,
+        backgroundColor: theme.colors.background.elevated,
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 8,
     },
-    clubText: {
-        fontSize: theme.typography.size.micro,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 4,
     },
-    tierBadge: {
-        paddingHorizontal: theme.spacing[3],
-        paddingVertical: theme.spacing[1],
-        borderRadius: theme.radius.sm,
-    },
-    tierBadgeText: {
-        fontSize: theme.typography.size.micro,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.black,
-        letterSpacing: theme.typography.letterSpacing.wide,
-    },
-    memberInfo: {
-        marginBottom: theme.spacing[6],
-    },
-    memberName: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing[1],
-    },
-    memberId: {
-        fontSize: theme.typography.size.bodySM,
+    progressSub: {
+        fontSize: 11,
         color: theme.colors.text.tertiary,
     },
-    pointsRow: {
+    actionGrid: {
         flexDirection: 'row',
-        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: theme.spacing[6],
+        marginBottom: theme.spacing[8],
+        gap: 12,
     },
-    pointsBlock: {
+    actionButton: {
         flex: 1,
+        backgroundColor: theme.colors.background.elevated,
+        borderRadius: 16,
+        padding: 16,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.border.subtle,
     },
-    pointsDivider: {
-        width: 1,
-        height: 40,
-        backgroundColor: theme.colors.border.default,
-        marginHorizontal: theme.spacing[4],
+    actionIcon: {
+        marginBottom: 8,
     },
-    pointsNumber: {
-        fontSize: theme.typography.size.displayMD,
-        fontWeight: theme.typography.weight.black as any,
-        color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.tighter,
-    },
-    pointsNumberSmall: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
+    actionText: {
+        fontSize: 12,
+        fontWeight: '600',
         color: theme.colors.text.primary,
     },
-    pointsLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
-    },
-    cardAccent: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 4,
-    },
-
-    // QR Section
-    qrSection: {
-        alignItems: 'center',
-        marginHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[8],
-    },
-    qrContainer: {
-        padding: theme.spacing[4],
-        backgroundColor: theme.colors.white,
-        borderRadius: theme.radius.lg,
-        marginBottom: theme.spacing[3],
-    },
-    qrPlaceholder: {
-        backgroundColor: theme.colors.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    qrText: {
-        fontSize: theme.typography.size.micro,
-        color: theme.colors.gray[400],
-        marginTop: theme.spacing[2],
-        letterSpacing: theme.typography.letterSpacing.widest,
-    },
-    qrHint: {
-        fontSize: theme.typography.size.bodySM,
-        color: theme.colors.text.tertiary,
-        marginBottom: theme.spacing[4],
-    },
-    scanButton: {
-        backgroundColor: theme.colors.brand.primary,
-        paddingHorizontal: theme.spacing[6],
-        paddingVertical: theme.spacing[3],
-        borderRadius: theme.radius.full,
-    },
-    scanButtonText: {
-        fontSize: theme.typography.size.bodySM,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.white,
-    },
-
-    // Section
     section: {
         paddingHorizontal: theme.spacing[6],
         marginBottom: theme.spacing[8],
     },
     sectionTitle: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 11,
+        fontWeight: '700',
         color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[4],
+        marginBottom: 16,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
-
-    // Activity
-    activityItem: {
+    listContainer: {
+        backgroundColor: theme.colors.background.card,
+        borderRadius: 16,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.border.subtle,
+    },
+    activityRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: theme.spacing[3],
+        padding: 12,
+    },
+    borderBottom: {
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.default,
+        borderBottomColor: theme.colors.border.subtle,
     },
-    activityInfo: {
-        flex: 1,
+    activityLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
     },
-    activityDescription: {
-        fontSize: theme.typography.size.bodyMD,
+    activityDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    activityDesc: {
+        fontSize: 14,
         color: theme.colors.text.primary,
-        marginBottom: theme.spacing[1],
+        fontWeight: '500',
+        marginBottom: 2,
     },
     activityDate: {
-        fontSize: theme.typography.size.caption,
+        fontSize: 11,
         color: theme.colors.text.tertiary,
     },
     activityPoints: {
-        fontSize: theme.typography.size.bodyLG,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    positivePoints: {
         color: theme.colors.success,
     },
-    activityPointsNegative: {
-        color: theme.colors.error,
+    negativePoints: {
+        color: theme.colors.text.primary,
     },
-
-    // Benefits
-    benefitsList: {
-        gap: theme.spacing[3],
-    },
-    benefitItem: {
+    benefitsGrid: {
         flexDirection: 'row',
-        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 12,
     },
-    benefitCheck: {
-        width: 24,
-        height: 24,
+    benefitCard: {
+        width: '48%', // roughly half - gap
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
-        backgroundColor: theme.colors.success,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: theme.spacing[3],
+        padding: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border.subtle,
     },
-    benefitCheckText: {
-        color: theme.colors.white,
-        fontSize: 12,
-        fontWeight: theme.typography.weight.bold as any,
+    benefitIcon: {
+        fontSize: 20,
+        marginBottom: 8,
     },
     benefitText: {
-        fontSize: theme.typography.size.bodyMD,
+        fontSize: 12,
         color: theme.colors.text.secondary,
+        lineHeight: 18,
+        fontWeight: '500',
     },
 });

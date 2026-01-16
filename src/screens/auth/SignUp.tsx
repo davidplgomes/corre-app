@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button, Input, ErrorMessage } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { signUp } from '../../services/supabase/auth';
 import { validateField } from '../../utils/validation';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -77,103 +78,111 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
             backgroundColor={theme.colors.background.primary}
             statusBarStyle="light-content"
         >
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                >
-                    <Text style={styles.backIcon}>←</Text>
-                </TouchableOpacity>
-                <View style={styles.headerContent}>
-                    <Image
-                        source={require('../../../assets/icon.png')}
-                        style={styles.logo}
-                        resizeMode="contain"
-                    />
-                    <Text style={styles.title}>Join Corre</Text>
-                    <Text style={styles.tagline}>Start your running journey today</Text>
-                </View>
-            </View>
-
-            <View style={styles.formContainer}>
-                {error && <ErrorMessage message={error} />}
-
-                <Input
-                    label="Full Name"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChangeText={setFullName}
-                    error={fullNameError}
-                    autoCapitalize="words"
-                    autoComplete="name"
-                    textContentType="name"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <Input
-                    label="Email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChangeText={setEmail}
-                    error={emailError}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <Input
-                    label="Password"
-                    placeholder="Min. 8 characters"
-                    value={password}
-                    onChangeText={setPassword}
-                    error={passwordError}
-                    isPassword
-                    autoCapitalize="none"
-                    autoComplete="password-new"
-                    textContentType="newPassword"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <Input
-                    label="Neighborhood (optional)"
-                    placeholder="Ex: Ribeira, Cedofeita..."
-                    value={neighborhood}
-                    onChangeText={setNeighborhood}
-                    autoCapitalize="words"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <Button
-                    title={loading ? 'Creating Account...' : 'Create Account'}
-                    onPress={handleSignUp}
-                    loading={loading}
-                    variant="primary"
-                    size="large"
-                    fullWidth
-                    style={styles.signUpButton}
-                />
-
-                <Text style={styles.termsText}>
-                    By signing up, you agree to our{' '}
-                    <Text style={styles.termsLink}>Terms of Service</Text>
-                    {' '}and{' '}
-                    <Text style={styles.termsLink}>Privacy Policy</Text>
-                </Text>
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Already have an account?</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                        <Text style={styles.loginText}>Sign In</Text>
+            <Animated.View
+                entering={FadeInDown.duration(800).springify()}
+                style={styles.container}
+            >
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                    >
+                        <Text style={styles.backIcon}>←</Text>
                     </TouchableOpacity>
+                    <View style={styles.headerContent}>
+                        <Image
+                            source={require('../../../assets/icon.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.title}>Join Corre</Text>
+                        <Text style={styles.tagline}>Start your running journey today</Text>
+                    </View>
                 </View>
-            </View>
+
+                <View style={styles.formContainer}>
+                    {error && <ErrorMessage message={error} />}
+
+                    <Input
+                        label="Full Name"
+                        placeholder="John Doe"
+                        value={fullName}
+                        onChangeText={setFullName}
+                        error={fullNameError}
+                        autoCapitalize="words"
+                        autoComplete="name"
+                        textContentType="name"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <Input
+                        label="Email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChangeText={setEmail}
+                        error={emailError}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        textContentType="emailAddress"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <Input
+                        label="Password"
+                        placeholder="Min. 8 characters"
+                        value={password}
+                        onChangeText={setPassword}
+                        error={passwordError}
+                        isPassword
+                        autoCapitalize="none"
+                        autoComplete="password-new"
+                        textContentType="newPassword"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <Input
+                        label="Neighborhood (optional)"
+                        placeholder="Ex: Ribeira, Cedofeita..."
+                        value={neighborhood}
+                        onChangeText={setNeighborhood}
+                        autoCapitalize="words"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <Button
+                        title={loading ? 'Creating Account...' : 'Create Account'}
+                        onPress={handleSignUp}
+                        loading={loading}
+                        variant="primary"
+                        size="large"
+                        fullWidth
+                        style={styles.signUpButton}
+                    />
+
+                    <Text style={styles.termsText}>
+                        By signing up, you agree to our{' '}
+                        <Text style={styles.termsLink}>Terms of Service</Text>
+                        {' '}and{' '}
+                        <Text style={styles.termsLink}>Privacy Policy</Text>
+                    </Text>
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>Already have an account?</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.loginText}>Sign In</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Animated.View>
         </Screen>
     );
 };
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: theme.spacing[6],
@@ -186,7 +195,7 @@ const styles = StyleSheet.create({
     backButton: {
         width: 44,
         height: 44,
-        borderRadius: theme.radius.full,
+        borderRadius: theme.radius.md, // Soft square (12px)
         backgroundColor: theme.colors.background.card,
         justifyContent: 'center',
         alignItems: 'center',

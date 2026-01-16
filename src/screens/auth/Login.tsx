@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Button, Input, ErrorMessage } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import { GoogleIcon, AppleIcon } from '../../components/auth/AuthIcons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { signIn } from '../../services/supabase/auth';
 import { validateField } from '../../utils/validation';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -68,87 +70,96 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
             backgroundColor={theme.colors.background.primary}
             statusBarStyle="light-content"
         >
-            <View style={styles.header}>
-                <Image
-                    source={require('../../../assets/icon.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <Text style={styles.title}>CORRE</Text>
-                <Text style={styles.tagline}>Run together, grow together</Text>
-            </View>
-
-            <View style={styles.formContainer}>
-                {error && <ErrorMessage message={error} />}
-
-                <Input
-                    label="Email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChangeText={setEmail}
-                    error={emailError}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <Input
-                    label="Password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChangeText={setPassword}
-                    error={passwordError}
-                    isPassword
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    textContentType="password"
-                    containerStyle={styles.inputSpacing}
-                />
-
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('ForgotPassword')}
-                    style={styles.forgotButton}
-                >
-                    <Text style={styles.forgotText}>Forgot password?</Text>
-                </TouchableOpacity>
-
-                <Button
-                    title={loading ? 'Signing in...' : 'Sign In'}
-                    onPress={handleLogin}
-                    loading={loading}
-                    variant="primary"
-                    size="large"
-                    fullWidth
-                    style={styles.loginButton}
-                />
-
-                <View style={styles.divider}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>or continue with</Text>
-                    <View style={styles.dividerLine} />
+            <Animated.View
+                entering={FadeInDown.duration(800).springify()}
+                style={styles.container}
+            >
+                <View style={styles.header}>
+                    <Image
+                        source={require('../../../assets/11.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <Image
+                        source={require('../../../assets/2.png')}
+                        style={styles.brandNameLogo}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.tagline}>Run together, grow together</Text>
                 </View>
 
-                <View style={styles.socialButtons}>
-                    <TouchableOpacity style={[styles.socialButton, styles.appleButton]}>
-                        <AppleIcon size={20} color="#FFFFFF" />
-                        <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                <View style={styles.formContainer}>
+                    {error && <ErrorMessage message={error} />}
+
+                    <Input
+                        label="Email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChangeText={setEmail}
+                        error={emailError}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        textContentType="emailAddress"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <Input
+                        label="Password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChangeText={setPassword}
+                        error={passwordError}
+                        isPassword
+                        autoCapitalize="none"
+                        autoComplete="password"
+                        textContentType="password"
+                        containerStyle={styles.inputSpacing}
+                    />
+
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('ForgotPassword')}
+                        style={styles.forgotButton}
+                    >
+                        <Text style={styles.forgotText}>Forgot password?</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
-                        <GoogleIcon size={20} />
-                        <Text style={styles.googleButtonText}>Continue with Google</Text>
-                    </TouchableOpacity>
-                </View>
+                    <Button
+                        title={loading ? 'Signing in...' : 'Sign In'}
+                        onPress={handleLogin}
+                        loading={loading}
+                        variant="primary"
+                        size="large"
+                        fullWidth
+                        style={styles.loginButton}
+                    />
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Don't have an account?</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                        <Text style={styles.signUpText}>Sign Up</Text>
-                    </TouchableOpacity>
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>or continue with</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    <View style={styles.socialButtons}>
+                        <TouchableOpacity style={[styles.socialButton, styles.appleButton]} onPress={() => Haptics.selectionAsync()}>
+                            <AppleIcon size={20} color="#FFFFFF" />
+                            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={() => Haptics.selectionAsync()}>
+                            <GoogleIcon size={20} />
+                            <Text style={styles.googleButtonText}>Continue with Google</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>Don't have an account?</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('SignUp')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <Text style={styles.signUpText}>Sign Up</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
+            </Animated.View>
         </Screen>
     );
 };
@@ -156,7 +167,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.primary[600],
+        backgroundColor: theme.colors.brand.primary,
     },
     gradientBackground: {
         position: 'absolute',
@@ -206,18 +217,27 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing[12],
     },
     logo: {
-        width: 80,
-        height: 80,
-        marginBottom: theme.spacing[4],
+        width: 150,
+        height: 150,
+        marginBottom: -10, // Pull text closer (overlay slightly if transparent border)
+        zIndex: 1, // Ensure icon stays on top if overlap
+    },
+    brandNameLogo: {
+        width: width * 0.6, // Increased to 60%
+        height: 70, // Slightly increased height for 60% width
+        resizeMode: 'contain',
+        marginTop: 0,
+        marginBottom: theme.spacing[2],
     },
     title: {
         fontSize: theme.typography.size.displayMD,
-        fontWeight: '900', // Black weight
-        fontStyle: 'italic', // Speed aesthetic
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.text.primary,
         letterSpacing: -1,
         marginBottom: theme.spacing[2],
         textTransform: 'uppercase',
+        display: 'none', // Hiding instead of removing to preserve reference if needed, or better yet, remove it.
     },
     tagline: {
         fontSize: theme.typography.size.bodyMD,
@@ -268,7 +288,7 @@ const styles = StyleSheet.create({
     socialButton: {
         flexDirection: 'row',
         height: 50,
-        borderRadius: theme.radius.lg,
+        borderRadius: theme.radius.md, // Match main buttons (12px)
         alignItems: 'center',
         justifyContent: 'center',
         gap: theme.spacing[3],

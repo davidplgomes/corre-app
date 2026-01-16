@@ -1,12 +1,20 @@
 import React from 'react';
 import {
-    TouchableOpacity,
     Text,
     StyleSheet,
     ActivityIndicator,
     ViewStyle,
     TextStyle,
+    StyleProp,
+    Pressable,
 } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    WithSpringConfig,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 
 interface ButtonProps {
@@ -17,9 +25,17 @@ interface ButtonProps {
     disabled?: boolean;
     loading?: boolean;
     fullWidth?: boolean;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
     textStyle?: TextStyle;
 }
+
+// Spring config for smooth "bouncy" feel (HIG-like)
+const SPRING_CONFIG: WithSpringConfig = {
+    damping: 15,
+    stiffness: 150,
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const Button: React.FC<ButtonProps> = ({
     title,
@@ -32,25 +48,47 @@ export const Button: React.FC<ButtonProps> = ({
     style,
     textStyle,
 }) => {
+    const scale = useSharedValue(1);
     const isDisabled = disabled || loading;
 
-    // Map variant to style key (outline uses secondary styles)
+    // Derived styles
     const styleVariant = variant === 'outline' ? 'secondary' : variant;
     const textVariant = variant === 'outline' ? 'secondary' : variant;
 
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: scale.value }],
+        };
+    });
+
+    const handlePressIn = () => {
+        if (!isDisabled) {
+            scale.value = withSpring(0.96, SPRING_CONFIG);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+    };
+
+    const handlePressOut = () => {
+        if (!isDisabled) {
+            scale.value = withSpring(1, SPRING_CONFIG);
+        }
+    };
+
     return (
-        <TouchableOpacity
+        <AnimatedPressable
             style={[
                 styles.button,
                 styles[styleVariant],
                 styles[size],
                 fullWidth && styles.fullWidth,
                 isDisabled && styles.disabled,
+                animatedStyle,
                 style,
             ]}
             onPress={onPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
             disabled={isDisabled}
-            activeOpacity={0.7}
         >
             {loading ? (
                 <ActivityIndicator
@@ -62,13 +100,13 @@ export const Button: React.FC<ButtonProps> = ({
                     {title}
                 </Text>
             )}
-        </TouchableOpacity>
+        </AnimatedPressable>
     );
 };
 
 const styles = StyleSheet.create({
     button: {
-        borderRadius: theme.radius.full,
+        borderRadius: theme.radius.md, // Soft corners (12px) as per spec
         alignItems: 'center',
         justifyContent: 'center',
     },

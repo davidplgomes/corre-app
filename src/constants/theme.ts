@@ -6,54 +6,57 @@ export const theme = {
     // Minimal Color Palette - Black, White, Accent
     colors: {
         // Primary brand color - Energetic Orange (like Strava)
+        // REDUCED USAGE: Only for primary actions/CTAs.
         brand: {
             primary: '#FF5722',
             secondary: '#FF7043',
-            muted: 'rgba(255, 87, 34, 0.15)',
-            subtle: 'rgba(255, 87, 34, 0.08)',
+            muted: '#27272A', // Hardcoded Zinc-800
+            subtle: '#18181B', // Hardcoded Zinc-900
         },
         // Pure black and white for maximum contrast
         black: '#000000',
         white: '#FFFFFF',
-        // Gray scale - carefully curated
+        // Gray scale - OLED Optimized
         gray: {
             50: '#FAFAFA',
             100: '#F5F5F5',
             200: '#EEEEEE',
             300: '#E0E0E0',
-            400: '#BDBDBD',
-            500: '#9E9E9E',
-            600: '#757575',
-            700: '#616161',
-            800: '#424242',
-            900: '#212121',
-            950: '#121212',
+            400: '#A1A1AA', // Zinc-400
+            500: '#71717A',
+            600: '#52525B',
+            700: '#3F3F46',
+            800: '#27272A',
+            900: '#18181B',
+            950: '#09090B',
         },
-        // Semantic colors - minimal
-        success: '#00C853',
-        warning: '#FFB300',
-        error: '#FF1744',
-        // Background colors - Dark theme
+        // Semantic colors
+        success: '#22C55E', // Green
+        warning: '#FBBF24', // Gold
+        error: '#EF4444',
+        // Background colors - OLED Dark Mode
         background: {
-            primary: '#000000',
-            elevated: '#0A0A0A',
-            card: '#121212',
-            input: '#1A1A1A',
+            primary: '#000000', // Pure Black
+            secondary: '#09090B', // Very Dark Zinc (was #121212)
+            elevated: '#18181B', // Zinc-900 (was 1C1C1E)
+            card: '#18181B', // Zinc-900 for lighter cards
+            input: '#27272A', // Dark Zinc
         },
-        // Text colors - High contrast
+        // Text colors
         text: {
             primary: '#FFFFFF',
-            secondary: 'rgba(255, 255, 255, 0.7)',
-            tertiary: 'rgba(255, 255, 255, 0.5)',
-            disabled: 'rgba(255, 255, 255, 0.3)',
+            secondary: '#A1A1AA', // Zinc-400
+            tertiary: '#71717A', // Zinc-500
+            disabled: '#52525B',
         },
-        // Border colors - Subtle
+        // Border colors
         border: {
-            default: 'rgba(255, 255, 255, 0.08)',
-            hover: 'rgba(255, 255, 255, 0.15)',
-            focus: 'rgba(255, 87, 34, 0.5)',
+            default: '#27272A', // Zinc-800
+            subtle: '#18181B',
+            hover: '#3F3F46',
+            focus: '#FFFFFF', // White focus
         },
-        // Legacy color aliases for backward compatibility
+        // Legacy color aliases
         primary: {
             50: '#FFF3E0',
             100: '#FFE0B2',
@@ -84,25 +87,21 @@ export const theme = {
     typography: {
         // Font sizes - Mobile optimized
         size: {
-            // Display - Hero numbers, big stats
             displayXL: 72,
             displayLG: 56,
             displayMD: 48,
             displaySM: 40,
-            // Headings
-            h1: 32,
-            h2: 24,
+            h1: 28, // Adjusted to spec ~28px
+            h2: 24, // Adjusted
             h3: 20,
-            h4: 18,
-            // Body
-            bodyLG: 17,
-            bodyMD: 15,
+            h4: 18, // Spec: Card Titles ~18px
+            h5: 16,
+            bodyLG: 16, // Spec: Body ~14-16px area
+            bodyMD: 14, // Spec: Body
             bodySM: 13,
-            // Caption
-            caption: 11,
+            caption: 12,
             micro: 10,
         },
-        // Font weights
         weight: {
             regular: '400',
             medium: '500',
@@ -110,22 +109,20 @@ export const theme = {
             bold: '700',
             black: '900',
         },
-        // Letter spacing
         letterSpacing: {
-            tighter: -2,
-            tight: -1,
+            tighter: -0.8,
+            tight: -0.4,
             normal: 0,
-            wide: 0.5,
-            wider: 1,
-            widest: 2,
+            wide: 0.4,
+            wider: 0.8,
+            widest: 1.6,
         },
-        // Line heights
         lineHeight: {
             none: 1,
             tight: 1.1,
-            snug: 1.25,
-            normal: 1.4,
-            relaxed: 1.6,
+            snug: 1.3,
+            normal: 1.5,
+            relaxed: 1.7,
         },
     },
 
@@ -148,14 +145,14 @@ export const theme = {
         32: 128,
     },
 
-    // Border radius - Minimal
+    // Border radius - Modern Rounded
     radius: {
         none: 0,
-        sm: 4,
-        md: 8,
-        lg: 12,
-        xl: 16,
-        '2xl': 20,
+        sm: 8, // Softer small radius
+        md: 12, // Buttons spec: 8-12px
+        lg: 16, // Cards spec: 16px
+        xl: 24,
+        '2xl': 32,
         full: 9999,
     },
 

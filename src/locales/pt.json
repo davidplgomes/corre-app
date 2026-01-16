@@ -18,7 +18,9 @@
     "close": "Fechar",
     "search": "Pesquisar",
     "filter": "Filtrar",
-    "sort": "Ordenar"
+    "sort": "Ordenar",
+    "like": "Curtir",
+    "comment": "Comentar"
   },
   "auth": {
     "login": "Entrar",
@@ -91,7 +93,18 @@
       "routine": "3 pontos",
       "special": "5 pontos",
       "race": "10 pontos"
-    }
+    },
+    "confirmDelete": "Tem certeza que deseja excluir este evento?",
+    "viewAll": "Ver todos",
+    "noParticipantsYet": "Nenhum participante ainda.",
+    "participantsList": "Lista de Participantes",
+    "saveChanges": "Salvar Alterações",
+    "activityRun": "correu",
+    "activityCheckIn": "fez check-in em",
+    "activityPost": "postou",
+    "distance": "Distância",
+    "time": "Tempo",
+    "pace": "Ritmo"
   },
   "leaderboard": {
     "title": "Classificação",

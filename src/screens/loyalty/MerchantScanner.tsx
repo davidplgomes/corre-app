@@ -10,10 +10,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, LoadingSpinner } from '../../components/common';
 import { TierBadge } from '../../components/profile';
-import { getUserByQRSecret } from '../../services/supabase/users';
+import { getUserByQRSecret, MerchantUserInfo } from '../../services/supabase/users';
 import { parseQRData } from '../../services/qrcode';
 import { TIERS, TierKey } from '../../constants/tiers';
-import { User } from '../../types';
 
 type MerchantScannerProps = {
     navigation: any;
@@ -23,7 +22,7 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
     const { t } = useTranslation();
     const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false);
-    const [scannedUser, setScannedUser] = useState<User | null>(null);
+    const [scannedUser, setScannedUser] = useState<MerchantUserInfo | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleBarCodeScanned = async ({ data }: { data: string }) => {

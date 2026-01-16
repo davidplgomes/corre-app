@@ -18,7 +18,9 @@
     "close": "Close",
     "search": "Search",
     "filter": "Filter",
-    "sort": "Sort"
+    "sort": "Sort",
+    "like": "Like",
+    "comment": "Comment"
   },
   "auth": {
     "login": "Login",
@@ -91,7 +93,18 @@
       "routine": "3 points",
       "special": "5 points",
       "race": "10 points"
-    }
+    },
+    "confirmDelete": "Are you sure you want to delete this event?",
+    "viewAll": "View all",
+    "noParticipantsYet": "No participants yet.",
+    "participantsList": "Participants List",
+    "saveChanges": "Save Changes",
+    "activityRun": "ran",
+    "activityCheckIn": "checked in at",
+    "activityPost": "posted",
+    "distance": "Distance",
+    "time": "Time",
+    "pace": "Pace"
   },
   "leaderboard": {
     "title": "Leaderboard",

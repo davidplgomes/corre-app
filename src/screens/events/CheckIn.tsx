@@ -124,7 +124,7 @@ export const CheckIn: React.FC<CheckInProps> = ({ route, navigation }) => {
                         longitude: event.location_lng,
                     }}
                     title={event.title}
-                    description={event.location_name}
+                    description={event.location_name ?? undefined}
                 />
 
                 {/* Check-In Radius Circle */}

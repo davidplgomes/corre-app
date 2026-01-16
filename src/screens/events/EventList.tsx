@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { EventCard } from '../../components/events/EventCard';
 import { LoadingSpinner } from '../../components/common';
 import { getUpcomingEvents } from '../../services/supabase/events';
@@ -140,7 +141,22 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
         loadEvents();
     }, [loadEvents]);
 
+    const filteredEvents = useMemo(() => {
+        if (activeFilter === 'Todos') return events;
+        return events.filter(event => {
+            const location = event.location_name || '';
+            const description = event.description || '';
+            const searchTerms = `${event.title} ${description} ${location}`.toLowerCase();
+            if (activeFilter === '5K') return searchTerms.includes('5k') || searchTerms.includes('5 km');
+            if (activeFilter === '10K') return searchTerms.includes('10k') || searchTerms.includes('10 km');
+            if (activeFilter === 'Meia Maratona') return searchTerms.includes('21k') || searchTerms.includes('21 km') || searchTerms.includes('meia');
+            if (activeFilter === 'Treino') return searchTerms.includes('treino');
+            return true;
+        });
+    }, [events, activeFilter]);
+
     const onRefresh = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
         loadEvents();
     }, [loadEvents]);
@@ -192,7 +208,10 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                                     styles.filterPill,
                                     activeFilter === item && styles.filterPillActive
                                 ]}
-                                onPress={() => setActiveFilter(item)}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setActiveFilter(item);
+                                }}
                             >
                                 <Text style={[
                                     styles.filterText,
@@ -207,12 +226,15 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
 
                 {/* Events List */}
                 <FlatList
-                    data={events}
+                    data={filteredEvents}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => (
                         <EventCard
                             event={item}
-                            onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('EventDetail', { eventId: item.id });
+                            }}
                         />
                     )}
                     contentContainerStyle={styles.listContent}
@@ -226,12 +248,6 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                 />
             </SafeAreaView>
-
-            {/* Bottom Tab Indicator */}
-            <View style={styles.bottomIndicator}>
-                <Text style={styles.bottomIndicatorText}>Eventos</Text>
-                <View style={styles.indicatorDot} />
-            </View>
         </View>
     );
 };
@@ -306,7 +322,7 @@ const styles = StyleSheet.create({
     filterPill: {
         paddingHorizontal: theme.spacing[4],
         paddingVertical: theme.spacing[2],
-        borderRadius: theme.radius.full,
+        borderRadius: theme.radius.md, // Soft corners (12px)
         borderWidth: 1,
         borderColor: theme.colors.border.default,
         marginRight: theme.spacing[2],
@@ -328,26 +344,5 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: theme.spacing[6],
         paddingBottom: 120,
-    },
-
-    // Bottom Indicator
-    bottomIndicator: {
-        position: 'absolute',
-        bottom: 100,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-    },
-    bottomIndicatorText: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.brand.primary,
-        fontWeight: theme.typography.weight.semibold as any,
-        marginBottom: theme.spacing[1],
-    },
-    indicatorDot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: theme.colors.brand.primary,
     },
 });

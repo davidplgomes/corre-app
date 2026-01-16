@@ -1,4 +1,4 @@
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { RouteProp } from '@react-navigation/native';
 
@@ -44,13 +44,14 @@ export type ProfileStackParamList = {
 };
 
 // Navigation props types
-export type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-export type AuthNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
+export type RootNavigationProp = StackNavigationProp<RootStackParamList>;
+export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>;
 export type MainTabNavigationProp = BottomTabNavigationProp<MainTabParamList>;
-export type EventsNavigationProp = NativeStackNavigationProp<EventsStackParamList>;
-export type LoyaltyNavigationProp = NativeStackNavigationProp<LoyaltyStackParamList>;
-export type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
+export type EventsNavigationProp = StackNavigationProp<EventsStackParamList>;
+export type LoyaltyNavigationProp = StackNavigationProp<LoyaltyStackParamList>;
+export type ProfileNavigationProp = StackNavigationProp<ProfileStackParamList>;
 
 // Route props types
 export type EventDetailRouteProp = RouteProp<EventsStackParamList, 'EventDetail'>;
 export type CheckInRouteProp = RouteProp<EventsStackParamList, 'CheckIn'>;
+

@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background.input,
         borderWidth: 1,
         borderColor: theme.colors.border.default,
-        borderRadius: theme.radius.lg,
+        borderRadius: theme.radius.md, // Match buttons (12px)
         paddingHorizontal: theme.spacing[4],
         minHeight: 52,
     },

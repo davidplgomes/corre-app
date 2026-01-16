@@ -1,0 +1,62 @@
+Pacotes de aquisição
+
+- Gratis
+
+- Basico = 20
+
+- Baixa Pace = 30 euros
+	- Addon na compra do pacote baixa pace = Brinde de boas vindas (Cupom de desconto + Camisa basica + numero de carrida + gel de corrida)
+
+- Parceiros = 100 euros
+
+Corre App
+
+- Idioma
+	- Multi idioma (EN, PT, ES)
+
+- Formulario de inscrição
+	- Bairro = Dropdown (Evita erros de digitação), if other, abrir Caixa de texto.
+
+- Integrar com o Strava
+	- Puxar as informações de atividade e sincronizar no perfil do atleta.
+	- Mostrar infomrações de Km percorridos, quantidade de etividades, pace médio no perfil do atleta.
+
+- Loyalt Card com QR Code e acesso para o Merchant validar, ou seja, acesso usuario e acesso merchant. Acesso usuario gera o QR code unico para ser escaneado pelo merchant que vai mostrar qual o desconto ele tem. (Ex: usuario free tem 5% e usuario pago tem 20%.)
+ 
+
+- Gameficação
+	- Atraves de check in por geolocalização com limite de 300m, liberado 30min antes e 30min depois do horario do evento. 
+
+	- Pontuação
+		- Eventos de rotina = 3 pontos
+		- Eventos especiais = 5 pontos
+		- Eventos de corrida = 10 pontos
+	
+	- Premiação 
+		- Fornecidos pelos patrocinadores mes a mes.
+		- Se atingir 12 pontos no mes, ter desconto no membership 17.5
+
+- Calendario de provas
+	- Usuarios podem adicionar provas, apenas o criador pode editar a prova inserida.
+	- Continuar com a ideia do  juntar-se a prova.
+
+- Marketplace do Corre
+	- Uma sessao para usuarios poderem anunciar produtos usados pagandom uma taxa de 5%.
+
+- Corre Shop
+	- Uma sessao para venda de produtos do corre. (Camisas, bones, meias, etc).
+
+
+- feed de atividade entre usuarios
+	- usar o exemplo do feed do strava.
+
+- Parceiros
+	- Colocar o parceiro com link levando direto para o site de venda de cada um.
+
+---------------------------------------------------------------------------------------
+
+Pausa do corre de 14/12 e volta 25/01.
+
+
+App / Team: Segunda 01/12 as 20h IR / 17h BR.
+Corre Travel: aguardar proposta da empresa.

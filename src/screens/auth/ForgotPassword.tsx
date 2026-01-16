@@ -12,10 +12,11 @@ import { useTranslation } from 'react-i18next';
 import { Button, Input, ErrorMessage } from '../../components/common';
 import { resetPassword } from '../../services/supabase/auth';
 import { validateField } from '../../utils/validation';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import { theme } from '../../constants/theme';
 
 type ForgotPasswordScreenProps = {
-    navigation: NativeStackNavigationProp<any>;
+    navigation: StackNavigationProp<any>;
 };
 
 export const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({
@@ -125,7 +126,7 @@ export const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.background.primary,
     },
     scrollContent: {
         flexGrow: 1,
@@ -140,14 +141,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     title: {
-        fontSize: 32,
+        fontSize: theme.typography.size.h1,
         fontWeight: '700',
-        color: '#374151',
+        color: theme.colors.text.primary,
         marginBottom: 12,
     },
     description: {
-        fontSize: 16,
-        color: '#6B7280',
+        fontSize: theme.typography.size.bodyMD,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         lineHeight: 24,
     },
@@ -158,9 +159,9 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     successContainer: {
-        backgroundColor: '#D1FAE5',
+        backgroundColor: 'rgba(0, 200, 83, 0.15)',
         borderWidth: 1,
-        borderColor: '#6EE7B7',
+        borderColor: theme.colors.success,
         borderRadius: 12,
         padding: 20,
         alignItems: 'center',
@@ -171,8 +172,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     successMessage: {
-        fontSize: 16,
-        color: '#065F46',
+        fontSize: theme.typography.size.bodyMD,
+        color: theme.colors.success,
         textAlign: 'center',
         fontWeight: '500',
     },
@@ -180,8 +181,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backText: {
-        fontSize: 16,
-        color: '#7C3AED',
+        fontSize: theme.typography.size.bodyMD,
+        color: theme.colors.brand.primary,
         fontWeight: '600',
     },
 });
+

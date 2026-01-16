@@ -3,52 +3,20 @@ import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Translation resources - will be replaced with actual JSON files later
+import en from '../locales/en.json';
+import pt from '../locales/pt.json';
+import es from '../locales/es.json';
+
+// Translation resources
 const resources = {
   en: {
-    translation: {
-      common: {
-        loading: 'Loading...',
-        error: 'Error',
-        success: 'Success',
-        cancel: 'Cancel',
-        save: 'Save',
-        delete: 'Delete',
-        edit: 'Edit',
-        create: 'Create',
-        back: 'Back',
-      },
-    },
+    translation: en,
   },
   pt: {
-    translation: {
-      common: {
-        loading: 'Carregando...',
-        error: 'Erro',
-        success: 'Sucesso',
-        cancel: 'Cancelar',
-        save: 'Salvar',
-        delete: 'Excluir',
-        edit: 'Editar',
-        create: 'Criar',
-        back: 'Voltar',
-      },
-    },
+    translation: pt,
   },
   es: {
-    translation: {
-      common: {
-        loading: 'Cargando...',
-        error: 'Error',
-        success: 'Éxito',
-        cancel: 'Cancelar',
-        save: 'Guardar',
-        delete: 'Eliminar',
-        edit: 'Editar',
-        create: 'Crear',
-        back: 'Atrás',
-      },
-    },
+    translation: es,
   },
 };
 

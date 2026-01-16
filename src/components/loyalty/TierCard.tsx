@@ -14,7 +14,7 @@ export const TierCard: React.FC<TierCardProps> = ({ tier, userName, style }) => 
     const { t } = useTranslation();
     const tierInfo = TIERS[tier] || TIERS.free;
 
-    const getGradientColors = (tierKey: TierKey): string[] => {
+    const getGradientColors = (tierKey: TierKey): [string, string] => {
         switch (tierKey) {
             case 'free':
                 return ['#6B7280', '#4B5563'];

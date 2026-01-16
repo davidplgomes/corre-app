@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
@@ -26,6 +27,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const tierConfig = tierColors[tier];
 
     const handleLogout = async () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         try {
             await signOut();
         } catch (error) {
@@ -55,27 +57,39 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             id: 'history',
             label: 'Histórico de Corridas',
             icon: <RunIcon size={20} color={theme.colors.text.secondary} />,
-            onPress: () => navigation.navigate('RunHistory'),
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('RunHistory');
+            },
             badge: stats.thisWeekRuns,
         },
         {
             id: 'runMap',
             label: 'Mapa de Corridas',
             icon: <MapIcon size={20} color={theme.colors.text.secondary} />,
-            onPress: () => navigation.navigate('RunMap'),
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('RunMap');
+            },
         },
         {
             id: 'achievements',
             label: 'Conquistas',
             icon: <MedalIcon size={20} color={theme.colors.text.secondary} />,
-            onPress: () => navigation.navigate('Achievements'),
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Achievements');
+            },
             badge: 8,
         },
         {
             id: 'settings',
             label: 'Configurações',
             icon: <SettingsIcon size={20} color={theme.colors.text.secondary} />,
-            onPress: () => navigation.navigate('Settings'),
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Settings');
+            },
         },
         {
             id: 'logout',
@@ -395,7 +409,7 @@ const styles = StyleSheet.create({
     weekCard: {
         marginHorizontal: theme.spacing[6],
         marginBottom: theme.spacing[6],
-        borderRadius: theme.radius.xl,
+        borderRadius: theme.radius.lg, // 16px
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: theme.colors.brand.primary + '20',

@@ -12,30 +12,34 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Card } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
-import { createEvent } from '../../services/supabase/events';
+import { createEvent, updateEvent } from '../../services/supabase/events';
+import { Event } from '../../types';
 import { EVENT_POINTS } from '../../constants/points';
 import { theme } from '../../constants/theme';
 
 type CreateEventProps = {
     navigation: any;
+    route: { params?: { event?: Event } };
 };
 
-export const CreateEvent: React.FC<CreateEventProps> = ({ navigation }) => {
+export const CreateEvent: React.FC<CreateEventProps> = ({ navigation, route }) => {
     const { t } = useTranslation();
     const { profile } = useAuth();
 
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [eventType, setEventType] = useState<'routine' | 'special' | 'race'>('routine');
-    const [date, setDate] = useState(new Date());
-    const [locationName, setLocationName] = useState('');
-    const [locationLat, setLocationLat] = useState('41.1579'); // Porto default
-    const [locationLng, setLocationLng] = useState('-8.6291');
+    const [title, setTitle] = useState(route.params?.event?.title || '');
+    const [description, setDescription] = useState(route.params?.event?.description || '');
+    const [eventType, setEventType] = useState<'routine' | 'special' | 'race'>(route.params?.event?.event_type || 'routine');
+    const [date, setDate] = useState(route.params?.event?.event_datetime ? new Date(route.params.event.event_datetime) : new Date());
+    const [locationName, setLocationName] = useState(route.params?.event?.location_name || '');
+    const [locationLat, setLocationLat] = useState(route.params?.event?.location_lat?.toString() || '41.1579');
+    const [locationLng, setLocationLng] = useState(route.params?.event?.location_lng?.toString() || '-8.6291');
     const [loading, setLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
 
-    const handleCreate = async () => {
+    const isEditing = !!route.params?.event;
+
+    const handleSave = async () => {
         if (!title.trim()) {
             Alert.alert(t('common.error'), t('validation.required'));
             return;
@@ -49,7 +53,7 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation }) => {
         setLoading(true);
 
         try {
-            await createEvent({
+            const eventData = {
                 title,
                 description,
                 event_type: eventType,
@@ -60,12 +64,19 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation }) => {
                 location_name: locationName,
                 check_in_radius_meters: 300,
                 creator_id: profile.id,
-            });
+            };
 
-            Alert.alert(t('common.success'), t('events.createEventSuccess'));
+            if (isEditing && route.params?.event) {
+                await updateEvent(route.params.event.id, eventData);
+                Alert.alert(t('common.success'), 'Evento atualizado com sucesso!');
+            } else {
+                await createEvent(eventData);
+                Alert.alert(t('common.success'), t('events.createEventSuccess'));
+            }
+
             navigation.goBack();
         } catch (error) {
-            console.error('Error creating event:', error);
+            console.error('Error saving event:', error);
             Alert.alert(t('common.error'), t('errors.unknownError'));
         } finally {
             setLoading(false);
@@ -76,7 +87,7 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation }) => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.content}>
-                    <Text style={styles.title}>{t('events.createEvent')}</Text>
+                    <Text style={styles.title}>{isEditing ? t('events.editEvent') : t('events.createEvent')}</Text>
 
                     {/* Event Title */}
                     <Input
@@ -192,10 +203,10 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation }) => {
                         />
                     </View>
 
-                    {/* Create Button */}
+                    {/* Create/Update Button */}
                     <Button
-                        title={t('events.createEvent')}
-                        onPress={handleCreate}
+                        title={isEditing ? t('events.saveChanges') : t('events.createEvent')}
+                        onPress={handleSave}
                         loading={loading}
                         style={styles.createButton}
                     />

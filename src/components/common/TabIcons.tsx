@@ -8,6 +8,21 @@ interface IconProps {
     filled?: boolean;
 }
 
+// Home Icon
+export const HomeIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <Path d="M12 3L2 12H5V20H9V14H15V20H19V12H22L12 3Z" fill={color} />
+        ) : (
+            <Path d="M12 3L2 12H5V20H9V14H15V20H19V12H22L12 3Z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+    </Svg>
+);
+
 // Calendar Icon (Eventos)
 export const CalendarIcon: React.FC<IconProps> = ({
     size = 24,
@@ -249,5 +264,110 @@ export const MapIcon: React.FC<IconProps> = ({
         <Path d="M1 6V22L8 18L16 22L23 18V2L16 6L8 2L1 6Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         <Path d="M8 2V18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         <Path d="M16 6V22" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+// Feed Icon (Social)
+export const FeedIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <>
+                <Rect x="4" y="4" width="16" height="16" rx="4" fill={color} />
+                <Path d="M8 8H16" stroke="#000" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+                <Path d="M8 12H16" stroke="#000" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+                <Path d="M8 16H12" stroke="#000" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+            </>
+        ) : (
+            <>
+                <Rect x="4" y="4" width="16" height="16" rx="4" stroke={color} strokeWidth="1.5" />
+                <Path d="M8 9H16" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+                <Path d="M8 13H16" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+                <Path d="M8 17H12" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+            </>
+        )}
+    </Svg>
+);
+
+// Heart Icon (Like)
+export const HeartIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <Path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                fill={color}
+                stroke={color}
+                strokeWidth="2"
+            />
+        ) : (
+            <Path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        )}
+    </Svg>
+);
+
+// Chat Bubble Icon (Comment)
+export const ChatBubbleIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <Path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                fill={color}
+            />
+        ) : (
+            <Path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        )}
+    </Svg>
+);
+
+// Pin Icon (Check-in)
+export const PinIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill={color} />
+        ) : (
+            <>
+                <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <Circle cx="12" cy="10" r="3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </>
+        )}
+    </Svg>
+);
+
+// Text/Post Icon
+export const TextIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M17 10H3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M21 6H3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M21 14H3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M17 18H3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );

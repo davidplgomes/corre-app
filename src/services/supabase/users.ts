@@ -47,11 +47,16 @@ export const updateProfile = async (
 };
 
 /**
+ * Type for user info returned by QR scan (partial data)
+ */
+export type MerchantUserInfo = Pick<User, 'id' | 'full_name' | 'email' | 'membership_tier' | 'qr_code_secret'>;
+
+/**
  * Get user by QR code secret (for merchant scanning)
  */
 export const getUserByQRSecret = async (
     qrSecret: string
-): Promise<User | null> => {
+): Promise<MerchantUserInfo | null> => {
     try {
         const { data, error } = await supabase
             .from('users')

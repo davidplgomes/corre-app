@@ -5,11 +5,11 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    StatusBar,
-    Switch,
+    StatusBar, Switch, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
@@ -23,7 +23,18 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const [darkMode, setDarkMode] = React.useState(true);
 
     const changeLanguage = (lang: string) => {
+        Haptics.selectionAsync();
         i18n.changeLanguage(lang);
+    };
+
+    const handleToggleNotifications = (value: boolean) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setNotificationsEnabled(value);
+    };
+
+    const handleToggleDarkMode = (value: boolean) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setDarkMode(value);
     };
 
     const languages = [
@@ -46,7 +57,10 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     <View style={styles.header}>
                         <TouchableOpacity
                             style={styles.backButton}
-                            onPress={() => navigation.goBack()}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.goBack();
+                            }}
                         >
                             <Text style={styles.backText}>← Voltar</Text>
                         </TouchableOpacity>
@@ -66,7 +80,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             </View>
                             <Switch
                                 value={notificationsEnabled}
-                                onValueChange={setNotificationsEnabled}
+                                onValueChange={handleToggleNotifications}
                                 trackColor={{ false: theme.colors.gray[600], true: theme.colors.brand.primary }}
                                 thumbColor={theme.colors.white}
                             />
@@ -85,11 +99,31 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             </View>
                             <Switch
                                 value={darkMode}
-                                onValueChange={setDarkMode}
+                                onValueChange={handleToggleDarkMode}
                                 trackColor={{ false: theme.colors.gray[600], true: theme.colors.brand.primary }}
                                 thumbColor={theme.colors.white}
                             />
                         </View>
+                    </View>
+
+                    {/* Integrations Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>INTEGRAÇÕES</Text>
+                        <TouchableOpacity
+                            style={styles.settingCard}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                Alert.alert('Strava', 'Redirecionando para login com Strava...');
+                            }}
+                        >
+                            <View style={styles.settingInfo}>
+                                <Text style={styles.settingLabel}>Strava</Text>
+                                <Text style={styles.settingDescription}>
+                                    Conectar para sincronizar corridas
+                                </Text>
+                            </View>
+                            <Text style={{ color: theme.colors.brand.primary, fontWeight: 'bold' }}>CONECTAR</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Language Section */}
@@ -114,15 +148,33 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     {/* Account Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>CONTA</Text>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('EditProfile');
+                            }}
+                        >
                             <Text style={styles.menuItemLabel}>Editar Perfil</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('ChangePassword');
+                            }}
+                        >
                             <Text style={styles.menuItemLabel}>Alterar Senha</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                Alert.alert('Em breve', 'Configurações de privacidade estarão disponíveis na próxima atualização.');
+                            }}
+                        >
                             <Text style={styles.menuItemLabel}>Privacidade</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
@@ -131,11 +183,23 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     {/* About Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>SOBRE</Text>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                Alert.alert('Termos de Uso', 'Todo o conteúdo do App Corre é protegido por direitos autorais.');
+                            }}
+                        >
                             <Text style={styles.menuItemLabel}>Termos de Uso</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                Alert.alert('Política de Privacidade', 'Nós respeitamos seus dados. Leia nossa política completa no site.');
+                            }}
+                        >
                             <Text style={styles.menuItemLabel}>Política de Privacidade</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>

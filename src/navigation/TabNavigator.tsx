@@ -3,21 +3,27 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { EventList } from '../screens/events/EventList';
 import { EventDetail } from '../screens/events/EventDetail';
 import { CheckIn } from '../screens/events/CheckIn';
 import { CreateEvent } from '../screens/events/CreateEvent';
+import { EventParticipants } from '../screens/events/EventParticipants'; // New Import
+import { FeedScreen } from '../screens/feed/FeedScreen';
 import { Leaderboard } from '../screens/leaderboard/Leaderboard';
 import { LoyaltyCard } from '../screens/loyalty/LoyaltyCard';
 import { MerchantScanner } from '../screens/loyalty/MerchantScanner';
 import { Profile } from '../screens/profile/Profile';
 import { Settings } from '../screens/profile/Settings';
+import { EditProfile } from '../screens/profile/EditProfile';
+import { ChangePassword } from '../screens/profile/ChangePassword'; // New Import
 import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
-import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon } from '../components/common/TabIcons';
+import { HomeScreen } from '../screens/home/HomeScreen'; // Import HomeScreen
+import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons'; // Import HomeIcon
 import { theme } from '../constants/theme';
 
 // Stack param lists
@@ -26,6 +32,12 @@ export type EventsStackParamList = {
     EventDetail: { eventId: string };
     CheckIn: { eventId: string; event: any };
     CreateEvent: undefined;
+    EventParticipants: { eventId: string; eventTitle: string };
+};
+
+export type FeedStackParamList = {
+    FeedMain: undefined;
+    Leaderboard: undefined;
 };
 
 export type LoyaltyStackParamList = {
@@ -41,14 +53,17 @@ export type MarketplaceStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     Settings: undefined;
+    EditProfile: undefined;
+    ChangePassword: undefined;
     RunHistory: undefined;
     Achievements: undefined;
     RunMap: undefined;
 };
 
 export type MainTabParamList = {
+    Home: undefined; // New Tab
     Events: undefined;
-    Leaderboard: undefined;
+    Feed: undefined;
     Marketplace: undefined;
     Loyalty: undefined;
     Profile: undefined;
@@ -56,6 +71,7 @@ export type MainTabParamList = {
 
 // Stacks
 const EventsStack = createStackNavigator<EventsStackParamList>();
+const FeedStack = createStackNavigator<FeedStackParamList>();
 const LoyaltyStack = createStackNavigator<LoyaltyStackParamList>();
 const MarketplaceStack = createStackNavigator<MarketplaceStackParamList>();
 const ProfileStack = createStackNavigator<ProfileStackParamList>();
@@ -68,7 +84,16 @@ const EventsStackNavigator: React.FC = () => (
         <EventsStack.Screen name="EventDetail" component={EventDetail} />
         <EventsStack.Screen name="CheckIn" component={CheckIn} />
         <EventsStack.Screen name="CreateEvent" component={CreateEvent} />
+        <EventsStack.Screen name="EventParticipants" component={EventParticipants} />
     </EventsStack.Navigator>
+);
+
+// Feed Stack Navigator
+const FeedStackNavigator: React.FC = () => (
+    <FeedStack.Navigator screenOptions={{ headerShown: false }}>
+        <FeedStack.Screen name="FeedMain" component={FeedScreen} />
+        <FeedStack.Screen name="Leaderboard" component={Leaderboard} />
+    </FeedStack.Navigator>
 );
 
 // Loyalty Stack Navigator
@@ -92,6 +117,8 @@ const ProfileStackNavigator: React.FC = () => (
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
         <ProfileStack.Screen name="ProfileMain" component={Profile} />
         <ProfileStack.Screen name="Settings" component={Settings} />
+        <ProfileStack.Screen name="EditProfile" component={EditProfile} />
+        <ProfileStack.Screen name="ChangePassword" component={ChangePassword} />
         <ProfileStack.Screen name="RunHistory" component={RunHistory} />
         <ProfileStack.Screen name="Achievements" component={Achievements} />
         <ProfileStack.Screen name="RunMap" component={RunMap} />
@@ -101,16 +128,19 @@ const ProfileStackNavigator: React.FC = () => (
 // Tab Icon Component
 interface TabIconProps {
     label: string;
-    icon: 'calendar' | 'trophy' | 'card' | 'person' | 'bag';
+    icon: 'home' | 'calendar' | 'trophy' | 'card' | 'person' | 'bag' | 'feed';
     focused: boolean;
 }
 
 const TabIcon: React.FC<TabIconProps> = ({ label, icon, focused }) => {
-    const color = focused ? theme.colors.brand.primary : theme.colors.text.tertiary;
-    const iconSize = 22;
+    // Change active color to White for B&W aesthetic
+    const color = focused ? theme.colors.white : theme.colors.text.tertiary;
+    const iconSize = 24; // Increased slightly for better visibility
 
     const renderIcon = () => {
         switch (icon) {
+            case 'home':
+                return <HomeIcon size={iconSize} color={color} filled={focused} />;
             case 'calendar':
                 return <CalendarIcon size={iconSize} color={color} filled={focused} />;
             case 'trophy':
@@ -121,16 +151,20 @@ const TabIcon: React.FC<TabIconProps> = ({ label, icon, focused }) => {
                 return <PersonIcon size={iconSize} color={color} filled={focused} />;
             case 'bag':
                 return <ShoppingBagIcon size={iconSize} color={color} filled={focused} />;
+            case 'feed':
+                return <FeedIcon size={iconSize} color={color} filled={focused} />;
         }
     };
 
     return (
         <View style={styles.tabItem}>
             {renderIcon()}
-            <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
-                {label}
-            </Text>
-            {focused && <View style={styles.activeDot} />}
+            {/* Added container to prevent text shift */}
+            <View style={styles.labelContainer}>
+                <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+                    {label}
+                </Text>
+            </View>
         </View>
     );
 };
@@ -140,18 +174,35 @@ export const TabNavigator: React.FC = () => {
 
     return (
         <Tab.Navigator
+            initialRouteName="Home"
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: [
                     styles.tabBar,
                     {
-                        height: 64 + insets.bottom,
+                        height: 80 + insets.bottom, // Fixed height to accommodate content
                         paddingBottom: insets.bottom,
                     }
                 ],
+                tabBarBackground: () => (
+                    Platform.OS === 'ios' ? (
+                        <BlurView tint="dark" intensity={80} style={StyleSheet.absoluteFill} />
+                    ) : (
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.9)' }]} />
+                    )
+                ),
                 tabBarShowLabel: false,
             }}
         >
+            <Tab.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{
+                    tabBarIcon: ({ focused }) => (
+                        <TabIcon label="Início" icon="home" focused={focused} />
+                    ),
+                }}
+            />
             <Tab.Screen
                 name="Events"
                 component={EventsStackNavigator}
@@ -162,11 +213,11 @@ export const TabNavigator: React.FC = () => {
                 }}
             />
             <Tab.Screen
-                name="Leaderboard"
-                component={Leaderboard}
+                name="Feed"
+                component={FeedStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Ranking" icon="trophy" focused={focused} />
+                        <TabIcon label="Social" icon="feed" focused={focused} />
                     ),
                 }}
             />
@@ -207,40 +258,42 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: theme.colors.background.elevated,
-        borderTopWidth: 1,
-        borderTopColor: theme.colors.border.default,
-        paddingTop: theme.spacing[3],
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: -4,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 10,
+        backgroundColor: 'transparent',
+        borderTopWidth: 0, // Removed border for cleaner look
+        elevation: 0,
     },
     tabItem: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: theme.spacing[1],
-        minWidth: 50,
+        paddingVertical: 12,
+        height: 60, // Fixed height for item
+        width: 60,
+    },
+    labelContainer: {
+        marginTop: 4,
+        height: 14, // Fixed height for label
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     tabLabel: {
         fontSize: 10,
-        fontWeight: theme.typography.weight.medium as any,
+        fontWeight: '500',
         color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
     },
     tabLabelActive: {
-        color: theme.colors.brand.primary,
-        fontWeight: theme.typography.weight.semibold as any,
+        color: theme.colors.white,
+        fontWeight: '600',
     },
     activeDot: {
+        position: 'absolute',
+        top: 6, // Top aligned dot? Or bottom?
+        // Let's place it very subtly at the top or bottom.
+        // Actually, many minimal apps don't have a dot if the icon fills.
+        // Let's remove the Dot layout shift by making it absolute bottom
+        bottom: 0,
         width: 4,
         height: 4,
         borderRadius: 2,
-        backgroundColor: theme.colors.brand.primary,
-        marginTop: theme.spacing[1],
+        backgroundColor: theme.colors.white,
     },
 });
