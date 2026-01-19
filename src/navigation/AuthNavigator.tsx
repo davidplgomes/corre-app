@@ -1,6 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Login, SignUp, ForgotPassword } from '../screens/auth';
+import { theme } from '../constants/theme';
 
 export type AuthStackParamList = {
     Login: undefined;
@@ -16,7 +17,7 @@ export const AuthNavigator: React.FC = () => {
             initialRouteName="Login"
             screenOptions={{
                 headerShown: false,
-                cardStyle: { backgroundColor: '#FFFFFF' },
+                cardStyle: { backgroundColor: theme.colors.background.primary },
             }}
         >
             <Stack.Screen name="Login" component={Login} />

@@ -167,7 +167,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.brand.primary,
+        backgroundColor: theme.colors.background.primary,
     },
     gradientBackground: {
         position: 'absolute',

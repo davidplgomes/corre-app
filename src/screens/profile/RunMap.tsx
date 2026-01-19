@@ -46,14 +46,16 @@ const INITIAL_REGION = {
     longitudeDelta: 0.015,
 };
 
-export const RunMap: React.FC<RunMapProps> = ({ navigation }) => {
-    const [selectedRun, setSelectedRun] = useState({
-        id: '1',
-        date: 'Hoje, 07:30',
-        distance: '5.2 km',
-        time: '28m 45s',
-        pace: "5'31\"/km",
-        calories: '320 kcal'
+export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, route }) => {
+    const { run } = route.params || {};
+
+    const [selectedRun] = useState({
+        id: run?.id || '1',
+        date: run?.date ? new Date(run.date).toLocaleDateString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hoje, 07:30',
+        distance: run?.distance || '5.2 km',
+        time: run?.time || '28m 45s',
+        pace: run?.pace || "5'31\"/km",
+        calories: run?.calories || '320 kcal'
     });
 
     return (

@@ -40,3 +40,23 @@ export const createFeedPost = async (
         throw error;
     }
 };
+
+/**
+ * Get user's run history (feed posts of type 'run')
+ */
+export const getUserRuns = async (userId: string): Promise<FeedPost[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('feed_posts')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('activity_type', 'run')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error getting user runs:', error);
+        throw error;
+    }
+};

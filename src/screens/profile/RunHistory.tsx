@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -6,27 +6,55 @@ import {
     FlatList,
     TouchableOpacity,
     StatusBar,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { getUserRuns } from '../../services/supabase/feed';
+import { useAuth } from '../../contexts/AuthContext';
 
 type RunHistoryProps = {
     navigation: any;
 };
 
-// Mock data for run history
-const MOCK_RUNS = [
-    { id: '1', date: '2026-01-14', distance: '5.2km', time: '28:45', pace: "5'31\"/km", points: 50 },
-    { id: '2', date: '2026-01-12', distance: '10.0km', time: '54:20', pace: "5'26\"/km", points: 100 },
-    { id: '3', date: '2026-01-10', distance: '3.5km', time: '18:55', pace: "5'24\"/km", points: 30 },
-    { id: '4', date: '2026-01-08', distance: '8.0km', time: '44:00', pace: "5'30\"/km", points: 80 },
-    { id: '5', date: '2026-01-05', distance: '12.0km', time: '1:06:00', pace: "5'30\"/km", points: 120 },
-    { id: '6', date: '2026-01-03', distance: '5.0km', time: '27:30', pace: "5'30\"/km", points: 50 },
-    { id: '7', date: '2026-01-01', distance: '21.1km', time: '1:56:00', pace: "5'29\"/km", points: 200 },
-];
-
 export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
+    // State for runs
+    const [runs, setRuns] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+
+    useEffect(() => {
+        const fetchRuns = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+            try {
+                setLoading(true);
+                const data = await getUserRuns(user.id);
+
+                const formattedRuns = data.map(post => ({
+                    id: post.id,
+                    date: post.created_at,
+                    distance: post.meta_data?.distance || '0km',
+                    time: post.meta_data?.time || '00:00',
+                    pace: post.meta_data?.pace || "0'00\"/km",
+                    points: post.meta_data?.points || 0
+                }));
+
+                setRuns(formattedRuns);
+            } catch (error) {
+                console.error('Error fetching runs:', error);
+                setRuns([]); // Ensure runs is empty on error
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRuns();
+    }, [user]);
+
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         const day = date.getDate();
@@ -34,18 +62,21 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
         return { day, month };
     };
 
-    const totalDistance = MOCK_RUNS.reduce((acc, run) => {
-        const km = parseFloat(run.distance.replace('km', ''));
-        return acc + km;
+    const totalDistance = runs.reduce((acc, run) => {
+        const km = parseFloat((run.distance || '0').toString().replace('km', ''));
+        return acc + (isNaN(km) ? 0 : km);
     }, 0);
 
-    const totalRuns = MOCK_RUNS.length;
+    const totalRuns = runs.length;
 
-    const renderItem = ({ item }: { item: typeof MOCK_RUNS[0] }) => {
+    const renderItem = ({ item }: { item: any }) => {
         const { day, month } = formatDate(item.date);
 
         return (
-            <View style={styles.runCard}>
+            <TouchableOpacity
+                style={styles.runCard}
+                onPress={() => navigation.navigate('RunMap', { run: item })}
+            >
                 {/* Date */}
                 <View style={styles.dateSection}>
                     <Text style={styles.dateDay}>{day}</Text>
@@ -77,7 +108,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                 <View style={styles.pointsSection}>
                     <Text style={styles.pointsValue}>+{item.points}</Text>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
@@ -112,13 +143,24 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                 </View>
 
                 {/* List */}
-                <FlatList
-                    data={MOCK_RUNS}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                {loading ? (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={theme.colors.brand.primary} />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={runs}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            <View style={{ padding: 20, alignItems: 'center' }}>
+                                <Text style={{ color: theme.colors.text.secondary }}>Nenhuma corrida registrada.</Text>
+                            </View>
+                        }
+                    />
+                )}
             </SafeAreaView>
         </View>
     );

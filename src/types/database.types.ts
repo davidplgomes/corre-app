@@ -130,6 +130,7 @@ export interface FeedPost {
     pace?: string;
     event_id?: string;
     location?: string;
+    points?: number;
   } | null;
   created_at: string;
   // Joins

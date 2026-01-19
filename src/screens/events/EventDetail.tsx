@@ -4,15 +4,18 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    SafeAreaView,
-    Alert,
     TouchableOpacity,
     StatusBar,
+    ImageBackground,
+    Dimensions,
+    Image,
+    Alert
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Button, Card, LoadingSpinner } from '../../components/common';
-import { TierBadge } from '../../components/profile';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LoadingSpinner } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme } from '../../constants/theme';
 import {
@@ -26,8 +29,11 @@ import {
 import { hasUserCheckedIn } from '../../services/supabase/checkins';
 import { Event, EventParticipant } from '../../types';
 import { formatDateTime, isUpcoming, isWithinCheckInWindow } from '../../utils/date';
-import { EVENT_POINTS } from '../../constants/points';
-import { TierKey } from '../../constants/tiers';
+// import { EVENT_POINTS } from '../../constants/points'; // Unused in new design for now
+// import { TierKey } from '../../constants/tiers'; // Unused in new design for now
+import { ChevronRightIcon, MapPinIcon } from '../../components/common/TabIcons'; // Assuming these exist, otherwise fallback to text
+
+const { width, height } = Dimensions.get('window');
 
 type EventDetailProps = {
     route: { params: { eventId: string } };
@@ -36,6 +42,7 @@ type EventDetailProps = {
 
 export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) => {
     const { t, i18n } = useTranslation();
+    const insets = useSafeAreaInsets();
     const { profile } = useAuth();
     const { eventId } = route.params;
 
@@ -84,7 +91,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
         try {
             await joinEvent(eventId, profile.id);
             setHasJoined(true);
-            // Alert.alert(t('common.success'), t('events.joinSuccess')); // Removed Alert for cleaner UX
             loadEventData();
         } catch (error) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -102,7 +108,6 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
         try {
             await leaveEvent(eventId, profile.id);
             setHasJoined(false);
-            // Alert.alert(t('common.success'), t('events.leaveSuccess')); // Removed Alert for cleaner UX
             loadEventData();
         } catch (error) {
             console.error('Error leaving event:', error);
@@ -117,17 +122,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
         navigation.navigate('CheckIn', { eventId, event });
     };
 
-    const getEventTypeColor = (type: string) => {
-        switch (type) {
-            case 'routine': return theme.colors.success; // Green
-            case 'special': return theme.colors.warning; // Gold
-            case 'race': return theme.colors.brand.primary; // Orange
-            default: return theme.colors.text.disabled;
-        }
-    };
-
     if (loading) {
-        return <LoadingSpinner />;
+        return (
+            <View style={styles.loadingContainer}>
+                <LoadingSpinner />
+            </View>
+        );
     }
 
     if (!event) {
@@ -138,291 +138,472 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
         );
     }
 
-    const eventColor = getEventTypeColor(event.event_type);
-    const canCheckIn = hasJoined && !hasCheckedIn && isWithinCheckInWindow(event.event_datetime);
-    const isEventUpcoming = isUpcoming(event.event_datetime);
+    const eventDate = new Date(event.event_datetime);
+    const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit' }).toUpperCase();
+    const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const city = event.location_name?.split(',')[0] || 'CITY';
+
+    // Mock Bib Number - In real app, this would be assigned dynamically
+    const bibNumber = "001";
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Event Header */}
-                <View style={styles.header}>
-                    <Text style={styles.title}>{event.title}</Text>
-                    <View style={[styles.typeBadge, { backgroundColor: eventColor }]}>
-                        <Text style={styles.typeBadgeText}>
-                            {t(`events.eventTypes.${event.event_type}`)} • {EVENT_POINTS[event.event_type as keyof typeof EVENT_POINTS]} pts
-                        </Text>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+            {/* Background Image */}
+            <ImageBackground
+                source={require('../../../assets/run-bg.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                {/* Dark Overlay Gradient fallback/enhancement */}
+                <View style={styles.overlay} />
+
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <Text style={styles.headerTitle}>OUTSIDE RUNNING <Text style={styles.headerCity}>{city.toUpperCase()}</Text></Text>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                            <Text style={styles.closeIcon}>×</Text>
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Creator Actions */}
-                    {profile?.id === event.creator_id && (
-                        <View style={styles.creatorActions}>
-                            <Button
-                                title={t('common.edit')}
-                                onPress={() => {
-                                    Haptics.selectionAsync();
-                                    navigation.navigate('CreateEvent', { event });
-                                }}
-                                variant="secondary"
-                                size="small"
-                                style={styles.actionButton}
-                            />
-                            <Button
-                                title={t('common.delete')}
-                                onPress={() => {
-                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                                    Alert.alert(
-                                        t('events.deleteEvent'),
-                                        t('events.confirmDelete'),
-                                        [
-                                            { text: t('common.cancel'), style: 'cancel' },
-                                            {
-                                                text: t('common.delete'),
-                                                style: 'destructive',
-                                                onPress: async () => {
-                                                    await deleteEvent(event.id);
-                                                    navigation.goBack();
-                                                }
-                                            }
-                                        ]
-                                    );
-                                }}
-                                variant="ghost"
-                                size="small"
-                                style={[styles.actionButton, styles.deleteButton]}
-                            />
-                        </View>
-                    )}
-                </View>
+                    {/* Stats Bar */}
+                    <View style={styles.statsBar}>
+                        <Text style={styles.statText}>{event.points_value}PTS</Text>
+                        <Text style={styles.statIcon}>⇄</Text>
+                        <Text style={styles.statText}>{city.toUpperCase()}</Text>
+                    </View>
 
-                <View style={styles.content}>
-                    {/* Event Info */}
-                    <Card variant="default" style={styles.infoCard}>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.infoIcon}>📅</Text>
-                            <View>
-                                <Text style={styles.infoLabel}>{t('events.date')}</Text>
-                                <Text style={styles.infoValue}>
-                                    {formatDateTime(event.event_datetime, i18n.language)}
-                                </Text>
-                            </View>
-                        </View>
-                        {event.location_name && (
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoIcon}>📍</Text>
+                    {/* Hero Text */}
+                    <View style={styles.heroContainer}>
+                        <Text style={styles.heroText}>RUN</Text>
+                    </View>
+
+                    {/* Glass Card */}
+                    <BlurView intensity={30} tint="dark" style={styles.glassCard}>
+                        <View style={styles.glassContent}>
+                            {/* Date & Time */}
+                            <View style={styles.dateTimeRow}>
                                 <View>
-                                    <Text style={styles.infoLabel}>{t('events.location')}</Text>
-                                    <Text style={styles.infoValue}>{event.location_name}</Text>
+                                    <Text style={styles.label}>DATE</Text>
+                                    <Text style={styles.valueLarge}>{dateStr}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={styles.label}>TIME</Text>
+                                    <Text style={styles.valueLarge}>{timeStr}</Text>
                                 </View>
                             </View>
-                        )}
-                    </Card>
 
-                    {/* Description */}
-                    {event.description && (
-                        <Card variant="default" style={styles.descriptionCard}>
-                            <Text style={styles.sectionTitle}>{t('events.description')}</Text>
-                            <Text style={styles.description}>{event.description}</Text>
-                        </Card>
-                    )}
-
-                    {/* Participants */}
-                    <Card variant="default" style={styles.participantsCard}>
-                        <Text style={styles.sectionTitle}>
-                            {t('events.participants')} ({participants.length})
-                        </Text>
-                        {participants.length > 0 ? (
-                            participants.slice(0, 5).map((p: any, index) => (
-                                <View key={index} style={styles.participantRow}>
-                                    <Text style={styles.participantName}>{p.users?.full_name || 'User'}</Text>
-                                    {p.users?.membership_tier && (
-                                        <TierBadge tier={p.users.membership_tier as TierKey} size="small" />
-                                    )}
+                            {/* Meeting Point */}
+                            <View style={styles.locationSection}>
+                                <Text style={styles.label}>MEETING POINT</Text>
+                                <View style={styles.locationRow}>
+                                    {/* <MapPinIcon size={20} color="#FFF" /> */}
+                                    <Text style={{ fontSize: 20 }}>📍</Text>
+                                    <View style={{ marginLeft: 8 }}>
+                                        <Text style={styles.locationText}>{event.location_name}</Text>
+                                        <Text style={styles.subLocationText}>Entrance</Text>
+                                    </View>
                                 </View>
-                            ))
-                        ) : (
-                            <Text style={styles.noParticipants}>No participants yet</Text>
-                        )}
-                        {participants.length > 5 && (
-                            <TouchableOpacity onPress={() => navigation.navigate('EventParticipants', { eventId, eventTitle: event.title })}>
-                                <Text style={styles.moreParticipants}>
-                                    +{participants.length - 5} more ({t('events.viewAll')})
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                    </Card>
+                            </View>
 
-                    {/* Actions */}
-                    <View style={styles.actions}>
-                        {hasCheckedIn ? (
-                            <Button
-                                title={t('events.alreadyCheckedIn')}
-                                onPress={() => { }}
-                                disabled
-                                variant="secondary"
-                                fullWidth
-                            />
-                        ) : canCheckIn ? (
-                            <Button
-                                title={t('events.checkIn')}
-                                onPress={handleCheckIn}
-                                loading={actionLoading}
-                                fullWidth
-                            />
-                        ) : hasJoined ? (
-                            <>
-                                {isEventUpcoming && (
-                                    <Button
-                                        title={t('events.leaveEvent')}
-                                        onPress={handleLeave}
-                                        loading={actionLoading}
-                                        variant="ghost"
-                                        fullWidth
-                                    />
-                                )}
-                            </>
-                        ) : isEventUpcoming ? (
-                            <Button
-                                title={t('events.joinEvent')}
-                                onPress={handleJoin}
-                                loading={actionLoading}
-                                fullWidth
-                                size="large"
-                            />
-                        ) : null}
+                            {/* Participants */}
+                            <View style={styles.participantsSection}>
+                                <View style={styles.avatarPile}>
+                                    {/* Mock Avatars for now, replace with participants.map */}
+                                    {participants.slice(0, 3).map((p, i) => (
+                                        <View key={i} style={[styles.avatarCircle, { marginLeft: i > 0 ? -15 : 0, zIndex: 10 - i }]}>
+                                            <Text style={styles.avatarInitials}>{p.users?.full_name?.substring(0, 2).toUpperCase()}</Text>
+                                        </View>
+                                    ))}
+                                    {participants.length > 3 && (
+                                        <View style={[styles.avatarCircle, { marginLeft: -15, backgroundColor: '#FFF', zIndex: 5 }]}>
+                                            <Text style={[styles.avatarInitials, { color: '#000' }]}>+{participants.length - 3}</Text>
+                                        </View>
+                                    )}
+                                    {participants.length === 0 && <Text style={{ color: 'rgba(255,255,255,0.5)' }}>Be the first to join</Text>}
+                                </View>
+                                <View>
+                                    <Text style={styles.joinText}>Join the crew</Text>
+                                    <Text style={styles.subJoinText}>All paces welcome</Text>
+                                </View>
+                            </View>
+
+                            {/* Action Button */}
+                            {!hasCheckedIn && (
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={hasJoined ? (isUpcoming(event.event_datetime) ? handleLeave : handleCheckIn) : handleJoin}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.actionButtonText}>
+                                        {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEvent').toUpperCase()) : 'JOIN RUN'}
+                                    </Text>
+                                    <View style={styles.arrowContainer}>
+                                        <Text style={styles.arrowText}>→</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            {/* Checked In State */}
+                            {hasCheckedIn && (
+                                <View style={[styles.actionButton, { backgroundColor: theme.colors.success }]}>
+                                    <Text style={styles.actionButtonText}>CHECKED IN</Text>
+                                </View>
+                            )}
+
+                        </View>
+                    </BlurView>
+
+                    {/* Bib Preview Card */}
+                    <View style={styles.bibCard}>
+                        <View style={styles.bibHeader}>
+                            <Text style={styles.bibBrand}>C<View style={styles.bibO} />RRE {city.toUpperCase()}</Text>
+                            <View style={styles.bibTag}>
+                                <Text style={styles.bibTagText}>BIB PREVIEW</Text>
+                            </View>
+                        </View>
+                        <Text style={styles.bibNumber}>{bibNumber}</Text>
+                        <View style={styles.bibFooter}>
+                            <Text style={styles.bibFooterText}>OUTSIDE RUNNING</Text>
+                            <Text style={styles.bibFooterDate}>{eventDate.toLocaleDateString()}</Text>
+                        </View>
+
+                        {/* Cutout notches */}
+                        <View style={[styles.notch, { left: -10, top: '50%' as any }]} />
+                        <View style={[styles.notch, { right: -10, top: '50%' as any }]} />
                     </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+
+                </ScrollView>
+            </ImageBackground>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary, // OLED Black
+        backgroundColor: '#000',
     },
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: 120, // Increased to avoid navbar overlap
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     errorContainer: {
         flex: 1,
+        backgroundColor: '#000',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: theme.colors.background.primary,
     },
     errorText: {
-        fontSize: 16,
-        color: theme.colors.error,
+        color: '#FFF',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.3)', // Adjust darkness
+    },
+    scrollView: {
+        flex: 1,
     },
     header: {
-        padding: 24,
-        alignItems: 'center',
-        paddingTop: theme.spacing[8],
-    },
-    title: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: '700',
-        color: theme.colors.text.primary,
-        textAlign: 'center',
-        marginBottom: 12,
-    },
-    typeBadge: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: theme.radius.full,
-    },
-    typeBadgeText: {
-        color: theme.colors.white,
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    content: {
-        padding: 16,
-    },
-    infoCard: {
-        marginBottom: 16,
-        backgroundColor: theme.colors.background.card, // Surface color
-        borderRadius: theme.radius.lg, // 16px
-        borderWidth: 0,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    infoIcon: {
-        fontSize: 24,
-        marginRight: 12,
-    },
-    infoLabel: {
-        fontSize: 12,
-        color: theme.colors.text.tertiary,
-    },
-    infoValue: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.text.primary,
-    },
-    descriptionCard: {
-        marginBottom: 16,
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
-        borderWidth: 0,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.text.primary,
-        marginBottom: 8,
-    },
-    description: {
-        fontSize: 14,
-        color: theme.colors.text.secondary,
-        lineHeight: 22,
-    },
-    participantsCard: {
-        marginBottom: 24,
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
-        borderWidth: 0,
-    },
-    participantRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingHorizontal: 20,
+        height: 60,
+    },
+    headerTitle: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 14,
+        letterSpacing: 1,
+    },
+    headerCity: {
+        fontWeight: '300',
+    },
+    closeButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeIcon: {
+        color: '#FFF',
+        fontSize: 20,
+        marginTop: -2,
+    },
+    statsBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginTop: 20,
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.subtle,
+        borderBottomColor: 'rgba(255,255,255,0.2)',
+        paddingBottom: 10,
+        marginHorizontal: 20,
     },
-    participantName: {
-        fontSize: 14,
-        color: theme.colors.text.primary,
+    statText: {
+        color: '#FFF',
+        fontWeight: '900',
+        fontSize: 16,
     },
-    noParticipants: {
-        fontSize: 14,
-        color: theme.colors.text.tertiary,
+    statIcon: {
+        color: '#FFF',
+        fontSize: 20,
+    },
+    heroContainer: {
+        alignItems: 'center',
+        marginVertical: 40,
+    },
+    heroText: {
+        // fontFamily: 'System', // Use a custom condensed font if available
+        fontSize: 120,
+        fontWeight: '900', // Heavy italic
         fontStyle: 'italic',
+        color: '#FFF',
+        includeFontPadding: false,
+        lineHeight: 120,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 4 },
+        textShadowRadius: 10,
     },
-    moreParticipants: {
-        fontSize: 12,
-        color: theme.colors.brand.primary,
+    glassCard: {
+        marginHorizontal: 20,
+        borderRadius: 30,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    glassContent: {
+        padding: 24,
+        backgroundColor: 'rgba(0,0,0,0.4)', // Additional internal darkening
+    },
+    label: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 10,
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    valueLarge: {
+        color: '#FFF',
+        fontSize: 24,
+        fontWeight: '800',
+    },
+    dateTimeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 30,
+    },
+    locationSection: {
+        marginBottom: 30,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginTop: 8,
     },
-    actions: {
-        gap: 12,
-        marginBottom: 50,
+    locationText: {
+        color: '#FFF',
+        fontSize: 18,
+        fontWeight: '600',
     },
-    creatorActions: {
+    subLocationText: {
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+    },
+    participantsSection: {
         flexDirection: 'row',
-        gap: 12,
-        marginTop: 16,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 30,
+    },
+    avatarPile: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatarCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#333',
+        borderWidth: 2,
+        borderColor: '#000', // Or match blur bg
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    avatarInitials: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    joinText: {
+        color: '#FFF',
+        textAlign: 'right',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    subJoinText: {
+        color: 'rgba(255,255,255,0.6)',
+        textAlign: 'right',
+        fontSize: 12,
     },
     actionButton: {
-        minWidth: 80,
+        backgroundColor: '#FFF',
+        borderRadius: 20, // Pill shape
+        height: 56,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 6,
     },
-    deleteButton: {
-    }
-});
+    actionButtonText: {
+        color: '#000',
+        fontWeight: '900',
+        fontSize: 18,
+        letterSpacing: 1,
+        marginLeft: 24,
+    },
+    arrowContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    arrowText: {
+        color: '#FFF',
+        fontSize: 24,
+        marginTop: -4,
+    },
+    bibCard: {
+        backgroundColor: '#FFF',
+        marginHorizontal: 20,
+        marginTop: 30,
+        marginBottom: 40,
+        borderRadius: 16,
+        padding: 16,
+        // height: 200, // Removed fixed height to let content drive it
+        justifyContent: 'space-between',
+        position: 'relative',
+        transform: [{ rotate: '-2deg' }], // Slight rotation like reference
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 6,
+    },
+    bibHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#000',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 4,
+        marginBottom: 10,
+    },
+    bibBrand: {
+        color: '#FFF',
+        fontWeight: '900',
+        fontSize: 10,
+        letterSpacing: 2, // Tracking widest
+        flexDirection: 'row',
+        alignItems: 'center',
+        display: 'flex',
+    },
+    bibBrandTextContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    bibO: {
+        width: 14,
+        height: 10,
+        borderWidth: 2,
+        borderColor: '#FFF',
+        borderRadius: 20,
+        marginHorizontal: 2,
+        transform: [{ translateY: 1 }]
+    },
+    bibTag: {
+        // backgroundColor: '#FFF',
+        // paddingHorizontal: 6,
+        // paddingVertical: 2,
+        // borderRadius: 2,
+    },
+    bibTagText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    bibNumberContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+    },
+    bibNumber: {
+        fontSize: 140, // Scaled for mobile
+        fontWeight: '900',
+        color: '#000',
+        textAlign: 'center',
+        includeFontPadding: false,
+        lineHeight: 140,
+        letterSpacing: -5,
+        fontVariant: ['tabular-nums'],
+    },
+    bibFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        backgroundColor: '#000',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 4,
+        marginTop: 10,
+    },
+    bibFooterText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+    },
+    bibFooterDate: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 10,
+    },
+    notchLeft: {
+        position: 'absolute',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#000', // Must match the screen background
+        left: -12,
+        top: '50%',
+        marginTop: -12,
+        zIndex: 10,
+    },
+    notchRight: {
+        position: 'absolute',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#000', // Must match the screen background
+        right: -12,
+        top: '50%',
+        marginTop: -12,
+        zIndex: 10,
+    },

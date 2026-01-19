@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { getUserJoinedEvents } from '../../services/supabase/events';
+import { getFeedPosts } from '../../services/supabase/feed';
 import { Skeleton } from '../../components/common';
 import {
     CalendarIcon,
@@ -21,23 +24,73 @@ export const HomeScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Mock data for "Next Run" - In real app, fetch from backend
-    const nextRun = {
-        title: "Quarta do Oakberry",
-        date: "Qua, 19:30",
-        location: "Oakberry, Dublin",
-        distance: "5km",
-        weather: "☁️ 12°C"
-    };
+    const [nextRun, setNextRun] = useState<any>(null);
+    const [latestPost, setLatestPost] = useState<any>(null);
 
-    useEffect(() => {
-        // Simulate fetch
-        setTimeout(() => setLoading(false), 1000);
-    }, []);
+    const loadData = useCallback(async () => {
+        try {
+            setLoading(true);
+
+            // Fetch joined events and find next one
+            if (user) {
+                const joinedEvents = await getUserJoinedEvents(user.id);
+                const now = new Date();
+                const futureEvents = joinedEvents
+                    .filter(e => new Date(e.event_datetime) > now)
+                    .sort((a, b) => new Date(a.event_datetime).getTime() - new Date(b.event_datetime).getTime());
+
+                if (futureEvents.length > 0) {
+                    const event = futureEvents[0];
+                    const date = new Date(event.event_datetime);
+                    // Format: "Qua, 19:30"
+                    const dateStr = date.toLocaleDateString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+                    setNextRun({
+                        title: event.title,
+                        date: dateStr,
+                        location: event.location_name || 'Local a definir',
+                        points: `${event.points_value} pts`,
+                        weather: "☁️ 12°C" // Mock weather for now
+                    });
+                } else {
+                    setNextRun(null);
+                }
+            }
+
+            // Fetch latest feed post
+            const posts = await getFeedPosts(1);
+            if (posts.length > 0) {
+                const post = posts[0];
+                let action = 'fez um post';
+                if (post.activity_type === 'run') action = `correu ${post.meta_data?.distance || 'um treino'}`;
+                if (post.activity_type === 'check_in') action = 'fez check-in em um evento';
+
+                setLatestPost({
+                    user: post.users?.full_name || 'Usuário',
+                    action: action,
+                    initials: post.users?.full_name ? post.users.full_name.substring(0, 2).toUpperCase() : 'US'
+                });
+            } else {
+                setLatestPost(null);
+            }
+
+        } catch (error) {
+            console.error('Error loading home data:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, [user]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);
-        setTimeout(() => setRefreshing(false), 1500);
+        loadData();
     };
 
     const QuickAction = ({ icon: Icon, label, onPress, color }: any) => (
@@ -71,13 +124,13 @@ export const HomeScreen = ({ navigation }: any) => {
                     <Text style={styles.sectionTitle}>Próximo Treino</Text>
                     {loading ? (
                         <Skeleton height={180} borderRadius={theme.radius.xl} />
-                    ) : (
+                    ) : nextRun ? (
                         <TouchableOpacity style={styles.heroCard} onPress={() => navigation.navigate('Events')}>
                             <View style={styles.heroContent}>
                                 <View style={styles.heroBadge}>
-                                    <Text style={styles.heroBadgeText}>HOJE</Text>
+                                    <Text style={styles.heroBadgeText}>PRÓXIMO</Text>
                                 </View>
-                                <Text style={styles.totalDistance}>{nextRun.distance}</Text>
+                                <Text style={styles.totalDistance}>{nextRun.points}</Text>
                                 <Text style={styles.heroTitle}>{nextRun.title}</Text>
                                 <View style={styles.heroDetails}>
                                     <Text style={styles.heroDetailText}>📅 {nextRun.date}</Text>
@@ -88,9 +141,15 @@ export const HomeScreen = ({ navigation }: any) => {
                                 </View>
                             </View>
 
-                            {/* Visual decorative circles */}
                             <View style={styles.decorativeCircle1} />
                             <View style={styles.decorativeCircle2} />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity style={[styles.heroCard, { backgroundColor: theme.colors.background.card, borderWidth: 1, borderColor: theme.colors.border.default }]} onPress={() => navigation.navigate('Events')}>
+                            <View style={[styles.heroContent, { alignItems: 'center', paddingVertical: 20 }]}>
+                                <Text style={[styles.heroTitle, { color: theme.colors.text.tertiary, textAlign: 'center', marginBottom: 10 }]}>Nenhum treino agendado</Text>
+                                <Text style={{ color: theme.colors.brand.primary, fontWeight: 'bold' }}>Ver Eventos Disponíveis</Text>
+                            </View>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -130,17 +189,19 @@ export const HomeScreen = ({ navigation }: any) => {
                             <Skeleton height={80} />
                             <Skeleton height={80} />
                         </View>
-                    ) : (
+                    ) : latestPost ? (
                         <TouchableOpacity style={styles.feedPreviewCard} onPress={() => navigation.navigate('Feed')}>
                             <View style={styles.feedHeader}>
-                                <View style={styles.avatarMini}><Text style={styles.avatarText}>JD</Text></View>
+                                <View style={styles.avatarMini}><Text style={styles.avatarText}>{latestPost.initials}</Text></View>
                                 <View>
-                                    <Text style={styles.feedUser}>John Doe</Text>
-                                    <Text style={styles.feedAction}>acabou de correr 5km!</Text>
+                                    <Text style={styles.feedUser}>{latestPost.user}</Text>
+                                    <Text style={styles.feedAction}>{latestPost.action}</Text>
                                 </View>
                             </View>
                             <ChevronRightIcon color={theme.colors.text.tertiary} size={20} />
                         </TouchableOpacity>
+                    ) : (
+                        <Text style={{ color: theme.colors.text.tertiary, fontStyle: 'italic' }}>Nenhuma atividade recente.</Text>
                     )}
                 </View>
 
