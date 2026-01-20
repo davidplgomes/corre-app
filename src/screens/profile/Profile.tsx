@@ -230,7 +230,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                         </View>
 
                         {/* Version */}
-                        <Text style={styles.version}>CORRE APP v1.0.0</Text>
+                        <Text style={styles.version}>CORRE APP v1.0.2</Text>
                     </ScrollView>
                 </SafeAreaView>
             </ImageBackground>
