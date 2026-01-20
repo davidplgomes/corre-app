@@ -8,8 +8,10 @@ import {
     StatusBar,
     ImageBackground,
     Image,
+    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import { LoadingSpinner } from '../../components/common';
@@ -33,6 +35,7 @@ const MOCK_LEADERBOARD = [
 export const Leaderboard: React.FC = () => {
     const { t } = useTranslation();
     const { profile } = useAuth();
+    const navigation = useNavigation();
 
     const [leaderboard, setLeaderboard] = useState<any[]>(MOCK_LEADERBOARD);
     const [userRank, setUserRank] = useState<{ rank: number | null; points: number; total: number }>({
@@ -157,7 +160,9 @@ export const Leaderboard: React.FC = () => {
                             <Text style={styles.headerLabel}>GLOBAL RANKING</Text>
                             <Text style={styles.headerTitle}>LEADERBOARD</Text>
                         </View>
-                        {/* Maybe a filter button here later */}
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                            <Text style={styles.closeIcon}>×</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Current User Floating Card (Glass) */}
@@ -230,9 +235,25 @@ const styles = StyleSheet.create({
     },
     // Header
     header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: 24,
         paddingTop: 10,
         paddingBottom: 20,
+    },
+    closeButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeIcon: {
+        color: '#FFF',
+        fontSize: 18,
+        marginTop: -2,
     },
     headerLabel: {
         fontSize: 10,

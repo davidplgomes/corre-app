@@ -203,7 +203,7 @@ export const HomeScreen = ({ navigation }: any) => {
                         <QuickAction
                             icon={TrophyIcon}
                             label="Ranking"
-                            onPress={() => navigation.navigate('Leaderboard')}
+                            onPress={() => navigation.navigate('Feed', { screen: 'Leaderboard' })}
                         />
                     </View>
 
