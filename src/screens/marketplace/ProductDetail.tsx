@@ -73,8 +73,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                                 <Text style={styles.title}>{product.title}</Text>
                             </View>
                             <View style={styles.pointsBadge}>
-                                <Text style={styles.pointsValue}>{product.points || product.price}</Text>
-                                <Text style={styles.pointsLabel}>{product.points ? 'pts' : 'EUR'}</Text>
+                                <Text style={styles.pointsValue}>{product.points_price || product.points || product.price}</Text>
+                                <Text style={styles.pointsLabel}>{(product.points_price || product.points) ? 'pts' : 'EUR'}</Text>
                             </View>
                         </View>
 
@@ -112,7 +112,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                             onPress={handleRedeem}
                         >
                             <Text style={styles.redeemText}>
-                                {product.points ? t('coupons.redeem').toUpperCase() : t('common.save').toUpperCase()}
+                                {(product.points_price || product.points) ? t('coupons.redeem').toUpperCase() : t('marketplace.contactSeller').toUpperCase()}
                             </Text>
                         </TouchableOpacity>
                     </BlurView>
