@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input } from '../../components/common';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase/client';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
@@ -20,6 +21,7 @@ type EditProfileProps = {
 };
 
 export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
+    const { t } = useTranslation();
     const { profile, refreshProfile } = useAuth();
     const [fullName, setFullName] = useState(profile?.fullName || '');
     const [neighborhood, setNeighborhood] = useState(profile?.neighborhood || '');
@@ -27,7 +29,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
 
     const handleSave = async () => {
         if (!fullName.trim() || !neighborhood.trim()) {
-            Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+            Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
 
@@ -45,11 +47,11 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
             if (error) throw error;
 
             await refreshProfile();
-            Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+            Alert.alert(t('common.success'), t('success.profileUpdated'));
             navigation.goBack();
         } catch (error) {
             console.error('Error updating profile:', error);
-            Alert.alert('Erro', 'Não foi possível atualizar o perfil.');
+            Alert.alert(t('common.error'), t('errors.updateProfile'));
         } finally {
             setLoading(false);
         }
@@ -65,9 +67,9 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                         style={styles.backButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.backText}>← Voltar</Text>
+                        <Text style={styles.backText}>← {t('common.back')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Editar Perfil</Text>
+                    <Text style={styles.headerTitle}>{t('profile.editProfile')}</Text>
                     {/* Placeholder for right side to balance header */}
                     <View style={{ width: 60 }} />
                 </View>
@@ -75,20 +77,20 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                 <ScrollView style={styles.content}>
                     <View style={styles.formContainer}>
                         <Input
-                            label="Nome Completo"
+                            label={t('auth.fullName')}
                             value={fullName}
                             onChangeText={setFullName}
-                            placeholder="Seu nome completo"
+                            placeholder={t('auth.fullNamePlaceholder')}
                             autoCapitalize="words"
                         />
 
                         <View style={styles.spacer} />
 
                         <Input
-                            label="Bairro"
+                            label={t('auth.neighborhood')}
                             value={neighborhood}
                             onChangeText={setNeighborhood}
-                            placeholder="Seu bairro"
+                            placeholder={t('auth.selectNeighborhood')}
                         />
 
                         {/* Future: Avatar Upload could go here */}
@@ -96,7 +98,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                         <View style={styles.spacerLarge} />
 
                         <Button
-                            title="Salvar Alterações"
+                            title={t('common.save')}
                             onPress={handleSave}
                             loading={loading}
                         />

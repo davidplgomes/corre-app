@@ -16,8 +16,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress, style }) =
     // Format date
     const eventDate = new Date(event.event_datetime);
     const day = eventDate.getDate();
-    const month = eventDate.toLocaleDateString(i18n.language, { month: 'short' }).toUpperCase();
-    const weekday = eventDate.toLocaleDateString(i18n.language, { weekday: 'short' }).toUpperCase();
+    const month = eventDate.toLocaleDateString(i18n.language, { month: 'short' }).toUpperCase().replace('.', '');
+    const weekday = eventDate.toLocaleDateString(i18n.language, { weekday: 'short' }).toUpperCase().replace('.', '');
 
     // Points display
     const points = event.points_value || 150;
@@ -51,7 +51,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress, style }) =
             {/* Points */}
             <View style={styles.pointsSection}>
                 <Text style={styles.pointsValue}>+{points}</Text>
-                <Text style={styles.pointsLabel}>Pontos</Text>
+                <Text style={styles.pointsLabel}>PTS</Text>
             </View>
         </TouchableOpacity>
     );
@@ -68,6 +68,11 @@ const styles = StyleSheet.create({
         marginBottom: theme.spacing[3],
         borderWidth: 1,
         borderColor: theme.colors.border.default,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
 
     // Date Section
@@ -78,19 +83,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: theme.spacing[2],
     },
     dateDay: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 32,
+        fontWeight: '900' as any,
         color: theme.colors.text.primary,
-        lineHeight: theme.typography.size.h2 * 1.1,
+        lineHeight: 32,
+        includeFontPadding: false,
     },
     dateMonth: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 12,
+        fontWeight: '700' as any,
         color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.wide,
+        letterSpacing: 1,
+        textTransform: 'uppercase' as any,
+        marginTop: 4,
     },
     dateWeekday: {
         fontSize: theme.typography.size.micro,
+        fontWeight: '600' as any,
         color: theme.colors.text.tertiary,
         letterSpacing: theme.typography.letterSpacing.wide,
         marginTop: theme.spacing[1],
@@ -110,13 +119,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        fontSize: theme.typography.size.bodyLG,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 18,
+        fontWeight: '800' as any,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing[1],
+        letterSpacing: 0.3,
     },
     location: {
-        fontSize: theme.typography.size.bodySM,
+        fontSize: 13,
+        fontWeight: '600' as any,
         color: theme.colors.text.tertiary,
     },
 
@@ -126,13 +137,17 @@ const styles = StyleSheet.create({
         marginLeft: theme.spacing[3],
     },
     pointsValue: {
-        fontSize: theme.typography.size.bodyLG,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 24,
+        fontWeight: '900' as any,
+        fontStyle: 'italic' as any,
         color: theme.colors.brand.primary,
+        lineHeight: 24,
     },
     pointsLabel: {
-        fontSize: theme.typography.size.micro,
+        fontSize: 10,
+        fontWeight: '700' as any,
         color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.wide,
+        letterSpacing: 1,
+        textTransform: 'uppercase' as any,
     },
 });

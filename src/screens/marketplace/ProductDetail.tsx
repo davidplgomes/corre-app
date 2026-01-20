@@ -7,11 +7,14 @@ import {
     ScrollView,
     TouchableOpacity,
     StatusBar,
-    Alert
+    Alert,
+    ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
 type ProductDetailProps = {
@@ -20,6 +23,7 @@ type ProductDetailProps = {
 };
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation }) => {
+    const { t } = useTranslation();
     const { product } = route.params || {};
 
     if (!product) {
@@ -29,82 +33,96 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
     const handleRedeem = () => {
         // Mock redeem action
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Sucesso', 'Solicitação de resgate enviada!');
+        Alert.alert(t('common.success'), t('success.redeemRequestSent'));
     };
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-            <ScrollView style={styles.scrollView} bounces={false}>
-                {/* Image Section */}
-                <View style={styles.imageContainer}>
-                    <Image source={{ uri: product.image_url || product.image }} style={styles.image} />
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            navigation.goBack();
-                        }}
-                    >
-                        <ChevronRightIcon size={24} color="#000" />
-                    </TouchableOpacity>
-                    <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.8)']}
-                        style={styles.imageOverlay}
-                    />
+                <ScrollView style={styles.scrollView} bounces={false}>
+                    {/* Image Section */}
+                    <View style={styles.imageContainer}>
+                        <Image source={{ uri: product.image_url || product.image }} style={styles.image} />
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                navigation.goBack();
+                            }}
+                        >
+                            <ChevronRightIcon size={24} color="#FFF" />
+                        </TouchableOpacity>
+                        <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.8)']}
+                            style={styles.imageOverlay}
+                        />
+                    </View>
+
+                    {/* Content Glass */}
+                    <BlurView intensity={20} tint="dark" style={styles.contentGlass}>
+                        <View style={styles.header}>
+                            <View>
+                                <Text style={styles.brand}>{product.brand}</Text>
+                                <Text style={styles.title}>{product.title}</Text>
+                            </View>
+                            <View style={styles.pointsBadge}>
+                                <Text style={styles.pointsValue}>{product.points || product.price}</Text>
+                                <Text style={styles.pointsLabel}>{product.points ? 'pts' : 'EUR'}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>{t('marketplace.description').toUpperCase()}</Text>
+                            <Text style={styles.description}>
+                                {product.description || t('marketplace.description') + '...'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>{t('marketplace.details').toUpperCase()}</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>{t('marketplace.category')}</Text>
+                                <Text style={styles.detailValue}>{product.category}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>{t('marketplace.availability')}</Text>
+                                <Text style={styles.detailValue}>{t('marketplace.inStock')}</Text>
+                            </View>
+                        </View>
+
+                        {/* Space for bottom button */}
+                        <View style={{ height: 120 }} />
+                    </BlurView>
+                </ScrollView>
+
+                {/* Bottom Action - Fixed at bottom with proper margin */}
+                <View style={styles.footerContainer}>
+                    <BlurView intensity={30} tint="dark" style={styles.footerGlass}>
+                        <TouchableOpacity
+                            style={styles.redeemButton}
+                            onPress={handleRedeem}
+                        >
+                            <Text style={styles.redeemText}>
+                                {product.points ? t('coupons.redeem').toUpperCase() : t('common.save').toUpperCase()}
+                            </Text>
+                        </TouchableOpacity>
+                    </BlurView>
                 </View>
-
-                {/* Content */}
-                <View style={styles.content}>
-                    <View style={styles.header}>
-                        <View>
-                            <Text style={styles.brand}>{product.brand}</Text>
-                            <Text style={styles.title}>{product.title}</Text>
-                        </View>
-                        <View style={styles.pointsBadge}>
-                            <Text style={styles.pointsValue}>{product.points || product.price}</Text>
-                            <Text style={styles.pointsLabel}>{product.points ? 'pts' : 'EUR'}</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>DESCRIÇÃO</Text>
-                        <Text style={styles.description}>
-                            {product.description || 'Produto exclusivo para membros do Corre App. Troque seus pontos por este item incrível e melhore sua performance. Disponível por tempo limitado.'}
-                        </Text>
-                    </View>
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>DETALHES</Text>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Categoria</Text>
-                            <Text style={styles.detailValue}>{product.category}</Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Disponibilidade</Text>
-                            <Text style={styles.detailValue}>Em estoque</Text>
-                        </View>
-                    </View>
-                </View>
-            </ScrollView>
-
-            {/* Bottom Action */}
-            <SafeAreaView edges={['bottom']} style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.redeemButton}
-                    onPress={handleRedeem}
-                >
-                    <Text style={styles.redeemText}>RESGATAR AGORA</Text>
-                </TouchableOpacity>
-            </SafeAreaView>
+            </ImageBackground>
         </View>
     );
 };
 
-// Simple LinearGradient replacement if not available or to simplify
+// Simple LinearGradient replacement
 const LinearGradient = ({ colors, style }: any) => (
     <View style={[style, { backgroundColor: 'transparent' }]} />
 );
@@ -112,7 +130,16 @@ const LinearGradient = ({ colors, style }: any) => (
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
     },
     scrollView: {
         flex: 1,
@@ -132,11 +159,13 @@ const styles = StyleSheet.create({
         left: 20,
         width: 40,
         height: 40,
-        backgroundColor: '#fff',
-        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)', // Darker background for visibility
+        borderRadius: 12, // Standard radius
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         transform: [{ rotate: '180deg' }]
     },
     imageOverlay: {
@@ -146,12 +175,16 @@ const styles = StyleSheet.create({
         right: 0,
         height: 100,
     },
-    content: {
+    contentGlass: {
         padding: theme.spacing[6],
         marginTop: -40,
-        backgroundColor: theme.colors.background.primary,
-        borderTopLeftRadius: theme.radius.lg, // 16px soft corners
-        borderTopRightRadius: theme.radius.lg,
+        overflow: 'hidden',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: 'rgba(0,0,0,0.6)', // Semi-transparent black
+        minHeight: 500, // Ensure it fills down
     },
     header: {
         flexDirection: 'row',
@@ -167,81 +200,95 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     title: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-        maxWidth: 200,
+        fontSize: 32,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        maxWidth: 220,
     },
     pointsBadge: {
         alignItems: 'center',
-        backgroundColor: theme.colors.background.card,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         paddingHorizontal: theme.spacing[4],
         paddingVertical: theme.spacing[2],
-        borderRadius: theme.radius.lg,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: theme.colors.brand.primary,
     },
     pointsValue: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.black as any,
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
     },
     pointsLabel: {
         fontSize: 10,
-        color: theme.colors.text.secondary,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.7)',
+        textTransform: 'uppercase',
     },
     divider: {
         height: 1,
-        backgroundColor: theme.colors.border.default,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         marginBottom: theme.spacing[6],
     },
     section: {
         marginBottom: theme.spacing[6],
     },
     sectionTitle: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
+        fontSize: 12,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
         marginBottom: theme.spacing[3],
-        letterSpacing: theme.typography.letterSpacing.wide,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
     },
     description: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.text.secondary,
-        lineHeight: 24,
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.8)',
+        lineHeight: 26,
     },
     detailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingVertical: theme.spacing[3],
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.default,
+        borderBottomColor: 'rgba(255,255,255,0.1)',
     },
     detailLabel: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.text.secondary,
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
     },
     detailValue: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.text.primary,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 14,
+        color: '#FFF',
+        fontWeight: '700',
     },
-    footer: {
-        padding: theme.spacing[6],
+    footerContainer: {
+        position: 'absolute',
+        bottom: 80, // Moved up to avoid navbar overlap
+        left: 0,
+        right: 0,
+    },
+    footerGlass: {
+        padding: 20,
+        paddingBottom: 30, // Extra padding for safe area
         borderTopWidth: 1,
-        borderTopColor: theme.colors.border.default,
-        backgroundColor: theme.colors.background.elevated,
+        borderTopColor: 'rgba(255,255,255,0.1)',
     },
     redeemButton: {
-        backgroundColor: theme.colors.brand.primary,
-        paddingVertical: theme.spacing[4],
-        borderRadius: theme.radius.full,
+        backgroundColor: theme.colors.brand.primary, // Solid orange
+        paddingVertical: 16,
+        borderRadius: 12,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.brand.primary,
     },
     redeemText: {
-        fontSize: theme.typography.size.bodyMD,
-        fontWeight: theme.typography.weight.bold as any,
-        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFF', // White text
         letterSpacing: 1,
+        textTransform: 'uppercase',
     },
 });

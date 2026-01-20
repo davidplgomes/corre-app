@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     Alert,
+    TouchableOpacity,
+    StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, LoadingSpinner } from '../../components/common';
+import { LoadingSpinner } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { getUserByQRSecret, MerchantUserInfo } from '../../services/supabase/users';
 import { parseQRData } from '../../services/qrcode';
 import { TIERS, TierKey } from '../../constants/tiers';
+import { theme } from '../../constants/theme';
+import { ChevronRightIcon } from '../../components/common/TabIcons';
 
 type MerchantScannerProps = {
     navigation: any;
@@ -68,24 +73,34 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
 
     if (!permission.granted) {
         return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.permissionContainer}>
-                    <Text style={styles.permissionTitle}>Camera Permission Required</Text>
-                    <Text style={styles.permissionText}>
-                        {t('errors.cameraPermissionDenied')}
-                    </Text>
-                    <Button
-                        title="Grant Permission"
-                        onPress={requestPermission}
-                        style={styles.permissionButton}
-                    />
-                    <Button
-                        title={t('common.back')}
-                        onPress={() => navigation.goBack()}
-                        variant="outline"
-                    />
-                </View>
-            </SafeAreaView>
+            <View style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <View style={styles.backIcon}>
+                                <ChevronRightIcon size={20} color="#FFF" />
+                            </View>
+                        </TouchableOpacity>
+                        <View>
+                            <Text style={styles.headerLabel}>SCANNER</Text>
+                            <Text style={styles.headerTitle}>QR CODE</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.permissionContainer}>
+                        <Text style={styles.permissionIcon}>📷</Text>
+                        <Text style={styles.permissionTitle}>Permissão Necessária</Text>
+                        <Text style={styles.permissionText}>
+                            {t('errors.cameraPermissionDenied')}
+                        </Text>
+                        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+                            <Text style={styles.permissionButtonText}>PERMITIR CÂMERA</Text>
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+            </View>
         );
     }
 
@@ -94,51 +109,87 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
         const tierInfo = TIERS[scannedUser.membership_tier as TierKey] || TIERS.free;
 
         return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.resultContainer}>
-                    <Text style={styles.successIcon}>✅</Text>
-                    <Text style={styles.successTitle}>{t('loyalty.scanSuccess')}</Text>
-
-                    <Card variant="elevated" style={styles.userCard}>
-                        <Text style={styles.userName}>{scannedUser.full_name}</Text>
-                        <TierBadge tier={scannedUser.membership_tier as TierKey} size="large" />
-
-                        <View style={styles.discountContainer}>
-                            <Text style={styles.discountLabel}>{t('loyalty.discount')}</Text>
-                            <Text style={[styles.discountValue, { color: tierInfo.color }]}>
-                                {tierInfo.discount}% OFF
-                            </Text>
+            <View style={styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <View style={styles.backIcon}>
+                                <ChevronRightIcon size={20} color="#FFF" />
+                            </View>
+                        </TouchableOpacity>
+                        <View>
+                            <Text style={styles.headerLabel}>SCANNER</Text>
+                            <Text style={styles.headerTitle}>QR CODE</Text>
                         </View>
-                    </Card>
-
-                    <View style={styles.actions}>
-                        <Button
-                            title={t('loyalty.scanAnother')}
-                            onPress={handleScanAnother}
-                        />
-                        <Button
-                            title={t('common.back')}
-                            onPress={() => navigation.goBack()}
-                            variant="outline"
-                            style={styles.backButton}
-                        />
                     </View>
-                </View>
-            </SafeAreaView>
+
+                    <View style={styles.resultContainer}>
+                        <View style={styles.successBadge}>
+                            <Text style={styles.successIcon}>✓</Text>
+                        </View>
+                        <Text style={styles.successTitle}>{t('loyalty.scanSuccess')}</Text>
+
+                        <BlurView intensity={20} tint="dark" style={styles.userCard}>
+                            <View style={styles.userCardContent}>
+                                <Text style={styles.userName}>{scannedUser.full_name}</Text>
+                                <TierBadge tier={scannedUser.membership_tier as TierKey} size="large" />
+
+                                <View style={styles.discountContainer}>
+                                    <Text style={styles.discountLabel}>DESCONTO APLICÁVEL</Text>
+                                    <Text style={[styles.discountValue, { color: tierInfo.color }]}>
+                                        {tierInfo.discount}% OFF
+                                    </Text>
+                                </View>
+                            </View>
+                        </BlurView>
+
+                        <View style={styles.actions}>
+                            <TouchableOpacity style={styles.primaryButton} onPress={handleScanAnother}>
+                                <Text style={styles.primaryButtonText}>{t('loyalty.scanAnother')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
+                                <Text style={styles.secondaryButtonText}>{t('common.back')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.scannerContainer}>
-                <CameraView
-                    style={styles.camera}
-                    barcodeScannerSettings={{
-                        barcodeTypes: ['qr'],
-                    }}
-                    onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                >
-                    <View style={styles.overlay}>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+            {/* Camera View */}
+            <CameraView
+                style={styles.camera}
+                barcodeScannerSettings={{
+                    barcodeTypes: ['qr'],
+                }}
+                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            >
+                {/* Overlay */}
+                <View style={styles.overlay}>
+                    {/* Header */}
+                    <SafeAreaView edges={['top']}>
+                        <View style={styles.cameraHeader}>
+                            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                                <View style={styles.backIcon}>
+                                    <ChevronRightIcon size={20} color="#FFF" />
+                                </View>
+                            </TouchableOpacity>
+                            <View>
+                                <Text style={styles.headerLabel}>SCANNER</Text>
+                                <Text style={styles.headerTitle}>QR CODE</Text>
+                            </View>
+                        </View>
+                    </SafeAreaView>
+
+                    {/* Scan Frame */}
+                    <View style={styles.scanAreaContainer}>
                         <View style={styles.scanFrame}>
                             <View style={[styles.corner, styles.topLeft]} />
                             <View style={[styles.corner, styles.topRight]} />
@@ -147,67 +198,120 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
                         </View>
                         <Text style={styles.scanText}>{t('loyalty.scanQR')}</Text>
                     </View>
-                </CameraView>
 
-                {loading && (
-                    <View style={styles.loadingOverlay}>
-                        <LoadingSpinner text="Processing..." />
-                    </View>
-                )}
-            </View>
+                    {/* Bottom Spacer for safe area */}
+                    <SafeAreaView edges={['bottom']}>
+                        <View style={{ height: 100 }} />
+                    </SafeAreaView>
+                </View>
+            </CameraView>
 
-            <View style={styles.bottomActions}>
-                <Button
-                    title={t('common.back')}
-                    onPress={() => navigation.goBack()}
-                    variant="outline"
-                />
-            </View>
-        </SafeAreaView>
+            {loading && (
+                <View style={styles.loadingOverlay}>
+                    <LoadingSpinner text="Processando..." />
+                </View>
+            )}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
+        backgroundColor: '#000',
     },
+    safeArea: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 20,
+    },
+    cameraHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    backButton: {
+        marginRight: 16,
+    },
+    backIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        transform: [{ rotate: '180deg' }],
+    },
+    headerLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+    },
+    // Permission Screen
     permissionContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 24,
-        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 40,
+    },
+    permissionIcon: {
+        fontSize: 64,
+        marginBottom: 24,
     },
     permissionTitle: {
         fontSize: 24,
-        fontWeight: '700',
-        color: '#374151',
+        fontWeight: '900',
+        color: '#FFF',
         marginBottom: 12,
         textAlign: 'center',
     },
     permissionText: {
-        fontSize: 16,
-        color: '#6B7280',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: 32,
+        lineHeight: 22,
     },
     permissionButton: {
-        marginBottom: 12,
-        width: '100%',
+        backgroundColor: theme.colors.brand.primary,
+        paddingHorizontal: 32,
+        paddingVertical: 16,
+        borderRadius: 12,
     },
-    scannerContainer: {
-        flex: 1,
-        position: 'relative',
+    permissionButtonText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFF',
+        letterSpacing: 1,
     },
+    // Camera
     camera: {
         flex: 1,
     },
     overlay: {
         flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    scanAreaContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     scanFrame: {
         width: 250,
@@ -216,77 +320,116 @@ const styles = StyleSheet.create({
     },
     corner: {
         position: 'absolute',
-        width: 30,
-        height: 30,
-        borderColor: '#7C3AED',
+        width: 40,
+        height: 40,
+        borderColor: theme.colors.brand.primary,
         borderWidth: 4,
     },
-    topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
-    topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
-    bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
-    bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
+    topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 12 },
+    topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 12 },
+    bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 12 },
+    bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 12 },
     scanText: {
-        color: '#FFFFFF',
+        color: '#FFF',
         fontSize: 16,
-        marginTop: 24,
+        marginTop: 32,
         fontWeight: '600',
+        textAlign: 'center',
     },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    bottomActions: {
-        padding: 16,
-        backgroundColor: '#FFFFFF',
-    },
+    // Result Screen
     resultContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 24,
-        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 24,
+    },
+    successBadge: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: theme.colors.success,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
     },
     successIcon: {
-        fontSize: 64,
-        marginBottom: 16,
+        fontSize: 40,
+        color: '#FFF',
     },
     successTitle: {
         fontSize: 24,
-        fontWeight: '700',
-        color: '#374151',
-        marginBottom: 24,
+        fontWeight: '900',
+        color: '#FFF',
+        marginBottom: 32,
     },
     userCard: {
         width: '100%',
-        alignItems: 'center',
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        marginBottom: 32,
+    },
+    userCardContent: {
         padding: 24,
-        marginBottom: 24,
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     userName: {
         fontSize: 24,
-        fontWeight: '700',
-        color: '#374151',
+        fontWeight: '800',
+        color: '#FFF',
         marginBottom: 16,
     },
     discountContainer: {
-        marginTop: 20,
+        marginTop: 24,
         alignItems: 'center',
     },
     discountLabel: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginBottom: 4,
+        fontSize: 10,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+        marginBottom: 8,
     },
     discountValue: {
-        fontSize: 32,
-        fontWeight: '700',
+        fontSize: 40,
+        fontWeight: '900',
     },
     actions: {
         width: '100%',
+        gap: 12,
     },
-    backButton: {
-        marginTop: 12,
+    primaryButton: {
+        backgroundColor: theme.colors.brand.primary,
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    primaryButtonText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFF',
+        letterSpacing: 1,
+    },
+    secondaryButton: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    secondaryButtonText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFF',
+        letterSpacing: 1,
     },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -62,23 +62,10 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member }) => {
         };
     });
 
+    // Enforce B&W / Monochrome Aesthetic
     const getGradientColors = (tier: string): readonly [string, string, ...string[]] => {
-        // We can map these to the theme.tierColors if we want strict adherence,
-        // but for "Future Premium" we might want slightly richer gradients here.
-        switch (tier.toLowerCase()) {
-            case 'starter':
-            case 'free':
-                return ['#52525B', '#27272A']; // Zinc 600 -> Zinc 800
-            case 'básico':
-            case 'basico':
-                return ['#22C55E', '#14532D']; // Green 500 -> Green 900
-            case 'baixa pace':
-                return ['#F97316', '#7C2D12']; // Orange 500 -> Orange 900
-            case 'parceiro':
-                return ['#EAB308', '#713F12']; // Yellow 500 -> Yellow 900
-            default:
-                return ['#3F3F46', '#18181B'] as const; // Default Dark
-        }
+        // All tiers use a sleek dark/black gradient now
+        return ['#27272A', '#000000'] as const;
     };
 
     return (
@@ -99,20 +86,26 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member }) => {
 
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
-                                <View>
-                                    <Text style={styles.brandText}>CORRE</Text>
-                                    <Text style={styles.clubText}>RUNNING CLUB</Text>
+                                <View style={styles.brandContainer}>
+                                    <Image
+                                        source={require('../../../assets/logo_transparent.png')}
+                                        style={styles.cardLogo}
+                                        resizeMode="contain"
+                                    />
+                                    <View>
+                                        <Text style={styles.brandText}>CORRE</Text>
+                                        <Text style={styles.clubText}>RUNNING CLUB</Text>
+                                    </View>
                                 </View>
+                                {/* Removed Tier Badge for cleaner look, or keep it if essential? Keeping for now but styled B&W */}
                                 <View style={styles.tierBadge}>
                                     <Text style={styles.tierText}>{member.tier.toUpperCase()}</Text>
                                 </View>
                             </View>
 
-                            <View style={styles.chipContainer}>
-                                <View style={styles.chip} />
-                                <View style={styles.nfcIcon}>
-                                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 20 }}>•)))</Text>
-                                </View>
+                            {/* Center Logo/Icon or Empty Space for Cleanliness */}
+                            <View style={styles.centerDecor}>
+                                {/* Optional: Put a large transparent arrows logo here if desired */}
                             </View>
 
                             <View style={styles.cardFooter}>
@@ -187,11 +180,11 @@ const styles = StyleSheet.create({
         padding: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.15)', // Crisp border
     },
     glassEffect: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)', // Very subtle tint
         zIndex: 0,
     },
     cardContent: {
@@ -210,49 +203,46 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
     },
-    brandText: {
-        fontSize: 24,
-        fontWeight: '900',
-        color: '#FFFFFF',
-        letterSpacing: 1,
-        fontStyle: 'italic',
-    },
-    clubText: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: 'rgba(255,255,255,0.7)',
-        letterSpacing: 2,
-    },
-    tierBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
-    },
-    tierText: {
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 1,
-    },
-    chipContainer: {
+    brandContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
     },
-    chip: {
-        width: 45,
-        height: 30,
-        backgroundColor: '#e0c080', // Gold-ish chip color
-        borderRadius: 6,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#b09050',
+    cardLogo: {
+        width: 80, // Increased significantly to 80
+        height: 80,
     },
-    nfcIcon: {
-        // Placeholder for NFC signal icon
+    brandText: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        letterSpacing: 1,
+        fontStyle: 'italic',
+        lineHeight: 20,
+    },
+    clubText: {
+        fontSize: 8,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 3,
+    },
+    tierBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    tierText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    centerDecor: {
+        flex: 1,
+        // Could be used for pattern overlay
     },
     cardFooter: {
         flexDirection: 'row',
@@ -261,20 +251,20 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 9,
-        color: 'rgba(255,255,255,0.6)',
+        color: 'rgba(255,255,255,0.5)',
         marginBottom: 4,
         fontWeight: '600',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
     value: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: '#FFFFFF',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
     valueMono: {
-        fontSize: 16,
-        fontFamily: 'Courier', // Monospace feel if available, or just generic
+        fontSize: 14,
+        fontFamily: 'Courier', // Monospace feel if available
         fontWeight: '700',
         color: '#FFFFFF',
         letterSpacing: 1,
@@ -284,17 +274,19 @@ const styles = StyleSheet.create({
         padding: 12,
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     scanText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '700',
-        marginBottom: 16,
-        letterSpacing: 1,
+        marginBottom: 20,
+        letterSpacing: 2,
     },
     helperText: {
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: 12,
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     }
 });

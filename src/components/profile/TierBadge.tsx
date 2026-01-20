@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { TIERS, TierKey } from '../../constants/tiers';
+import { theme } from '../../constants/theme';
 
 interface TierBadgeProps {
     tier: TierKey;
@@ -20,14 +21,14 @@ export const TierBadge: React.FC<TierBadgeProps> = ({
             style={[
                 styles.container,
                 styles[size],
-                { backgroundColor: tierInfo.color + '20', borderColor: tierInfo.color },
+                { backgroundColor: theme.colors.brand.primary, borderColor: theme.colors.brand.primary },
                 style,
             ]}
         >
-            <Text style={[styles.text, styles[`${size}Text`], { color: tierInfo.color }]}>
+            <Text style={[styles.text, styles[`${size}Text`], { color: '#FFF' }]}>
                 {tierInfo.name}
             </Text>
-            <Text style={[styles.discount, { color: tierInfo.color }]}>
+            <Text style={[styles.discount, { color: '#FFF' }]}>
                 {tierInfo.discount}% OFF
             </Text>
         </View>
@@ -58,20 +59,23 @@ const styles = StyleSheet.create({
     },
     // Text sizes
     text: {
-        fontWeight: '700',
+        fontWeight: '900' as any,
+        letterSpacing: 1,
+        textTransform: 'uppercase' as any,
     },
     smallText: {
-        fontSize: 12,
+        fontSize: 10,
     },
     mediumText: {
-        fontSize: 14,
+        fontSize: 12,
     },
     largeText: {
-        fontSize: 18,
+        fontSize: 16,
     },
     discount: {
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 4,
+        fontSize: 10,
+        fontWeight: '700',
+        marginTop: 2,
+        letterSpacing: 0.5,
     },
 });

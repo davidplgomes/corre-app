@@ -28,10 +28,10 @@ import {
 } from '../../services/supabase/events';
 import { hasUserCheckedIn } from '../../services/supabase/checkins';
 import { Event, EventParticipant } from '../../types';
-import { formatDateTime, isUpcoming, isWithinCheckInWindow } from '../../utils/date';
+import { formatDateTime, formatEventDate, isUpcoming, isWithinCheckInWindow } from '../../utils/date';
 // import { EVENT_POINTS } from '../../constants/points'; // Unused in new design for now
 // import { TierKey } from '../../constants/tiers'; // Unused in new design for now
-import { ChevronRightIcon, MapPinIcon } from '../../components/common/TabIcons'; // Assuming these exist, otherwise fallback to text
+import { ChevronRightIcon, MapIcon } from '../../components/common/TabIcons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -139,8 +139,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     }
 
     const eventDate = new Date(event.event_datetime);
-    const dateStr = eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit' }).toUpperCase();
-    const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const dateStr = formatEventDate(eventDate, i18n.language);
+    const timeStr = eventDate.toLocaleTimeString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' });
     const city = event.location_name?.split(',')[0] || 'CITY';
 
     // Mock Bib Number - In real app, this would be assigned dynamically
@@ -161,12 +161,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}
+                    contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 80 }}
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.headerTitle}>OUTSIDE RUNNING <Text style={styles.headerCity}>{city.toUpperCase()}</Text></Text>
+                        <Text style={styles.headerTitle}>{t('events.streetRun').toUpperCase()} <Text style={styles.headerCity}>{city.toUpperCase()}</Text></Text>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
                             <Text style={styles.closeIcon}>×</Text>
                         </TouchableOpacity>
@@ -174,7 +174,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 
                     {/* Stats Bar */}
                     <View style={styles.statsBar}>
-                        <Text style={styles.statText}>{event.points_value}PTS</Text>
+                        <Text style={styles.pointsText}>{event.points_value}PTS</Text>
                         <Text style={styles.statIcon}>⇄</Text>
                         <Text style={styles.statText}>{city.toUpperCase()}</Text>
                     </View>
@@ -190,24 +190,24 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                             {/* Date & Time */}
                             <View style={styles.dateTimeRow}>
                                 <View>
-                                    <Text style={styles.label}>DATE</Text>
+                                    <Text style={styles.label}>DATA</Text>
                                     <Text style={styles.valueLarge}>{dateStr}</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={styles.label}>TIME</Text>
+                                    <Text style={styles.label}>HORÁRIO</Text>
                                     <Text style={styles.valueLarge}>{timeStr}</Text>
                                 </View>
                             </View>
 
                             {/* Meeting Point */}
                             <View style={styles.locationSection}>
-                                <Text style={styles.label}>MEETING POINT</Text>
+                                <Text style={styles.label}>{t('events.meetingPoint').toUpperCase()}</Text>
                                 <View style={styles.locationRow}>
                                     {/* <MapPinIcon size={20} color="#FFF" /> */}
                                     <Text style={{ fontSize: 20 }}>📍</Text>
                                     <View style={{ marginLeft: 8 }}>
                                         <Text style={styles.locationText}>{event.location_name}</Text>
-                                        <Text style={styles.subLocationText}>Entrance</Text>
+                                        <Text style={styles.subLocationText}>{t('events.entrance')}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -226,11 +226,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                             <Text style={[styles.avatarInitials, { color: '#000' }]}>+{participants.length - 3}</Text>
                                         </View>
                                     )}
-                                    {participants.length === 0 && <Text style={{ color: 'rgba(255,255,255,0.5)' }}>Be the first to join</Text>}
+                                    {participants.length === 0 && <Text style={{ color: 'rgba(255,255,255,0.5)' }}>{t('events.beTheFirst')}</Text>}
                                 </View>
                                 <View>
-                                    <Text style={styles.joinText}>Join the crew</Text>
-                                    <Text style={styles.subJoinText}>All paces welcome</Text>
+                                    <Text style={styles.joinText}>{t('events.joinTheCrew')}</Text>
+                                    <Text style={styles.subJoinText}>{t('events.allPaces')}</Text>
                                 </View>
                             </View>
 
@@ -242,7 +242,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                     activeOpacity={0.8}
                                 >
                                     <Text style={styles.actionButtonText}>
-                                        {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEvent').toUpperCase()) : 'JOIN RUN'}
+                                        {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEventButton').toUpperCase()) : t('events.participate').toUpperCase()}
                                     </Text>
                                     <View style={styles.arrowContainer}>
                                         <Text style={styles.arrowText}>→</Text>
@@ -252,7 +252,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                             {/* Checked In State */}
                             {hasCheckedIn && (
                                 <View style={[styles.actionButton, { backgroundColor: theme.colors.success }]}>
-                                    <Text style={styles.actionButtonText}>CHECKED IN</Text>
+                                    <Text style={styles.actionButtonText}>PRESENÇA CONFIRMADA</Text>
                                 </View>
                             )}
 
@@ -269,13 +269,13 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                         </View>
                         <Text style={styles.bibNumber}>{bibNumber}</Text>
                         <View style={styles.bibFooter}>
-                            <Text style={styles.bibFooterText}>OUTSIDE RUNNING</Text>
+                            <Text style={styles.bibFooterText}>{t('events.streetRun').toUpperCase()}</Text>
                             <Text style={styles.bibFooterDate}>{eventDate.toLocaleDateString()}</Text>
                         </View>
 
                         {/* Cutout notches */}
-                        <View style={[styles.notch, { left: -10, top: '50%' as any }]} />
-                        <View style={[styles.notch, { right: -10, top: '50%' as any }]} />
+                        <View style={styles.notchLeft} />
+                        <View style={styles.notchRight} />
                     </View>
 
                 </ScrollView>
@@ -333,16 +333,16 @@ const styles = StyleSheet.create({
         fontWeight: '300',
     },
     closeButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     closeIcon: {
         color: '#FFF',
-        fontSize: 20,
+        fontSize: 18,
         marginTop: -2,
     },
     statsBar: {
@@ -357,6 +357,11 @@ const styles = StyleSheet.create({
     },
     statText: {
         color: '#FFF',
+        fontWeight: '900',
+        fontSize: 16,
+    },
+    pointsText: {
+        color: theme.colors.brand.primary,
         fontWeight: '900',
         fontSize: 16,
     },
@@ -398,7 +403,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     valueLarge: {
-        color: '#FFF',
+        color: theme.colors.brand.primary,
         fontSize: 24,
         fontWeight: '800',
     },
@@ -493,11 +498,10 @@ const styles = StyleSheet.create({
     bibCard: {
         backgroundColor: '#FFF',
         marginHorizontal: 20,
-        marginTop: 30,
-        marginBottom: 40,
+        marginTop: 20,
+        marginBottom: 60,
         borderRadius: 16,
-        padding: 16,
-        // height: 200, // Removed fixed height to let content drive it
+        padding: 12,
         justifyContent: 'space-between',
         position: 'relative',
         transform: [{ rotate: '-2deg' }], // Slight rotation like reference
@@ -512,10 +516,10 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: '#000',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         borderRadius: 4,
-        marginBottom: 10,
+        marginBottom: 8,
     },
     bibBrand: {
         color: '#FFF',
@@ -557,23 +561,23 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     bibNumber: {
-        fontSize: 140, // Scaled for mobile
+        fontSize: 100,
         fontWeight: '900',
         color: '#000',
         textAlign: 'center',
         includeFontPadding: false,
-        lineHeight: 140,
-        letterSpacing: -5,
+        lineHeight: 100,
+        letterSpacing: -4,
         fontVariant: ['tabular-nums'],
     },
     bibFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         backgroundColor: '#000',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         borderRadius: 4,
-        marginTop: 10,
+        marginTop: 8,
     },
     bibFooterText: {
         color: '#FFF',
@@ -587,23 +591,26 @@ const styles = StyleSheet.create({
     },
     notchLeft: {
         position: 'absolute',
-        width: 24,
+        width: 12,
         height: 24,
-        borderRadius: 12,
         backgroundColor: '#000', // Must match the screen background
-        left: -12,
+        left: 0,
         top: '50%',
         marginTop: -12,
+        borderTopRightRadius: 12,
+        borderBottomRightRadius: 12,
         zIndex: 10,
     },
     notchRight: {
         position: 'absolute',
-        width: 24,
+        width: 12,
         height: 24,
-        borderRadius: 12,
         backgroundColor: '#000', // Must match the screen background
-        right: -12,
+        right: 0,
         top: '50%',
         marginTop: -12,
+        borderTopLeftRadius: 12,
+        borderBottomLeftRadius: 12,
         zIndex: 10,
     },
+});

@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
 import { Button, Input } from '../../components/common';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase/client';
 
 type ChangePasswordProps = {
@@ -18,23 +19,24 @@ type ChangePasswordProps = {
 };
 
 export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) => {
+    const { t } = useTranslation();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
         if (!password || !confirmPassword) {
-            Alert.alert('Erro', 'Preencha todos os campos.');
+            Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Erro', 'As senhas não coincidem.');
+            Alert.alert(t('common.error'), t('errors.passwordsDoNotMatch'));
             return;
         }
 
         if (password.length < 6) {
-            Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+            Alert.alert(t('common.error'), t('errors.passwordTooShort'));
             return;
         }
 
@@ -46,11 +48,11 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
 
             if (error) throw error;
 
-            Alert.alert('Sucesso', 'Senha atualizada com sucesso!');
+            Alert.alert(t('common.success'), t('success.passwordUpdated'));
             navigation.goBack();
         } catch (error: any) {
             console.error('Error updating password:', error);
-            Alert.alert('Erro', error.message || 'Não foi possível atualizar a senha.');
+            Alert.alert(t('common.error'), error.message || t('errors.updatePassword'));
         } finally {
             setLoading(false);
         }
@@ -66,9 +68,9 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                         style={styles.backButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.backText}>← Voltar</Text>
+                        <Text style={styles.backText}>← {t('common.back')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Alterar Senha</Text>
+                    <Text style={styles.headerTitle}>{t('profile.changePassword')}</Text>
                     <View style={{ width: 60 }} />
                 </View>
 
@@ -79,7 +81,7 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                         </Text>
 
                         <Input
-                            label="Nova Senha"
+                            label={t('auth.newPassword')}
                             value={password}
                             onChangeText={setPassword}
                             placeholder="Mínimo 6 caracteres"
@@ -89,7 +91,7 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                         <View style={styles.spacer} />
 
                         <Input
-                            label="Confirmar Senha"
+                            label={t('auth.confirmPassword')}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             placeholder="Repita a nova senha"
@@ -99,7 +101,7 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                         <View style={styles.spacerLarge} />
 
                         <Button
-                            title="Atualizar Senha"
+                            title={t('common.save')}
                             onPress={handleSave}
                             loading={loading}
                         />

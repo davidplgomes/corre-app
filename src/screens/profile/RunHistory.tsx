@@ -9,8 +9,10 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { useTranslation } from 'react-i18next';
+import { ChevronRightIcon, ClockIcon } from '../../components/common/TabIcons';
 import { getUserRuns } from '../../services/supabase/feed';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -19,10 +21,10 @@ type RunHistoryProps = {
 };
 
 export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
-    // State for runs
     const [runs, setRuns] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
+    const { t } = useTranslation();
 
     useEffect(() => {
         const fetchRuns = async () => {
@@ -46,7 +48,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                 setRuns(formattedRuns);
             } catch (error) {
                 console.error('Error fetching runs:', error);
-                setRuns([]); // Ensure runs is empty on error
+                setRuns([]);
             } finally {
                 setLoading(false);
             }
@@ -91,15 +93,15 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                     <View style={styles.statRow}>
                         <View style={styles.stat}>
                             <Text style={styles.statValue}>{item.distance}</Text>
-                            <Text style={styles.statLabel}>Distância</Text>
+                            <Text style={styles.statLabel}>{t('events.distance')}</Text>
                         </View>
                         <View style={styles.stat}>
                             <Text style={styles.statValue}>{item.time}</Text>
-                            <Text style={styles.statLabel}>Tempo</Text>
+                            <Text style={styles.statLabel}>{t('events.duration')}</Text>
                         </View>
                         <View style={styles.stat}>
                             <Text style={styles.statValue}>{item.pace}</Text>
-                            <Text style={styles.statLabel}>Pace</Text>
+                            <Text style={styles.statLabel}>{t('events.pace')}</Text>
                         </View>
                     </View>
                 </View>
@@ -114,37 +116,41 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backText}>← Voltar</Text>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <View style={styles.backIcon}>
+                            <ChevronRightIcon size={20} color="#FFF" />
+                        </View>
                     </TouchableOpacity>
-                    <Text style={styles.headerLabel}>HISTÓRICO</Text>
-                    <Text style={styles.headerTitle}>De Corridas</Text>
+                    <View>
+                        <Text style={styles.headerLabel}>{t('runHistory.title').split(' ')[0].toUpperCase()}</Text>
+                        <Text style={styles.headerTitle}>{t('runHistory.title').split(' ').slice(1).join(' ').toUpperCase()}</Text>
+                    </View>
                 </View>
 
                 {/* Summary */}
                 <View style={styles.summaryRow}>
-                    <View style={styles.summaryItem}>
-                        <Text style={styles.summaryValue}>{totalRuns}</Text>
-                        <Text style={styles.summaryLabel}>Corridas</Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                        <Text style={styles.summaryValue}>{totalDistance.toFixed(1)}km</Text>
-                        <Text style={styles.summaryLabel}>Total</Text>
-                    </View>
+                    <BlurView intensity={20} tint="dark" style={styles.summaryCard}>
+                        <View style={styles.summaryContent}>
+                            <Text style={styles.summaryValue}>{totalRuns}</Text>
+                            <Text style={styles.summaryLabel}>{t('events.runs').toUpperCase()}</Text>
+                        </View>
+                    </BlurView>
+                    <BlurView intensity={20} tint="dark" style={[styles.summaryCard, styles.summaryCardAccent]}>
+                        <View style={styles.summaryContent}>
+                            <Text style={[styles.summaryValue, styles.accentText]}>{totalDistance.toFixed(1)}km</Text>
+                            <Text style={styles.summaryLabel}>TOTAL</Text>
+                        </View>
+                    </BlurView>
                 </View>
 
                 {/* List */}
                 {loading ? (
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={theme.colors.brand.primary} />
                     </View>
                 ) : (
@@ -155,8 +161,10 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
-                            <View style={{ padding: 20, alignItems: 'center' }}>
-                                <Text style={{ color: theme.colors.text.secondary }}>Nenhuma corrida registrada.</Text>
+                            <View style={styles.emptyContainer}>
+                                <ClockIcon size={48} color="rgba(255,255,255,0.3)" />
+                                <Text style={styles.emptyText}>{t('runHistory.noRuns')}</Text>
+                                <Text style={styles.emptySubtext}>{t('runHistory.runsWillAppear')}</Text>
                             </View>
                         }
                     />
@@ -169,103 +177,140 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
     },
     safeArea: {
         flex: 1,
     },
-
     // Header
     header: {
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[4],
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 20,
     },
     backButton: {
-        marginBottom: theme.spacing[3],
+        marginRight: 16,
     },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
+    backIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 28,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
-
     // Summary
     summaryRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingBottom: theme.spacing[6],
+        paddingHorizontal: 20,
+        marginBottom: 24,
+        gap: 12,
     },
-    summaryItem: {
+    summaryCard: {
         flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    summaryCardAccent: {
+        borderColor: theme.colors.brand.primary,
+    },
+    summaryContent: {
+        padding: 20,
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     summaryValue: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#FFF',
+        marginBottom: 4,
+    },
+    accentText: {
         color: theme.colors.brand.primary,
     },
     summaryLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
     },
-    summaryDivider: {
-        width: 1,
-        height: 40,
-        backgroundColor: theme.colors.border.default,
-        marginHorizontal: theme.spacing[4],
-    },
-
     // List
     listContent: {
-        paddingHorizontal: theme.spacing[6],
+        paddingHorizontal: 20,
         paddingBottom: 120,
     },
-
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        padding: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 16,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.3)',
+        marginTop: 8,
+    },
     // Run Card
     runCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
-        padding: theme.spacing[4],
-        marginBottom: theme.spacing[3],
+        backgroundColor: 'rgba(30,30,30,0.9)',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     dateSection: {
         alignItems: 'center',
         width: 44,
     },
     dateDay: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#FFF',
     },
     dateMonth: {
-        fontSize: theme.typography.size.micro,
-        fontWeight: theme.typography.weight.semibold as any,
+        fontSize: 10,
+        fontWeight: '700',
         color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.wide,
+        letterSpacing: 1,
     },
     accentLine: {
         width: 3,
         height: 40,
         borderRadius: 1.5,
         backgroundColor: theme.colors.success,
-        marginHorizontal: theme.spacing[3],
+        marginHorizontal: 12,
     },
     statsSection: {
         flex: 1,
@@ -278,21 +323,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     statValue: {
-        fontSize: theme.typography.size.bodyMD,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.primary,
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFF',
     },
     statLabel: {
-        fontSize: theme.typography.size.micro,
-        color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
+        fontSize: 9,
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 4,
+        textTransform: 'uppercase',
     },
     pointsSection: {
-        marginLeft: theme.spacing[3],
+        marginLeft: 12,
     },
     pointsValue: {
-        fontSize: theme.typography.size.bodyLG,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 16,
+        fontWeight: '900',
         color: theme.colors.brand.primary,
     },
 });

@@ -11,6 +11,7 @@
     "back": "Voltar",
     "next": "Próximo",
     "submit": "Enviar",
+    "user": "Usuário",
     "confirm": "Confirmar",
     "ok": "OK",
     "yes": "Sim",
@@ -20,7 +21,10 @@
     "filter": "Filtrar",
     "sort": "Ordenar",
     "like": "Curtir",
-    "comment": "Comentar"
+    "comment": "Comentar",
+    "viewAll": "Ver tudo",
+    "refresh": "Atualizar",
+    "permissionRequired": "Permissão Necessária"
   },
   "auth": {
     "login": "Entrar",
@@ -45,12 +49,18 @@
     "emailRequired": "E-mail é obrigatório",
     "passwordRequired": "Senha é obrigatória",
     "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
-    "invalidEmail": "Formato de e-mail inválido"
+    "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+    "invalidEmail": "Formato de e-mail inválido",
+    "newPassword": "Nova Senha",
+    "confirmPassword": "Confirmar Senha"
   },
   "navigation": {
+    "home": "Início",
     "events": "Eventos",
+    "feed": "Social",
+    "shop": "Loja",
     "leaderboard": "Classificação",
-    "loyalty": "Fidelidade",
+    "loyalty": "Cartão",
     "profile": "Perfil"
   },
   "events": {
@@ -103,8 +113,18 @@
     "activityCheckIn": "fez check-in em",
     "activityPost": "postou",
     "distance": "Distância",
-    "time": "Tempo",
-    "pace": "Ritmo"
+    "duration": "Tempo",
+    "pace": "Ritmo",
+    "entrance": "Entrada",
+    "beTheFirst": "Seja o primeiro",
+    "joinTheCrew": "Junte-se à galera",
+    "allPaces": "Todos os ritmos",
+    "participate": "Participar",
+    "leaveEventButton": "Sair do Evento",
+    "runs": "Corridas",
+    "streetRun": "Corrida de Rua",
+    "morningRun": "Corrida Matinal",
+    "meetingPoint": "Ponto de Encontro"
   },
   "leaderboard": {
     "title": "Classificação",
@@ -142,10 +162,58 @@
       "basico": "10% de desconto e registro prioritário",
       "baixa_pace": "15% de desconto e presente de boas-vindas",
       "parceiros": "20% de desconto e acesso VIP"
-    }
+    },
+    "yourBenefits": "Seus Benefícios",
+    "history": "Histórico",
+    "yourWallet": "Sua Carteira",
+    "fidelity": "Fidelidade",
+    "scan": "Escanear",
+    "current": "Atual",
+    "ptsToNextLevel": "pts para o próximo nível",
+    "nextLevel": "Próximo Nível",
+    "memberId": "ID do Membro",
+    "discountPartners": "10% OFF em parceiros",
+    "vipAccess": "Acesso VIP a eventos",
+    "priorityQueue": "Prioridade na fila",
+    "recentActivity": "Últimas Atividades"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "createAd": "Criar Anúncio",
+    "announce": "Anunciar",
+    "itemTitle": "Título do Item",
+    "price": "Preço (R$)",
+    "description": "Descrição",
+    "contact": "Contato",
+    "imageLink": "Link da Imagem",
+    "category": "Categoria",
+    "categories": {
+      "eletronicos": "Eletrônicos",
+      "roupas": "Roupas",
+      "outros": "Outros"
+    },
+    "interested": "Tenho interesse",
+    "contactSeller": "Entrar em contato",
+    "details": "Detalhes",
+    "availability": "Disponibilidade",
+    "inStock": "Em estoque",
+    "fewUnits": "Poucas Und.",
+    "by": "de",
+    "shop": "Loja",
+    "pointsBalance": "Saldo de Pontos",
+    "correShop": "Loja Corre",
+    "community": "Comunidade",
+    "adTitle": "Título do Anúncio",
+    "publish": "Publicar",
+    "announceProduct": "ANUNCIAR PRODUTO",
+    "titlePlaceholder": "Ex: Tênis Nike 42",
+    "noShopItems": "Nenhum item na loja no momento.",
+    "noCommunityItems": "Nenhum item anunciado."
   },
   "profile": {
     "title": "Perfil",
+    "editProfile": "Editar Perfil",
+    "changePassword": "Alterar Senha",
     "settings": "Configurações",
     "language": "Idioma",
     "editProfile": "Editar Perfil",
@@ -161,7 +229,62 @@
       "es": "Español"
     },
     "selectLanguage": "Selecionar Idioma",
-    "changeLanguageSuccess": "Idioma alterado com sucesso"
+    "changeLanguageSuccess": "Idioma alterado com sucesso",
+    "runHistory": "Histórico de Corridas",
+    "runMap": "Mapa de Corridas",
+    "achievements": "Conquistas",
+    "friends": "Amigos",
+    "logout": "Sair",
+    "myProfile": "Meu Perfil",
+    "distance": "Distância",
+    "time": "Tempo",
+    "averagePace": "Pace Médio",
+    "january": "Janeiro",
+    "completed": "Concluído",
+    "inProgress": "Em Progresso",
+    "unlocked": "Desbloqueadas",
+    "your": "Suas"
+  },
+  "friends": {
+    "title": "Amigos",
+    "searchPlaceholder": "Pesquisar usuários...",
+    "searchResults": "RESULTADOS",
+    "myFriends": "Meus Amigos",
+    "pendingRequests": "Solicitações",
+    "addFriend": "Adicionar",
+    "pending": "Pendente",
+    "requestSent": "Solicitação enviada!",
+    "wantsToConnect": "quer se conectar",
+    "noFriends": "Nenhum amigo ainda",
+    "noRequests": "Nenhuma solicitação pendente",
+    "removeFriend": "Remover Amigo",
+    "confirmRemove": "Tem certeza que deseja remover este amigo?"
+  },
+  "achievements": {
+    "firstRun": "Primeira Corrida",
+    "firstRunDesc": "Complete sua primeira corrida",
+    "5km": "5km Concluído",
+    "5kmDesc": "Complete uma corrida de 5km",
+    "10km": "10km Concluído",
+    "10kmDesc": "Complete uma corrida de 10km",
+    "halfMarathon": "Meia Maratona",
+    "halfMarathonDesc": "Complete uma meia maratona (21.1km)",
+    "marathon": "Maratona",
+    "marathonDesc": "Complete uma maratona (42.2km)",
+    "50kmTotal": "50km Total",
+    "50kmTotalDesc": "Acumule 50km de corrida",
+    "100kmTotal": "100km Total",
+    "100kmTotalDesc": "Acumule 100km de corrida",
+    "500kmTotal": "500km Total",
+    "500kmTotalDesc": "Acumule 500km de corrida",
+    "nightRunner": "Corredor Noturno",
+    "nightRunnerDesc": "Complete 5 corridas noturnas",
+    "earlyBird": "Madrugador",
+    "earlyBirdDesc": "Complete 5 corridas antes das 7h",
+    "consistency": "Consistência",
+    "consistencyDesc": "Corra 7 dias seguidos",
+    "speedster": "Velocista",
+    "speedsterDesc": "Pace abaixo de 5 min/km"
   },
   "errors": {
     "networkError": "Erro de rede. Verifique sua conexão.",
@@ -169,12 +292,66 @@
     "unknownError": "Ocorreu um erro desconhecido",
     "permissionDenied": "Permissão negada",
     "locationPermissionDenied": "Permissão de localização é necessária para check-ins",
-    "cameraPermissionDenied": "Permissão de câmera é necessária para escanear códigos QR"
+    "cameraPermissionDenied": "Permissão de câmera é necessária para escanear códigos QR",
+    "fillAllFields": "Por favor, preencha todos os campos.",
+    "updateProfile": "Não foi possível atualizar o perfil.",
+    "passwordsDoNotMatch": "As senhas não coincidem.",
+    "passwordLength": "A senha deve ter pelo menos 6 caracteres.",
+    "updatePassword": "Não foi possível atualizar a senha.",
+    "createAd": "Não foi possível criar o anúncio.",
+    "loadFeed": "Não foi possível carregar o feed."
   },
   "validation": {
     "required": "Este campo é obrigatório",
     "invalidEmail": "Formato de e-mail inválido",
     "invalidDate": "Data inválida",
     "invalidLocation": "Localização inválida"
+  },
+  "success": {
+    "profileUpdated": "Perfil atualizado com sucesso!",
+    "passwordUpdated": "Senha atualizada com sucesso!",
+    "redeemRequestSent": "Solicitação de resgate enviada!",
+    "itemAnnounced": "Seu item foi anunciado!"
+  },
+  "settings": {
+    "title": "Configurações",
+    "preferences": "Preferências",
+    "enableNotifications": "Ativar Notificações",
+    "darkMode": "Modo Escuro",
+    "privacy": "Privacidade",
+    "termsOfUse": "Termos de Uso",
+    "privacyPolicy": "Política de Privacidade",
+    "version": "Versão",
+    "connectedApps": "Apps Conectados",
+    "connect": "Conectar",
+    "disconnect": "Desconectar"
+  },
+  "home": {
+    "nextWorkout": "Próximo Treino",
+    "recentFeed": "Feed Recente",
+    "noRecentActivity": "Nenhuma atividade recente.",
+    "noScheduledWorkout": "Nenhum Treino Agendado",
+    "viewEvents": "Ver Eventos",
+    "next": "Próximo"
+  },
+  "feed": {
+    "noRecentActivity": "Nenhuma atividade recente.",
+    "friends": "Amigos",
+    "community": "Comunidade",
+    "activities": "Atividades"
+  },
+  "runHistory": {
+    "title": "Histórico de Corridas",
+    "noRuns": "Nenhuma corrida registrada.",
+    "runsWillAppear": "Suas corridas aparecerão aqui."
+  },
+  "coupons": {
+    "title": "Cupons",
+    "cost": "Custo",
+    "redeem": "Resgatar",
+    "available": "Disponível",
+    "used": "Usado",
+    "your": "Seus",
+    "validUntil": "Válido até"
   }
 }

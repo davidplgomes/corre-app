@@ -5,28 +5,33 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
+    StatusBar,
+    ImageBackground
 } from 'react-native';
-import { Screen } from '../../components/common/Screen';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { theme, tierColors } from '../../constants/theme';
 import { DigitalCard } from '../../components/loyalty/DigitalCard';
-import { LinearGradient } from 'expo-linear-gradient';
+import { QRCodeIcon, GiftIcon, ClockIcon } from '../../components/common/TabIcons';
 
 type LoyaltyCardProps = {
     navigation: any;
 };
 
 // Reusable Stat Component
-const StatBox = ({ label, value, subLabel }: { label: string, value: string | number, subLabel?: string }) => (
+const StatBox = ({ label, value }: { label: string, value: string | number }) => (
     <View style={styles.statBox}>
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
-        {subLabel && <Text style={styles.statSub}>{subLabel}</Text>}
     </View>
 );
 
 export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
     const { profile, user } = useAuth();
+    const { t } = useTranslation();
 
     // Use profile data or fallback to mock data
     const tier = (profile?.membershipTier || 'basico') as keyof typeof tierColors;
@@ -43,183 +48,232 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
         points: profile?.currentMonthPoints || 1250,
         lifetime: profile?.totalLifetimePoints || 4850,
         nextTier: 5000,
+        currentTierName: tierConfig.label,
+        nextTierName: 'ELITE',
     };
 
     const progress = Math.min((stats.lifetime / stats.nextTier) * 100, 100);
+    const pointsToNextLevel = stats.nextTier - stats.lifetime;
 
     const benefits = [
-        { id: '1', text: '10% OFF em parceiros', active: true, icon: '🛍️' },
-        { id: '2', text: 'Acesso VIP a eventos', active: true, icon: '🎫' },
-        { id: '3', text: 'Prioridade na fila', active: true, icon: '⚡' },
+        { id: '1', text: t('loyalty.discountPartners'), icon: '🛍️' },
+        { id: '2', text: t('loyalty.vipAccess'), icon: '🎫' },
+        { id: '3', text: t('loyalty.priorityQueue'), icon: '⚡' },
     ];
 
     const recentActivity = [
-        { id: '1', type: 'earn', points: 150, description: 'Corrida Noturna', date: '14 Jan' },
-        { id: '2', type: 'earn', points: 100, description: 'Treino Semanal', date: '12 Jan' },
-        { id: '3', type: 'redeem', points: -200, description: 'Resgate Store', date: '10 Jan' },
+        { id: '1', type: 'earn', points: 150, description: t('events.morningRun'), date: '14 Jan' },
+        { id: '2', type: 'earn', points: 100, description: t('events.morningRun'), date: '12 Jan' },
+        { id: '3', type: 'redeem', points: -200, description: t('marketplace.title'), date: '10 Jan' },
     ];
 
     return (
-        <Screen
-            preset="scroll"
-            safeAreaEdges={['top']}
-            contentContainerStyle={styles.scrollContent}
-            style={styles.container}
-        >
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerLabel}>SUA CARTEIRA</Text>
-                    <Text style={styles.headerTitle}>Fidelidade</Text>
-                </View>
-                {/* Optional: Add a settings or info icon here */}
-            </View>
-
-            {/* Digital Card Section - Center Stage */}
-            <View style={styles.cardSection}>
-                <DigitalCard member={memberData} />
-            </View>
-
-            {/* Stats Grid */}
-            <View style={styles.statsContainer}>
-                <StatBox label="PONTOS MÊS" value={stats.points} />
-                <View style={styles.divider} />
-                <StatBox label="TOTAL GERAL" value={stats.lifetime} />
-            </View>
-
-            {/* Progress to Next Tier */}
-            <View style={styles.progressSection}>
-                <View style={styles.progressHeader}>
-                    <Text style={styles.progressLabel}>Próximo Nível: ELITE</Text>
-                    <Text style={styles.progressValue}>{Math.floor(progress)}%</Text>
-                </View>
-                <View style={styles.progressBarBg}>
-                    <LinearGradient
-                        colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
-                        style={[styles.progressBarFill, { width: `${progress}%` }]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                    />
-                </View>
-                <Text style={styles.progressSub}>
-                    Faltam {stats.nextTier - stats.lifetime} pontos para subir de nível
-                </Text>
-            </View>
-
-            {/* Menu / Actions */}
-            <View style={styles.actionGrid}>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('MerchantScanner')}
-                >
-                    <View style={styles.actionIcon}>
-                        <Text style={{ fontSize: 24 }}>📷</Text>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <SafeAreaView style={styles.safeArea} edges={['top']}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View>
+                            <Text style={styles.headerLabel}>{t('loyalty.yourWallet').toUpperCase()}</Text>
+                            <Text style={styles.headerTitle}>{t('loyalty.fidelity').toUpperCase()}</Text>
+                        </View>
                     </View>
-                    <Text style={styles.actionText}>Escanear</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton}>
-                    <View style={styles.actionIcon}>
-                        <Text style={{ fontSize: 24 }}>🎁</Text>
+                    {/* Digital Card Section */}
+                    <View style={styles.cardSection}>
+                        <DigitalCard member={memberData} />
                     </View>
-                    <Text style={styles.actionText}>Resgatar</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton}>
-                    <View style={styles.actionIcon}>
-                        <Text style={{ fontSize: 24 }}>📜</Text>
+                    {/* Stats Grid - Two Separate Boxes */}
+                    <View style={styles.statsRow}>
+                        <View style={styles.statBoxSeparate}>
+                            <Text style={styles.statValueLarge}>{stats.points.toLocaleString()}</Text>
+                            <Text style={styles.statLabelSmall}>POINTS</Text>
+                        </View>
+                        <View style={[styles.statBoxSeparate, styles.statBoxAccent]}>
+                            <Text style={[styles.statValueLarge, styles.accentText]}>{stats.lifetime.toLocaleString()}</Text>
+                            <Text style={styles.statLabelSmall}>TOTAL</Text>
+                        </View>
                     </View>
-                    <Text style={styles.actionText}>Histórico</Text>
-                </TouchableOpacity>
-            </View>
 
-            {/* Recent Activity List */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>ÚLTIMAS ATIVIDADES</Text>
-                <View style={styles.listContainer}>
-                    {recentActivity.map((activity, index) => (
-                        <View key={activity.id} style={[
-                            styles.activityRow,
-                            index !== recentActivity.length - 1 && styles.borderBottom
-                        ]}>
-                            <View style={styles.activityLeft}>
-                                <View style={[
-                                    styles.activityDot,
-                                    { backgroundColor: activity.type === 'earn' ? theme.colors.success : theme.colors.brand.primary }
-                                ]} />
-                                <View>
-                                    <Text style={styles.activityDesc}>{activity.description}</Text>
-                                    <Text style={styles.activityDate}>{activity.date}</Text>
+                    {/* Progress Section */}
+                    <View style={styles.progressSection}>
+                        <View style={styles.progressHeader}>
+                            <Text style={styles.progressLabelLeft}>NEXT LEVEL</Text>
+                            <Text style={styles.progressLabelRight}>{stats.nextTierName}</Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                            <LinearGradient
+                                colors={['#666', '#999']}
+                                style={[styles.progressBarFill, { width: `${progress}%` }]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                            />
+                        </View>
+                        <View style={styles.progressFooter}>
+                            <Text style={styles.progressCurrent}>{t('loyalty.current')}: {stats.currentTierName}</Text>
+                            <Text style={styles.progressRemaining}>{pointsToNextLevel} {t('loyalty.ptsToNextLevel')}</Text>
+                        </View>
+                    </View>
+
+                    {/* Quick Actions with Proper Icons - matching HomeScreen style */}
+                    <View style={styles.actionGrid}>
+                        <TouchableOpacity
+                            style={styles.actionWrapper}
+                            onPress={() => navigation.navigate('MerchantScanner')}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={20} tint="dark" style={styles.actionBlur}>
+                                <View style={styles.actionContent}>
+                                    <View style={styles.actionIconContainer}>
+                                        <QRCodeIcon size={24} color="#FFF" />
+                                    </View>
+                                    <Text style={styles.actionLabel}>{t('loyalty.scan').toUpperCase()}</Text>
                                 </View>
+                            </BlurView>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.actionWrapper}
+                            onPress={() => navigation.navigate('Coupons')}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={20} tint="dark" style={styles.actionBlur}>
+                                <View style={styles.actionContent}>
+                                    <View style={styles.actionIconContainer}>
+                                        <GiftIcon size={24} color="#FFF" />
+                                    </View>
+                                    <Text style={styles.actionLabel}>{t('coupons.title').toUpperCase()}</Text>
+                                </View>
+                            </BlurView>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.actionWrapper}
+                            onPress={() => navigation.navigate('RunHistory')}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={20} tint="dark" style={styles.actionBlur}>
+                                <View style={styles.actionContent}>
+                                    <View style={styles.actionIconContainer}>
+                                        <ClockIcon size={24} color="#FFF" />
+                                    </View>
+                                    <Text style={styles.actionLabel}>{t('loyalty.history').toUpperCase()}</Text>
+                                </View>
+                            </BlurView>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Benefits List */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('loyalty.yourBenefits').toUpperCase()}</Text>
+                        <View style={styles.benefitsGrid}>
+                            {benefits.map((benefit) => (
+                                <BlurView key={benefit.id} intensity={10} tint="dark" style={styles.benefitGlass}>
+                                    <View style={styles.benefitCard}>
+                                        <Text style={styles.benefitIcon}>{benefit.icon}</Text>
+                                        <Text style={styles.benefitText}>{benefit.text}</Text>
+                                    </View>
+                                </BlurView>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Recent Activity */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('loyalty.recentActivity').toUpperCase()}</Text>
+                        <BlurView intensity={15} tint="dark" style={styles.listGlass}>
+                            <View style={styles.listContainer}>
+                                {recentActivity.map((activity, index) => (
+                                    <View key={activity.id} style={[
+                                        styles.activityRow,
+                                        index !== recentActivity.length - 1 && styles.borderBottom
+                                    ]}>
+                                        <View style={styles.activityLeft}>
+                                            <View style={[
+                                                styles.activityDot,
+                                                { backgroundColor: activity.type === 'earn' ? theme.colors.success : theme.colors.brand.primary }
+                                            ]} />
+                                            <View>
+                                                <Text style={styles.activityDesc}>{activity.description}</Text>
+                                                <Text style={styles.activityDate}>{activity.date}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={[
+                                            styles.activityPoints,
+                                            activity.type === 'redeem' ? styles.negativePoints : styles.positivePoints
+                                        ]}>
+                                            {activity.points > 0 ? '+' : ''}{activity.points}
+                                        </Text>
+                                    </View>
+                                ))}
                             </View>
-                            <Text style={[
-                                styles.activityPoints,
-                                activity.type === 'redeem' ? styles.negativePoints : styles.positivePoints
-                            ]}>
-                                {activity.points > 0 ? '+' : ''}{activity.points}
-                            </Text>
-                        </View>
-                    ))}
-                </View>
-            </View>
+                        </BlurView>
+                    </View>
 
-            {/* Benefits List */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>SEUS BENEFÍCIOS</Text>
-                <View style={styles.benefitsGrid}>
-                    {benefits.map((benefit) => (
-                        <View key={benefit.id} style={styles.benefitCard}>
-                            <Text style={styles.benefitIcon}>{benefit.icon}</Text>
-                            <Text style={styles.benefitText}>{benefit.text}</Text>
-                        </View>
-                    ))}
-                </View>
-            </View>
-
-        </Screen>
+                </ScrollView>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: theme.colors.background.primary,
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    safeArea: {
+        flex: 1,
     },
     scrollContent: {
         paddingBottom: 120,
     },
     header: {
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        marginBottom: theme.spacing[6],
+        paddingHorizontal: 24,
+        paddingTop: 10,
+        marginBottom: 20,
     },
     headerLabel: {
         fontSize: 10,
-        fontWeight: '600',
-        color: theme.colors.text.tertiary,
-        letterSpacing: 1.5,
-        textTransform: 'uppercase',
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
         marginBottom: 4,
     },
     headerTitle: {
         fontSize: 32,
-        fontWeight: '800',
-        color: theme.colors.text.primary,
-        letterSpacing: -0.5,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
     cardSection: {
         alignItems: 'center',
-        marginBottom: theme.spacing[8],
-        zIndex: 10, // Ensure card flips over other elements if needed
+        marginBottom: 30,
+        zIndex: 10,
+        paddingHorizontal: 20,
+    },
+    statsGlass: {
+        marginHorizontal: 20,
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     statsContainer: {
         flexDirection: 'row',
-        marginHorizontal: theme.spacing[6],
-        backgroundColor: theme.colors.background.card,
-        borderRadius: 16,
         padding: 20,
-        marginBottom: theme.spacing[6],
-        borderWidth: 1,
-        borderColor: theme.colors.border.subtle,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     statBox: {
         flex: 1,
@@ -227,102 +281,256 @@ const styles = StyleSheet.create({
     },
     divider: {
         width: 1,
-        backgroundColor: theme.colors.border.default,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         marginHorizontal: 16,
     },
     statValue: {
         fontSize: 24,
         fontWeight: '900',
-        color: theme.colors.text.primary,
+        fontStyle: 'italic',
+        color: '#FFF',
         marginBottom: 4,
     },
     statLabel: {
-        fontSize: 11,
-        color: theme.colors.text.tertiary,
-        fontWeight: '600',
-        letterSpacing: 0.5,
-    },
-    statSub: {
         fontSize: 10,
-        color: theme.colors.success,
-        marginTop: 2,
+        color: 'rgba(255,255,255,0.5)',
+        fontWeight: '900',
+        letterSpacing: 1,
     },
+    // New stats layout - separate boxes
+    statsRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 24,
+        gap: 12,
+    },
+    statBoxSeparate: {
+        flex: 1,
+        backgroundColor: 'rgba(30,30,30,0.9)',
+        borderRadius: 12,
+        paddingVertical: 20,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    statBoxAccent: {
+        borderColor: theme.colors.brand.primary,
+        borderWidth: 1,
+    },
+    statValueLarge: {
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#FFF',
+        marginBottom: 4,
+    },
+    accentText: {
+        color: theme.colors.brand.primary,
+    },
+    statLabelSmall: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+    },
+    // New progress section
     progressSection: {
-        marginHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[8],
+        paddingHorizontal: 20,
+        marginBottom: 30,
     },
     progressHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: 12,
     },
-    progressLabel: {
+    progressLabelLeft: {
         fontSize: 12,
-        color: theme.colors.text.secondary,
         fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
     },
-    progressValue: {
+    progressLabelRight: {
         fontSize: 12,
-        color: theme.colors.brand.primary,
         fontWeight: '700',
+        color: theme.colors.brand.primary,
+        letterSpacing: 0.5,
     },
     progressBarBg: {
-        height: 8,
-        backgroundColor: theme.colors.background.elevated,
+        height: 6,
+        backgroundColor: 'rgba(255,255,255,0.15)',
         borderRadius: 4,
         overflow: 'hidden',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     progressBarFill: {
         height: '100%',
         borderRadius: 4,
     },
-    progressSub: {
-        fontSize: 11,
-        color: theme.colors.text.tertiary,
+    progressFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
     },
+    progressCurrent: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.4)',
+    },
+    progressRemaining: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.4)',
+    },
+    // Action cards - matching HomeScreen style
     actionGrid: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[8],
+        paddingHorizontal: 20,
+        marginBottom: 30,
         gap: 12,
+    },
+    actionWrapper: {
+        flex: 1,
+    },
+    actionBlur: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+    },
+    actionContent: {
+        padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    actionCard: {
+        flex: 1,
+        backgroundColor: 'rgba(30,30,30,0.9)',
+        borderRadius: 12,
+        paddingVertical: 20,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    actionIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    actionIconText: {
+        fontSize: 20,
+        color: '#FFF',
+    },
+    actionLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#FFF',
+        letterSpacing: 1,
+    },
+    // Keep old styles for compatibility
+    actionGlass: {
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     actionButton: {
         flex: 1,
-        backgroundColor: theme.colors.background.elevated,
-        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         padding: 16,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.colors.border.subtle,
+        justifyContent: 'center',
+        height: 100,
     },
     actionIcon: {
+        fontSize: 24,
         marginBottom: 8,
     },
     actionText: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 0.5,
+    },
+    sectionGlass: {
+        marginHorizontal: 20,
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    sectionInner: {
+        padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    progressLabel: {
         fontSize: 12,
-        fontWeight: '600',
-        color: theme.colors.text.primary,
+        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    progressValue: {
+        fontSize: 14,
+        color: theme.colors.brand.primary,
+        fontWeight: '900',
+    },
+    progressSub: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.5)',
+        fontStyle: 'italic',
     },
     section: {
-        paddingHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[8],
+        paddingHorizontal: 20,
+        marginBottom: 30,
     },
     sectionTitle: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: theme.colors.text.tertiary,
+        fontSize: 12,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.5)',
         marginBottom: 16,
         letterSpacing: 1,
-        textTransform: 'uppercase',
+        paddingLeft: 4,
+    },
+    benefitsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    benefitGlass: {
+        width: '48%',
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    benefitCard: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        padding: 16,
+        height: 100,
+        justifyContent: 'center',
+    },
+    benefitIcon: {
+        fontSize: 20,
+        marginBottom: 8,
+    },
+    benefitText: {
+        fontSize: 12,
+        color: '#FFF',
+        lineHeight: 16,
+        fontWeight: '600',
+    },
+    listGlass: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     listContainer: {
-        backgroundColor: theme.colors.background.card,
-        borderRadius: 16,
         padding: 8,
-        borderWidth: 1,
-        borderColor: theme.colors.border.subtle,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     activityRow: {
         flexDirection: 'row',
@@ -332,7 +540,7 @@ const styles = StyleSheet.create({
     },
     borderBottom: {
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.subtle,
+        borderBottomColor: 'rgba(255,255,255,0.1)',
     },
     activityLeft: {
         flexDirection: 'row',
@@ -340,19 +548,19 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     activityDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
     },
     activityDesc: {
         fontSize: 14,
-        color: theme.colors.text.primary,
-        fontWeight: '500',
+        color: '#FFF',
+        fontWeight: '600',
         marginBottom: 2,
     },
     activityDate: {
-        fontSize: 11,
-        color: theme.colors.text.tertiary,
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.5)',
     },
     activityPoints: {
         fontSize: 14,
@@ -362,29 +570,6 @@ const styles = StyleSheet.create({
         color: theme.colors.success,
     },
     negativePoints: {
-        color: theme.colors.text.primary,
-    },
-    benefitsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-    },
-    benefitCard: {
-        width: '48%', // roughly half - gap
-        backgroundColor: theme.colors.background.elevated,
-        borderRadius: 12,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: theme.colors.border.subtle,
-    },
-    benefitIcon: {
-        fontSize: 20,
-        marginBottom: 8,
-    },
-    benefitText: {
-        fontSize: 12,
-        color: theme.colors.text.secondary,
-        lineHeight: 18,
-        fontWeight: '500',
+        color: '#FFF',
     },
 });

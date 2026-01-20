@@ -8,10 +8,12 @@ import {
     Image,
     TouchableOpacity,
     StatusBar,
-    Alert
+    Alert,
+    ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics'; // Import Haptics
 import { theme } from '../../constants/theme';
 import { FeedPost } from '../../types';
@@ -25,8 +27,10 @@ import {
     PinIcon,
     TextIcon,
     HeartIcon,
-    ChatBubbleIcon
+    ChatBubbleIcon,
+    TrophyIcon
 } from '../../components/common/TabIcons';
+import { MEMBERSHIP_TIERS } from '../../constants/tiers';
 
 type FeedScreenProps = {
     navigation: any;
@@ -38,6 +42,11 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
     const [posts, setPosts] = useState<FeedPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'community' | 'friends'>('community');
+
+    const filteredPosts = activeTab === 'friends'
+        ? posts.filter((_, i) => i % 2 === 0) // Mock filter for friends
+        : posts;
 
     const loadPosts = useCallback(async () => {
         try {
@@ -49,7 +58,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Error loading feed:', error);
-            Alert.alert('Erro', 'Não foi possível carregar o feed.');
+            Alert.alert(t('common.error'), t('errors.loadFeed'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -67,25 +76,50 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
     };
 
     const renderHeader = () => (
-        <View style={styles.header}>
-            <View>
-                <Text style={styles.headerLabel}>SOCIAL</Text>
-                <Text style={styles.headerTitle}>Atividades</Text>
+        <View>
+            <View style={styles.header}>
+                <View>
+                    <Text style={styles.headerLabel}>{t('navigation.feed').toUpperCase()}</Text>
+                    <Text style={styles.headerTitle}>{t('feed.activities').toUpperCase()}</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.leaderboardButton}
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.navigate('Leaderboard');
+                    }}
+                >
+                    <TrophyIcon size={20} color={theme.colors.text.primary} />
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity
-                style={styles.leaderboardButton}
-                onPress={() => {
-                    Haptics.selectionAsync();
-                    navigation.navigate('Leaderboard');
-                }}
-            >
-                <Text style={styles.leaderboardButtonText}>🏆 Ranking</Text>
-            </TouchableOpacity>
+            <View style={styles.tabContainer}>
+                <TouchableOpacity
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        setActiveTab('community');
+                    }}
+                    style={[styles.tab, activeTab === 'community' && styles.activeTab]}
+                >
+                    <Text style={[styles.tabText, activeTab === 'community' && styles.activeTabText]}>{t('feed.community').toUpperCase()}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        setActiveTab('friends');
+                    }}
+                    style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+                >
+                    <Text style={styles.tabText}>{t('feed.friends').toUpperCase()}</Text>
+                    {activeTab === 'friends' && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
     const renderPost = ({ item }: { item: FeedPost }) => {
         const user = item.users as any;
+        const tierKey = (user?.membership_tier as TierKey) || 'free';
+        const tierColor = MEMBERSHIP_TIERS[tierKey]?.color || theme.colors.border.default;
 
         let IconComponent = RunIcon;
         let action = t('events.activityRun');
@@ -102,18 +136,16 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
         }
 
         return (
-            <View style={styles.postCard}>
+            <BlurView intensity={20} tint="dark" style={styles.postCard}>
                 <View style={styles.postHeader}>
                     <View style={styles.userInfo}>
-                        <View style={styles.avatarPlaceholder}>
-                            <Text style={styles.avatarInitial}>{user?.full_name?.charAt(0) || 'U'}</Text>
+                        <View style={[styles.avatarPlaceholder, { borderColor: tierColor, borderWidth: 2 }]}>
+                            <Text style={[styles.avatarInitial, { color: tierColor }]}>{user?.full_name?.charAt(0) || 'U'}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
                             <View style={styles.userRow}>
                                 <Text style={styles.userName}>{user?.full_name || 'Usuário'}</Text>
-                                {user?.membership_tier && (
-                                    <TierBadge tier={user.membership_tier as TierKey} size="small" />
-                                )}
+                                {/* Removed TierBadge, using avatar border instead */}
                             </View>
                             <Text style={styles.postTime}>
                                 {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -140,7 +172,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
                         </View>
                         <View style={styles.verticalDivider} />
                         <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>{t('events.time') || 'TIME'}</Text>
+                            <Text style={styles.statLabel}>{t('events.duration') || 'TIME'}</Text>
                             <Text style={styles.statValue}>{item.meta_data.time || '00:00'}</Text>
                         </View>
                         <View style={styles.verticalDivider} />
@@ -167,7 +199,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
                         <Text style={styles.actionButtonText}>{t('common.comment') || 'Comentar'}</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
+            </BlurView>
         );
     };
 
@@ -177,38 +209,45 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {renderHeader()}
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {renderHeader()}
 
-                <FlatList
-                    data={posts}
-                    renderItem={renderPost}
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor={theme.colors.brand.primary}
-                        />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>Nenhuma atividade recente.</Text>
-                            <TouchableOpacity
-                                style={styles.refreshButton}
-                                onPress={() => {
-                                    Haptics.selectionAsync();
-                                    loadPosts();
-                                }}
-                            >
-                                <Text style={styles.refreshButtonText}>Atualizar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    }
-                />
-            </SafeAreaView>
+                    <FlatList
+                        data={filteredPosts}
+                        renderItem={renderPost}
+                        keyExtractor={item => item.id}
+                        contentContainerStyle={styles.listContent}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor={theme.colors.brand.primary}
+                            />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={styles.emptyText}>{t('feed.noRecentActivity')}</Text>
+                                <TouchableOpacity
+                                    style={styles.refreshButton}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        loadPosts();
+                                    }}
+                                >
+                                    <Text style={styles.refreshButtonText}>{t('common.refresh')}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        }
+                    />
+                </SafeAreaView>
+            </ImageBackground>
         </View>
     );
 };
@@ -216,7 +255,16 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     safeArea: {
         flex: 1,
@@ -225,21 +273,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[4],
+        paddingHorizontal: 24, // Exact match
+        paddingTop: 10,       // Exact match
+        paddingBottom: 20,    // Exact match
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 4,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 32,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
     leaderboardButton: {
         backgroundColor: theme.colors.background.card,
@@ -405,5 +454,40 @@ const styles = StyleSheet.create({
     refreshButtonText: {
         color: theme.colors.brand.primary,
         fontWeight: 'bold',
+    },
+
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 24,
+        marginBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border.subtle,
+    },
+    tab: {
+        marginRight: 24,
+        paddingBottom: 12,
+        position: 'relative',
+    },
+    activeTab: {
+        borderBottomWidth: 2,
+        borderBottomColor: '#FFF',
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: theme.colors.text.tertiary,
+        letterSpacing: 0.5,
+    },
+    activeTabText: {
+        color: '#FFF',
+    },
+    activeDot: {
+        position: 'absolute',
+        top: 0,
+        right: -6,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: theme.colors.brand.primary,
     },
 });

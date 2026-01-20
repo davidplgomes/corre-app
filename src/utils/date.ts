@@ -1,3 +1,46 @@
+// Localized weekday names (short)
+const WEEKDAYS: Record<string, string[]> = {
+    pt: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'],
+    en: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+    es: ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'],
+};
+
+// Localized month names (short)
+const MONTHS: Record<string, string[]> = {
+    pt: ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'],
+    en: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
+    es: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
+};
+
+/**
+ * Get localized weekday name
+ */
+export const getLocalizedWeekday = (date: Date | string, locale: string = 'en'): string => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const weekdays = WEEKDAYS[locale] || WEEKDAYS['en'];
+    return weekdays[dateObj.getDay()];
+};
+
+/**
+ * Get localized month name
+ */
+export const getLocalizedMonth = (date: Date | string, locale: string = 'en'): string => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const months = MONTHS[locale] || MONTHS['en'];
+    return months[dateObj.getMonth()];
+};
+
+/**
+ * Format event date with localized weekday and month (e.g., "SEX, 15 JAN")
+ */
+export const formatEventDate = (date: Date | string, locale: string = 'en'): string => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const weekday = getLocalizedWeekday(dateObj, locale);
+    const month = getLocalizedMonth(dateObj, locale);
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    return `${weekday}, ${day} ${month}`;
+};
+
 /**
  * Format date to localized string
  */

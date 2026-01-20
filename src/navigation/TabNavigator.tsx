@@ -13,6 +13,7 @@ import { FeedScreen } from '../screens/feed/FeedScreen';
 import { Leaderboard } from '../screens/leaderboard/Leaderboard';
 import { LoyaltyCard } from '../screens/loyalty/LoyaltyCard';
 import { MerchantScanner } from '../screens/loyalty/MerchantScanner';
+import { Coupons } from '../screens/loyalty/Coupons';
 import { Profile } from '../screens/profile/Profile';
 import { Settings } from '../screens/profile/Settings';
 import { EditProfile } from '../screens/profile/EditProfile';
@@ -20,10 +21,12 @@ import { ChangePassword } from '../screens/profile/ChangePassword'; // New Impor
 import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
+import { Friends } from '../screens/profile/Friends';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
 import { HomeScreen } from '../screens/home/HomeScreen'; // Import HomeScreen
 import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons'; // Import HomeIcon
+import { useTranslation } from 'react-i18next';
 import { theme } from '../constants/theme';
 
 // Stack param lists
@@ -43,6 +46,7 @@ export type FeedStackParamList = {
 export type LoyaltyStackParamList = {
     LoyaltyCard: undefined;
     MerchantScanner: undefined;
+    Coupons: undefined;
 };
 
 export type MarketplaceStackParamList = {
@@ -58,6 +62,7 @@ export type ProfileStackParamList = {
     RunHistory: undefined;
     Achievements: undefined;
     RunMap: undefined;
+    Friends: undefined;
 };
 
 export type MainTabParamList = {
@@ -101,6 +106,7 @@ const LoyaltyStackNavigator: React.FC = () => (
     <LoyaltyStack.Navigator screenOptions={{ headerShown: false }}>
         <LoyaltyStack.Screen name="LoyaltyCard" component={LoyaltyCard} />
         <LoyaltyStack.Screen name="MerchantScanner" component={MerchantScanner} />
+        <LoyaltyStack.Screen name="Coupons" component={Coupons} />
     </LoyaltyStack.Navigator>
 );
 
@@ -122,6 +128,7 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="RunHistory" component={RunHistory} />
         <ProfileStack.Screen name="Achievements" component={Achievements} />
         <ProfileStack.Screen name="RunMap" component={RunMap} />
+        <ProfileStack.Screen name="Friends" component={Friends} />
     </ProfileStack.Navigator>
 );
 
@@ -171,6 +178,7 @@ const TabIcon: React.FC<TabIconProps> = ({ label, icon, focused }) => {
 
 export const TabNavigator: React.FC = () => {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
 
     return (
         <Tab.Navigator
@@ -199,7 +207,7 @@ export const TabNavigator: React.FC = () => {
                 component={HomeScreen}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Início" icon="home" focused={focused} />
+                        <TabIcon label={t('navigation.home')} icon="home" focused={focused} />
                     ),
                 }}
             />
@@ -208,7 +216,7 @@ export const TabNavigator: React.FC = () => {
                 component={EventsStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Eventos" icon="calendar" focused={focused} />
+                        <TabIcon label={t('navigation.events')} icon="calendar" focused={focused} />
                     ),
                 }}
             />
@@ -217,7 +225,7 @@ export const TabNavigator: React.FC = () => {
                 component={FeedStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Social" icon="feed" focused={focused} />
+                        <TabIcon label={t('navigation.feed')} icon="feed" focused={focused} />
                     ),
                 }}
             />
@@ -226,7 +234,7 @@ export const TabNavigator: React.FC = () => {
                 component={MarketplaceStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Loja" icon="bag" focused={focused} />
+                        <TabIcon label={t('navigation.shop')} icon="bag" focused={focused} />
                     ),
                 }}
             />
@@ -235,7 +243,7 @@ export const TabNavigator: React.FC = () => {
                 component={LoyaltyStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Cartão" icon="card" focused={focused} />
+                        <TabIcon label={t('navigation.loyalty')} icon="card" focused={focused} />
                     ),
                 }}
             />
@@ -244,7 +252,7 @@ export const TabNavigator: React.FC = () => {
                 component={ProfileStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon label="Perfil" icon="person" focused={focused} />
+                        <TabIcon label={t('navigation.profile')} icon="person" focused={focused} />
                     ),
                 }}
             />

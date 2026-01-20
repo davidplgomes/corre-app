@@ -8,7 +8,11 @@ import {
     StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
+import { ChevronRightIcon, TrophyIcon } from '../../components/common/TabIcons';
 
 type AchievementsProps = {
     navigation: any;
@@ -42,18 +46,34 @@ const ACHIEVEMENTS: Achievement[] = [
 ];
 
 export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
-    const unlockedCount = ACHIEVEMENTS.filter(a => a.unlocked).length;
-    const totalCount = ACHIEVEMENTS.length;
+    const { t } = useTranslation();
+
+    // Mock achievements with translations
+    const achievements: Achievement[] = [
+        { id: '1', title: t('achievements.firstRun'), description: t('achievements.firstRunDesc'), icon: '🏃', unlocked: true, unlockedDate: '2025-12-01' },
+        { id: '2', title: t('achievements.5km'), description: t('achievements.5kmDesc'), icon: '🎯', unlocked: true, unlockedDate: '2025-12-05' },
+        { id: '3', title: t('achievements.10km'), description: t('achievements.10kmDesc'), icon: '🔥', unlocked: true, unlockedDate: '2025-12-15' },
+        { id: '4', title: t('achievements.halfMarathon'), description: t('achievements.halfMarathonDesc'), icon: '🏅', unlocked: true, unlockedDate: '2026-01-01' },
+        { id: '5', title: t('achievements.marathon'), description: t('achievements.marathonDesc'), icon: '🏆', unlocked: false, progress: 21, target: 42 },
+        { id: '6', title: t('achievements.50kmTotal'), description: t('achievements.50kmTotalDesc'), icon: '⭐', unlocked: true, unlockedDate: '2025-12-20' },
+        { id: '7', title: t('achievements.100kmTotal'), description: t('achievements.100kmTotalDesc'), icon: '💫', unlocked: true, unlockedDate: '2026-01-05' },
+        { id: '8', title: t('achievements.500kmTotal'), description: t('achievements.500kmTotalDesc'), icon: '🌟', unlocked: false, progress: 350, target: 500 },
+        { id: '9', title: t('achievements.nightRunner'), description: t('achievements.nightRunnerDesc'), icon: '🌙', unlocked: true, unlockedDate: '2026-01-10' },
+        { id: '10', title: t('achievements.earlyBird'), description: t('achievements.earlyBirdDesc'), icon: '🌅', unlocked: false, progress: 3, target: 5 },
+        { id: '11', title: t('achievements.consistency'), description: t('achievements.consistencyDesc'), icon: '📅', unlocked: false, progress: 4, target: 7 },
+        { id: '12', title: t('achievements.speedster'), description: t('achievements.speedsterDesc'), icon: '⚡', unlocked: true, unlockedDate: '2026-01-12' },
+    ];
+
+    const unlockedCount = achievements.filter(a => a.unlocked).length;
+    const totalCount = achievements.length;
 
     const renderAchievement = (achievement: Achievement) => (
         <View
             key={achievement.id}
             style={[styles.achievementCard, !achievement.unlocked && styles.achievementLocked]}
         >
-            <View style={styles.iconContainer}>
-                <Text style={[styles.icon, !achievement.unlocked && styles.iconLocked]}>
-                    {achievement.icon}
-                </Text>
+            <View style={[styles.iconContainer, achievement.unlocked && styles.iconContainerUnlocked]}>
+                <Text style={styles.icon}>{achievement.icon}</Text>
             </View>
             <View style={styles.achievementInfo}>
                 <Text style={[styles.achievementTitle, !achievement.unlocked && styles.textLocked]}>
@@ -65,11 +85,14 @@ export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
                 {!achievement.unlocked && achievement.progress !== undefined && (
                     <View style={styles.progressContainer}>
                         <View style={styles.progressTrack}>
-                            <View
+                            <LinearGradient
+                                colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
                                 style={[
                                     styles.progressFill,
                                     { width: `${(achievement.progress / (achievement.target || 1)) * 100}%` }
                                 ]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
                             />
                         </View>
                         <Text style={styles.progressText}>
@@ -81,21 +104,16 @@ export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
                 {/* Unlocked date */}
                 {achievement.unlocked && achievement.unlockedDate && (
                     <Text style={styles.unlockedDate}>
-                        Desbloqueado em {new Date(achievement.unlockedDate).toLocaleDateString('pt-BR')}
+                        ✓ {new Date(achievement.unlockedDate).toLocaleDateString('pt-BR')}
                     </Text>
                 )}
             </View>
-            {achievement.unlocked && (
-                <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                </View>
-            )}
         </View>
     );
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 <ScrollView
@@ -105,37 +123,49 @@ export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
                 >
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => navigation.goBack()}
-                        >
-                            <Text style={styles.backText}>← Voltar</Text>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <View style={styles.backIcon}>
+                                <ChevronRightIcon size={20} color="#FFF" />
+                            </View>
                         </TouchableOpacity>
-                        <Text style={styles.headerLabel}>CONQUISTAS</Text>
-                        <Text style={styles.headerTitle}>Suas Medalhas</Text>
-                    </View>
-
-                    {/* Progress Summary */}
-                    <View style={styles.summary}>
-                        <Text style={styles.summaryNumber}>{unlockedCount}</Text>
-                        <Text style={styles.summaryLabel}>de {totalCount} conquistas</Text>
-                        <View style={styles.summaryProgress}>
-                            <View
-                                style={[
-                                    styles.summaryProgressFill,
-                                    { width: `${(unlockedCount / totalCount) * 100}%` }
-                                ]}
-                            />
+                        <View>
+                            <Text style={styles.headerLabel}>{t('profile.your').toUpperCase()}</Text>
+                            <Text style={styles.headerTitle}>{t('profile.achievements').toUpperCase()}</Text>
+                        </View>
+                        <View style={styles.trophyBadge}>
+                            <TrophyIcon size={20} color={theme.colors.brand.primary} />
                         </View>
                     </View>
 
+                    {/* Progress Summary */}
+                    <BlurView intensity={20} tint="dark" style={styles.summaryCard}>
+                        <View style={styles.summaryContent}>
+                            <View style={styles.summaryNumberRow}>
+                                <Text style={styles.summaryNumber}>{unlockedCount}</Text>
+                                <Text style={styles.summaryTotal}>/{totalCount}</Text>
+                            </View>
+                            <Text style={styles.summaryLabel}>{t('profile.achievements').toUpperCase()} {t('profile.completed').toUpperCase()}</Text>
+                            <View style={styles.summaryProgress}>
+                                <LinearGradient
+                                    colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
+                                    style={[
+                                        styles.summaryProgressFill,
+                                        { width: `${(unlockedCount / totalCount) * 100}%` }
+                                    ]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                />
+                            </View>
+                        </View>
+                    </BlurView>
+
                     {/* Unlocked Section */}
-                    <Text style={styles.sectionTitle}>Desbloqueadas</Text>
-                    {ACHIEVEMENTS.filter(a => a.unlocked).map(renderAchievement)}
+                    <Text style={styles.sectionTitle}>{t('profile.unlocked').toUpperCase()}</Text>
+                    {achievements.filter(a => a.unlocked).map(renderAchievement)}
 
                     {/* Locked Section */}
-                    <Text style={styles.sectionTitle}>Em Progresso</Text>
-                    {ACHIEVEMENTS.filter(a => !a.unlocked).map(renderAchievement)}
+                    <Text style={styles.sectionTitle}>{t('profile.inProgress').toUpperCase()}</Text>
+                    {achievements.filter(a => !a.unlocked).map(renderAchievement)}
                 </ScrollView>
             </SafeAreaView>
         </View>
@@ -145,7 +175,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
     },
     safeArea: {
         flex: 1,
@@ -156,84 +186,121 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: 120,
     },
-
     // Header
     header: {
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[4],
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 24,
     },
     backButton: {
-        marginBottom: theme.spacing[3],
+        marginRight: 16,
     },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
+    backIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 28,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
-
-    // Summary
-    summary: {
+    trophyBadge: {
+        marginLeft: 'auto',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,136,0,0.2)',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingBottom: theme.spacing[8],
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.brand.primary,
+    },
+    // Summary
+    summaryCard: {
+        marginHorizontal: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        marginBottom: 32,
+    },
+    summaryContent: {
+        padding: 24,
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    summaryNumberRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
     },
     summaryNumber: {
-        fontSize: theme.typography.size.displayLG,
-        fontWeight: theme.typography.weight.black as any,
+        fontSize: 64,
+        fontWeight: '900',
         color: theme.colors.brand.primary,
+        includeFontPadding: false,
+    },
+    summaryTotal: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.4)',
     },
     summaryLabel: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.text.tertiary,
-        marginBottom: theme.spacing[4],
+        fontSize: 10,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+        marginTop: 8,
+        marginBottom: 16,
     },
     summaryProgress: {
         width: '100%',
         height: 8,
-        backgroundColor: theme.colors.background.card,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: 4,
         overflow: 'hidden',
     },
     summaryProgressFill: {
         height: '100%',
-        backgroundColor: theme.colors.brand.primary,
         borderRadius: 4,
     },
-
     // Section
     sectionTitle: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        paddingHorizontal: theme.spacing[6],
-        marginTop: theme.spacing[4],
-        marginBottom: theme.spacing[3],
+        fontSize: 12,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 2,
+        paddingHorizontal: 20,
+        marginTop: 8,
+        marginBottom: 16,
     },
-
     // Achievement Card
     achievementCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[3],
-        padding: theme.spacing[4],
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
+        marginHorizontal: 20,
+        marginBottom: 12,
+        padding: 16,
+        backgroundColor: 'rgba(30,30,30,0.9)',
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     achievementLocked: {
         opacity: 0.6,
@@ -242,71 +309,61 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: theme.colors.background.elevated,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: theme.spacing[4],
+        marginRight: 16,
+    },
+    iconContainerUnlocked: {
+        backgroundColor: 'rgba(255,136,0,0.2)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,136,0,0.5)',
     },
     icon: {
         fontSize: 24,
-    },
-    iconLocked: {
-        opacity: 0.4,
     },
     achievementInfo: {
         flex: 1,
     },
     achievementTitle: {
-        fontSize: theme.typography.size.bodyMD,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing[1],
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 4,
     },
     textLocked: {
-        color: theme.colors.text.secondary,
+        color: 'rgba(255,255,255,0.6)',
     },
     achievementDescription: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.5)',
     },
     unlockedDate: {
-        fontSize: theme.typography.size.micro,
+        fontSize: 11,
         color: theme.colors.success,
-        marginTop: theme.spacing[2],
+        marginTop: 8,
+        fontWeight: '600',
     },
     progressContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: theme.spacing[2],
+        marginTop: 10,
     },
     progressTrack: {
         flex: 1,
         height: 4,
-        backgroundColor: theme.colors.background.elevated,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: 2,
         overflow: 'hidden',
-        marginRight: theme.spacing[2],
+        marginRight: 10,
     },
     progressFill: {
         height: '100%',
-        backgroundColor: theme.colors.brand.primary,
         borderRadius: 2,
     },
     progressText: {
-        fontSize: theme.typography.size.micro,
-        color: theme.colors.text.tertiary,
-    },
-    checkmark: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: theme.colors.success,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    checkmarkText: {
-        color: theme.colors.white,
-        fontSize: 14,
-        fontWeight: theme.typography.weight.bold as any,
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.5)',
+        fontWeight: '600',
     },
 });

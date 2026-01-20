@@ -122,32 +122,21 @@ export const PersonIcon: React.FC<IconProps> = ({
     </Svg>
 );
 
-// Run Icon (para histórico)
+// Run Icon (para histórico) - Improved
 export const RunIcon: React.FC<IconProps> = ({
     size = 24,
     color = '#FFFFFF'
 }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Circle cx="17" cy="4" r="2" stroke={color} strokeWidth="1.5" />
+        {/* Head */}
+        <Circle cx="12" cy="5" r="2" stroke={color} strokeWidth="1.5" />
+        {/* Body and Limbs */}
         <Path
-            d="M15 8L12 11L9 9L5 13"
+            d="M12 8v5l3 3l2-1 M12 13l-3 2l-1 4 M12 8l3-1l2 3 M12 8l-3 1l-2-2"
             stroke={color}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-        />
-        <Path
-            d="M12 11L15 14L12 20"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <Path
-            d="M9 17L7 22"
-            stroke={color}
-            strokeWidth="1.5"
-            strokeLinecap="round"
         />
     </Svg>
 );
@@ -371,3 +360,48 @@ export const TextIcon: React.FC<IconProps> = ({
         <Path d="M17 18H3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
+
+// QR Code Icon (Scan)
+export const QRCodeIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" />
+        <Rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" />
+        <Rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="1.5" />
+        <Rect x="14" y="14" width="3" height="3" stroke={color} strokeWidth="1.5" />
+        <Rect x="18" y="18" width="3" height="3" stroke={color} strokeWidth="1.5" />
+        <Rect x="14" y="18" width="3" height="3" stroke={color} strokeWidth="1.5" />
+        <Rect x="18" y="14" width="3" height="3" stroke={color} strokeWidth="1.5" />
+        <Rect x="5" y="5" width="3" height="3" fill={color} />
+        <Rect x="16" y="5" width="3" height="3" fill={color} />
+        <Rect x="5" y="16" width="3" height="3" fill={color} />
+    </Svg>
+);
+
+// Gift Icon (Redeem)
+export const GiftIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Rect x="3" y="8" width="18" height="4" rx="1" stroke={color} strokeWidth="1.5" />
+        <Path d="M12 8V21" stroke={color} strokeWidth="1.5" />
+        <Rect x="5" y="12" width="14" height="9" rx="1" stroke={color} strokeWidth="1.5" />
+        <Path d="M12 8C12 8 12 5 9 5C7 5 6 6 6 7C6 8 7 8 12 8" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        <Path d="M12 8C12 8 12 5 15 5C17 5 18 6 18 7C18 8 17 8 12 8" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </Svg>
+);
+
+// Clock Icon (History)
+export const ClockIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5" />
+        <Path d="M12 7V12L15 15" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+

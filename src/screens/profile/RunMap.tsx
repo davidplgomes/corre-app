@@ -7,11 +7,13 @@ import {
     TouchableOpacity,
     StatusBar,
     Platform,
+    Image,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
-// Se der erro de tipo no MapView, ignorar pois a lib pode não ter tipos perfeitos
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
 type RunMapProps = {
@@ -48,19 +50,20 @@ const INITIAL_REGION = {
 
 export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, route }) => {
     const { run } = route.params || {};
+    const { t } = useTranslation();
 
     const [selectedRun] = useState({
         id: run?.id || '1',
-        date: run?.date ? new Date(run.date).toLocaleDateString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'Hoje, 07:30',
-        distance: run?.distance || '5.2 km',
-        time: run?.time || '28m 45s',
-        pace: run?.pace || "5'31\"/km",
-        calories: run?.calories || '320 kcal'
+        date: run?.date ? new Date(run.date).toLocaleDateString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase() : 'TODAY, 07:30',
+        distance: run?.distance || '5.2',
+        time: run?.time || '28:45',
+        pace: run?.pace || "5'31\"",
+        calories: run?.calories || '320'
     });
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
             <MapView
                 style={styles.map}
@@ -76,62 +79,79 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                 />
 
                 {/* Start Marker */}
-                <Marker coordinate={RUN_ROUTE[0]} title="Início">
+                <Marker coordinate={RUN_ROUTE[0]} title="Start">
                     <View style={styles.markerContainer}>
                         <View style={styles.startMarker} />
                     </View>
                 </Marker>
 
                 {/* End Marker */}
-                <Marker coordinate={RUN_ROUTE[RUN_ROUTE.length - 1]} title="Fim">
+                <Marker coordinate={RUN_ROUTE[RUN_ROUTE.length - 1]} title="End">
                     <View style={styles.markerContainer}>
                         <View style={styles.endMarker} />
                     </View>
                 </Marker>
             </MapView>
 
+            {/* Glass Wrapper for entire UIOverlay to ensure readability if map is light, though map is dark */}
+
             {/* Header Overlay */}
             <SafeAreaView style={styles.headerOverlay} edges={['top']}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <ChevronRightIcon size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>MAPA DE CORRIDAS</Text>
-            </SafeAreaView>
-
-            {/* Bottom Card */}
-            <View style={styles.bottomCardContainer}>
-                <View style={styles.runCard}>
-                    <View style={styles.cardHeader}>
-                        <View>
-                            <Text style={styles.cardDate}>{selectedRun.date}</Text>
-                            <Text style={styles.cardTitle}>Corrida Matinal</Text>
-                        </View>
-                        <View style={styles.liveBadge}>
-                            <View style={styles.liveDot} />
-                            <Text style={styles.liveText}>CONCLUÍDO</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>Distância</Text>
-                            <Text style={styles.statValue}>{selectedRun.distance}</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>Tempo</Text>
-                            <Text style={styles.statValue}>{selectedRun.time}</Text>
-                        </View>
-                        <View style={styles.statDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>Pace</Text>
-                            <Text style={styles.statValue}>{selectedRun.pace}</Text>
-                        </View>
+                <View style={styles.headerRow}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <ChevronRightIcon size={24} color="#FFF" />
+                    </TouchableOpacity>
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.headerTitle}>RUN SUMMARY</Text>
+                        <Text style={styles.headerDate}>{selectedRun.date}</Text>
                     </View>
                 </View>
+            </SafeAreaView>
+
+            {/* Bottom Card - HUD Style */}
+            <View style={styles.bottomCardContainer}>
+                <BlurView intensity={40} tint="dark" style={styles.runCard}>
+                    <View style={styles.glassContent}>
+                        <View style={styles.cardHeader}>
+                            <View>
+                                <Text style={styles.cardTitle}>{t('events.morningRun').toUpperCase()}</Text>
+                                <View style={styles.tagRow}>
+                                    <View style={[styles.tag, { backgroundColor: theme.colors.brand.primary }]}>
+                                        <Text style={styles.tagText}>{t('profile.completed').toUpperCase()}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                            {/* Logo stamp or brand element could go here */}
+                            <View style={styles.brandStamp}>
+                                <Image
+                                    source={require('../../../assets/logo_transparent.png')}
+                                    style={styles.brandLogo}
+                                    resizeMode="contain"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.statsRow}>
+                            <View style={styles.statItem}>
+                                <Text style={styles.statLabel}>{t('profile.distance').toUpperCase()} (KM)</Text>
+                                <Text style={styles.statValue}>{selectedRun.distance}</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={styles.statLabel}>{t('profile.time').toUpperCase()}</Text>
+                                <Text style={styles.statValue}>{selectedRun.time}</Text>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <Text style={styles.statLabel}>PACE</Text>
+                                <Text style={styles.statValue}>{selectedRun.pace}</Text>
+                            </View>
+                        </View>
+                    </View>
+                </BlurView>
             </View>
         </View>
     );
@@ -150,39 +170,47 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: theme.spacing[4],
-        paddingTop: theme.spacing[2],
+        paddingHorizontal: 20,
+    },
+    headerRow: {
+        marginTop: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },
     backButton: {
         width: 40,
         height: 40,
-        backgroundColor: '#fff',
         borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         transform: [{ rotate: '180deg' }]
     },
+    headerTitleContainer: {
+        marginLeft: 16,
+    },
     headerTitle: {
-        fontSize: theme.typography.size.h4,
-        fontWeight: theme.typography.weight.bold as any,
-        color: '#000',
-        marginLeft: theme.spacing[4],
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        overflow: 'hidden',
+        fontSize: 14,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        fontStyle: 'italic',
+    },
+    headerDate: {
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '700',
+        letterSpacing: 1,
     },
     markerContainer: {
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
     },
     startMarker: {
         width: 16,
@@ -190,103 +218,114 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: theme.colors.success,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: '#000',
     },
     endMarker: {
         width: 16,
         height: 16,
         borderRadius: 8,
-        backgroundColor: theme.colors.error,
+        backgroundColor: theme.colors.brand.primary,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: '#000',
     },
     bottomCardContainer: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 100, // Increased to clear navbar
         left: 20,
         right: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 10,
     },
     runCard: {
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.xl,
-        padding: theme.spacing[5],
+        borderRadius: 24,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        borderColor: 'rgba(255,255,255,0.15)',
+    },
+    glassContent: {
+        padding: 24,
+        backgroundColor: 'rgba(0,0,0,0.6)', // Deep dark tint
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: theme.spacing[4],
-    },
-    cardDate: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginBottom: 2,
+        marginBottom: 24,
     },
     cardTitle: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        includeFontPadding: false,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
-    liveBadge: {
+    tagRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.success + '20',
+        marginTop: 8,
+    },
+    tag: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: 4,
     },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: theme.colors.success,
-        marginRight: 6,
-    },
-    liveText: {
+    tagText: {
+        color: '#FFF',
         fontSize: 10,
-        fontWeight: 'bold',
-        color: theme.colors.success,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    brandStamp: {
+        // Container for logo
+    },
+    brandLogo: {
+        width: 120, // Increased from 80
+        height: 36, // Increased from 24
     },
     statsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     statItem: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flex: 1,
     },
     statLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginBottom: 2,
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.5)',
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 4,
     },
     statValue: {
-        fontSize: theme.typography.size.bodyLG,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        includeFontPadding: false,
     },
     statDivider: {
         width: 1,
         height: 30,
-        backgroundColor: theme.colors.border.default,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginHorizontal: 10,
+        marginBottom: 2,
     },
 });
 
-// Dark Map Style (Snazzy Maps standard dark theme style)
+// Dark Map Style (Pitch Black Minimal)
 const mapStyle = [
     {
         "elementType": "geometry",
         "stylers": [
             {
-                "color": "#212121"
+                "color": "#121212"
             }
         ]
     },
@@ -324,32 +363,6 @@ const mapStyle = [
         ]
     },
     {
-        "featureType": "administrative.country",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#9e9e9e"
-            }
-        ]
-    },
-    {
-        "featureType": "administrative.land_parcel",
-        "stylers": [
-            {
-                "visibility": "off"
-            }
-        ]
-    },
-    {
-        "featureType": "administrative.locality",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#bdbdbd"
-            }
-        ]
-    },
-    {
         "featureType": "poi",
         "elementType": "labels.text.fill",
         "stylers": [
@@ -368,24 +381,6 @@ const mapStyle = [
         ]
     },
     {
-        "featureType": "poi.park",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#616161"
-            }
-        ]
-    },
-    {
-        "featureType": "poi.park",
-        "elementType": "labels.text.stroke",
-        "stylers": [
-            {
-                "color": "#1b1b1b"
-            }
-        ]
-    },
-    {
         "featureType": "road",
         "elementType": "geometry.fill",
         "stylers": [
@@ -395,74 +390,11 @@ const mapStyle = [
         ]
     },
     {
-        "featureType": "road",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#8a8a8a"
-            }
-        ]
-    },
-    {
-        "featureType": "road.arterial",
-        "elementType": "geometry",
-        "stylers": [
-            {
-                "color": "#373737"
-            }
-        ]
-    },
-    {
-        "featureType": "road.highway",
-        "elementType": "geometry",
-        "stylers": [
-            {
-                "color": "#3c3c3c"
-            }
-        ]
-    },
-    {
-        "featureType": "road.highway.controlled_access",
-        "elementType": "geometry",
-        "stylers": [
-            {
-                "color": "#4e4e4e"
-            }
-        ]
-    },
-    {
-        "featureType": "road.local",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#616161"
-            }
-        ]
-    },
-    {
-        "featureType": "transit",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#757575"
-            }
-        ]
-    },
-    {
         "featureType": "water",
         "elementType": "geometry",
         "stylers": [
             {
                 "color": "#000000"
-            }
-        ]
-    },
-    {
-        "featureType": "water",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#3d3d3d"
             }
         ]
     }

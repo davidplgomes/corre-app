@@ -11,6 +11,7 @@
     "back": "Back",
     "next": "Next",
     "submit": "Submit",
+    "user": "User",
     "confirm": "Confirm",
     "ok": "OK",
     "yes": "Yes",
@@ -20,7 +21,10 @@
     "filter": "Filter",
     "sort": "Sort",
     "like": "Like",
-    "comment": "Comment"
+    "comment": "Comment",
+    "viewAll": "View all",
+    "refresh": "Refresh",
+    "permissionRequired": "Permission Required"
   },
   "auth": {
     "login": "Login",
@@ -45,12 +49,18 @@
     "emailRequired": "Email is required",
     "passwordRequired": "Password is required",
     "passwordTooShort": "Password must be at least 6 characters",
-    "invalidEmail": "Invalid email format"
+    "passwordTooShort": "Password must be at least 6 characters",
+    "invalidEmail": "Invalid email format",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password"
   },
   "navigation": {
+    "home": "Home",
     "events": "Events",
+    "feed": "Social",
+    "shop": "Shop",
     "leaderboard": "Leaderboard",
-    "loyalty": "Loyalty",
+    "loyalty": "Card",
     "profile": "Profile"
   },
   "events": {
@@ -103,8 +113,18 @@
     "activityCheckIn": "checked in at",
     "activityPost": "posted",
     "distance": "Distance",
-    "time": "Time",
-    "pace": "Pace"
+    "duration": "Time",
+    "pace": "Pace",
+    "entrance": "Entrance",
+    "beTheFirst": "Be the first",
+    "joinTheCrew": "Join the crew",
+    "allPaces": "All paces",
+    "participate": "Join",
+    "leaveEventButton": "Leave Event",
+    "runs": "Runs",
+    "streetRun": "Street Run",
+    "morningRun": "Morning Run",
+    "meetingPoint": "Meeting Point"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -142,10 +162,58 @@
       "basico": "10% discount and priority registration",
       "baixa_pace": "15% discount and welcome gift",
       "parceiros": "20% discount and VIP access"
-    }
+    },
+    "yourBenefits": "Your Benefits",
+    "history": "History",
+    "yourWallet": "Your Wallet",
+    "fidelity": "Loyalty",
+    "scan": "Scan",
+    "current": "Current",
+    "ptsToNextLevel": "pts to next level",
+    "nextLevel": "Next Level",
+    "memberId": "Member ID",
+    "discountPartners": "10% OFF at partners",
+    "vipAccess": "VIP access to events",
+    "priorityQueue": "Priority queue",
+    "recentActivity": "Recent Activity"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "createAd": "Create Ad",
+    "announce": "Announce",
+    "itemTitle": "Item Title",
+    "price": "Price (R$)",
+    "description": "Description",
+    "contact": "Contact",
+    "imageLink": "Image Link",
+    "category": "Category",
+    "categories": {
+      "eletronicos": "Electronics",
+      "roupas": "Clothing",
+      "outros": "Others"
+    },
+    "interested": "I'm interested",
+    "contactSeller": "Contact Seller",
+    "details": "Details",
+    "availability": "Availability",
+    "inStock": "In Stock",
+    "fewUnits": "Few Units",
+    "by": "by",
+    "shop": "Shop",
+    "pointsBalance": "Points Balance",
+    "correShop": "Corre Shop",
+    "community": "Community",
+    "adTitle": "Ad Title",
+    "publish": "Publish",
+    "announceProduct": "ANNOUNCE PRODUCT",
+    "titlePlaceholder": "Ex: Nike Shoes 42",
+    "noShopItems": "No items in the shop at the moment.",
+    "noCommunityItems": "No items announced."
   },
   "profile": {
     "title": "Profile",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
     "settings": "Settings",
     "language": "Language",
     "editProfile": "Edit Profile",
@@ -161,7 +229,62 @@
       "es": "Español"
     },
     "selectLanguage": "Select Language",
-    "changeLanguageSuccess": "Language changed successfully"
+    "changeLanguageSuccess": "Language changed successfully",
+    "runHistory": "Run History",
+    "runMap": "Run Map",
+    "achievements": "Achievements",
+    "friends": "Friends",
+    "logout": "Logout",
+    "myProfile": "My Profile",
+    "distance": "Distance",
+    "time": "Time",
+    "averagePace": "Avg Pace",
+    "january": "January",
+    "completed": "Completed",
+    "inProgress": "In Progress",
+    "unlocked": "Unlocked",
+    "your": "Your"
+  },
+  "friends": {
+    "title": "Friends",
+    "searchPlaceholder": "Search users...",
+    "searchResults": "RESULTS",
+    "myFriends": "My Friends",
+    "pendingRequests": "Requests",
+    "addFriend": "Add",
+    "pending": "Pending",
+    "requestSent": "Request sent!",
+    "wantsToConnect": "wants to connect",
+    "noFriends": "No friends yet",
+    "noRequests": "No pending requests",
+    "removeFriend": "Remove Friend",
+    "confirmRemove": "Are you sure you want to remove this friend?"
+  },
+  "achievements": {
+    "firstRun": "First Run",
+    "firstRunDesc": "Complete your first run",
+    "5km": "5km Completed",
+    "5kmDesc": "Complete a 5km run",
+    "10km": "10km Completed",
+    "10kmDesc": "Complete a 10km run",
+    "halfMarathon": "Half Marathon",
+    "halfMarathonDesc": "Complete a half marathon (21.1km)",
+    "marathon": "Marathon",
+    "marathonDesc": "Complete a marathon (42.2km)",
+    "50kmTotal": "50km Total",
+    "50kmTotalDesc": "Accumulate 50km of running",
+    "100kmTotal": "100km Total",
+    "100kmTotalDesc": "Accumulate 100km of running",
+    "500kmTotal": "500km Total",
+    "500kmTotalDesc": "Accumulate 500km of running",
+    "nightRunner": "Night Runner",
+    "nightRunnerDesc": "Complete 5 night runs",
+    "earlyBird": "Early Bird",
+    "earlyBirdDesc": "Complete 5 runs before 7am",
+    "consistency": "Consistency",
+    "consistencyDesc": "Run 7 days in a row",
+    "speedster": "Speedster",
+    "speedsterDesc": "Pace below 5 min/km"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
@@ -169,12 +292,66 @@
     "unknownError": "An unknown error occurred",
     "permissionDenied": "Permission denied",
     "locationPermissionDenied": "Location permission is required for check-ins",
-    "cameraPermissionDenied": "Camera permission is required to scan QR codes"
+    "cameraPermissionDenied": "Camera permission is required to scan QR codes",
+    "fillAllFields": "Please fill in all fields.",
+    "updateProfile": "Could not update profile.",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordLength": "Password must be at least 6 characters.",
+    "updatePassword": "Could not update password.",
+    "createAd": "Could not create ad.",
+    "loadFeed": "Could not load feed."
   },
   "validation": {
     "required": "This field is required",
     "invalidEmail": "Invalid email format",
     "invalidDate": "Invalid date",
     "invalidLocation": "Invalid location"
+  },
+  "success": {
+    "profileUpdated": "Profile updated successfully!",
+    "passwordUpdated": "Password updated successfully!",
+    "redeemRequestSent": "Redeem request sent!",
+    "ItemAnnounced": "Your item has been announced!"
+  },
+  "settings": {
+    "title": "Settings",
+    "preferences": "Preferences",
+    "enableNotifications": "Enable Notifications",
+    "darkMode": "Dark Mode",
+    "privacy": "Privacy",
+    "termsOfUse": "Terms of Use",
+    "privacyPolicy": "Privacy Policy",
+    "version": "Version",
+    "connectedApps": "Connected Apps",
+    "connect": "Connect",
+    "disconnect": "Disconnect"
+  },
+  "home": {
+    "nextWorkout": "Next Workout",
+    "recentFeed": "Recent Feed",
+    "noRecentActivity": "No recent activity.",
+    "noScheduledWorkout": "No Scheduled Workout",
+    "viewEvents": "View Events",
+    "next": "Next"
+  },
+  "feed": {
+    "noRecentActivity": "No recent activity.",
+    "friends": "Friends",
+    "community": "Community",
+    "activities": "Activities"
+  },
+  "runHistory": {
+    "title": "Run History",
+    "noRuns": "No runs recorded.",
+    "runsWillAppear": "Your runs will appear here."
+  },
+  "coupons": {
+    "title": "Coupons",
+    "cost": "Cost",
+    "redeem": "Redeem",
+    "available": "Available",
+    "used": "Used",
+    "your": "Your",
+    "validUntil": "Valid until"
   }
 }

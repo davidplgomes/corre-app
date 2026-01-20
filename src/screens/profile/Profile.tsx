@@ -6,21 +6,23 @@ import {
     ScrollView,
     TouchableOpacity,
     StatusBar,
-    Animated,
+    ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, RunIcon, MedalIcon, SettingsIcon, MapIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
 };
 
 export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
+    const { t } = useTranslation();
     const { profile, user } = useAuth();
 
     const tier = (profile?.membershipTier || 'basico') as keyof typeof tierColors;
@@ -55,8 +57,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const menuItems = [
         {
             id: 'history',
-            label: 'Histórico de Corridas',
-            icon: <RunIcon size={20} color={theme.colors.text.secondary} />,
+            label: t('profile.runHistory'),
+            icon: <ClockIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('RunHistory');
@@ -65,8 +67,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         },
         {
             id: 'runMap',
-            label: 'Mapa de Corridas',
-            icon: <MapIcon size={20} color={theme.colors.text.secondary} />,
+            label: t('profile.runMap'),
+            icon: <MapIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('RunMap');
@@ -74,8 +76,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         },
         {
             id: 'achievements',
-            label: 'Conquistas',
-            icon: <MedalIcon size={20} color={theme.colors.text.secondary} />,
+            label: t('profile.achievements'),
+            icon: <MedalIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('Achievements');
@@ -83,9 +85,18 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             badge: 8,
         },
         {
+            id: 'friends',
+            label: t('profile.friends'),
+            icon: <PersonIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Friends');
+            },
+        },
+        {
             id: 'settings',
-            label: 'Configurações',
-            icon: <SettingsIcon size={20} color={theme.colors.text.secondary} />,
+            label: t('profile.settings'),
+            icon: <SettingsIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('Settings');
@@ -93,7 +104,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         },
         {
             id: 'logout',
-            label: 'Sair',
+            label: t('profile.logout'),
             icon: null,
             isDestructive: true,
             onPress: handleLogout,
@@ -102,168 +113,127 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/CorreHS.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                <ScrollView
-                    style={styles.scrollView}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {/* Header with Gradient */}
-                    <View style={styles.headerSection}>
-                        <LinearGradient
-                            colors={['rgba(255, 87, 34, 0.15)', 'rgba(255, 87, 34, 0.05)', 'transparent']}
-                            style={styles.headerGradient}
-                        />
-                        <Text style={styles.headerLabel}>PROFILE</Text>
-                    </View>
-
-                    {/* Avatar Section with Glow */}
-                    <View style={styles.profileSection}>
-                        {/* Avatar Glow Effect */}
-                        <View style={styles.avatarGlow}>
-                            <View style={[styles.avatarGlowInner, { backgroundColor: tierConfig.primary + '30' }]} />
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    <ScrollView
+                        style={styles.scrollView}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        {/* Header */}
+                        <View style={styles.headerSection}>
+                            <Text style={styles.headerLabel}>{t('profile.myProfile').toUpperCase()}</Text>
+                            <Text style={styles.headerTitle}>{t('navigation.profile').toUpperCase()}</Text>
                         </View>
 
-                        {/* Avatar */}
-                        <View style={[styles.avatarContainer, { borderColor: tierConfig.primary }]}>
-                            <LinearGradient
-                                colors={[tierConfig.primary, tierConfig.primary + 'CC']}
-                                style={styles.avatarGradient}
-                            >
-                                <Text style={styles.avatarText}>{userInitial}</Text>
-                            </LinearGradient>
-                        </View>
+                        {/* Avatar Section */}
+                        <BlurView intensity={20} tint="dark" style={styles.profileGlassCard}>
+                            <View style={styles.profileContent}>
+                                <View style={[styles.avatarContainer, { borderColor: tierConfig.primary }]}>
+                                    <Text style={styles.avatarText}>{userInitial}</Text>
+                                </View>
+                                <Text style={styles.userName}>{userName.toUpperCase()}</Text>
+                                <View style={[styles.tierBadge, { backgroundColor: tierConfig.primary }]}>
+                                    <Text style={styles.tierText}>{tierConfig.label}</Text>
+                                </View>
+                                <Text style={styles.memberSince}>{t('profile.memberSince')} {t('profile.january')} 2025</Text>
+                            </View>
+                        </BlurView>
 
-                        <Text style={styles.userName}>{userName}</Text>
-
-                        <View style={[styles.tierBadge, { backgroundColor: tierConfig.primary }]}>
-                            <Text style={styles.tierText}>{tierConfig.label}</Text>
-                        </View>
-
-                        {/* Member since */}
-                        <Text style={styles.memberSince}>Membro desde Janeiro 2025</Text>
-                    </View>
-
-                    {/* Big Points Display with Glow */}
-                    <View style={styles.pointsSection}>
-                        <View style={styles.pointsGlow} />
-                        <Text style={styles.pointsNumber}>{stats.currentPoints}</Text>
-                        <Text style={styles.pointsLabel}>Pontos do Mês</Text>
-                        <View style={styles.pointsDivider}>
+                        {/* Points Highlight */}
+                        <View style={styles.pointsSection}>
+                            <Text style={styles.pointsNumber}>{stats.currentPoints}</Text>
+                            <Text style={styles.pointsLabel}>{t('profile.currentPoints').toUpperCase()}</Text>
                             <Text style={styles.lifetimePoints}>{stats.lifetimePoints} total</Text>
                         </View>
-                    </View>
 
-                    {/* This Week Summary Card */}
-                    <View style={styles.weekCard}>
-                        <LinearGradient
-                            colors={['rgba(255, 87, 34, 0.1)', 'rgba(255, 87, 34, 0.02)']}
-                            style={styles.weekCardGradient}
-                        >
-                            <Text style={styles.weekCardTitle}>Esta Semana</Text>
-                            <View style={styles.weekStats}>
-                                <View style={styles.weekStat}>
-                                    <Text style={styles.weekStatValue}>{stats.thisWeekRuns}</Text>
-                                    <Text style={styles.weekStatLabel}>Corridas</Text>
+                        {/* Stats Grid */}
+                        <View style={styles.statsGrid}>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>📍</Text>
+                                        <Text style={styles.statLabel}>{t('profile.distance').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.totalDistance}</Text>
                                 </View>
-                                <View style={styles.weekStatDivider} />
-                                <View style={styles.weekStat}>
-                                    <Text style={styles.weekStatValue}>{stats.thisWeekDistance}</Text>
-                                    <Text style={styles.weekStatLabel}>Distância</Text>
+                            </BlurView>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>⏱</Text>
+                                        <Text style={styles.statLabel}>{t('profile.time').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.totalTime}</Text>
                                 </View>
-                            </View>
-                        </LinearGradient>
-                    </View>
+                            </BlurView>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>🏃</Text>
+                                        <Text style={styles.statLabel}>{t('events.runs').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.totalRuns}</Text>
+                                </View>
+                            </BlurView>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>⚡</Text>
+                                        <Text style={styles.statLabel}>{t('profile.averagePace').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.averagePace}</Text>
+                                </View>
+                            </BlurView>
+                        </View>
 
-                    {/* Stats Grid - 2x2 */}
-                    <View style={styles.statsGrid}>
-                        <View style={styles.statCard}>
-                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 87, 34, 0.15)' }]}>
-                                <Text style={styles.statIcon}>📍</Text>
-                            </View>
-                            <Text style={styles.statLabel}>Distância Total</Text>
-                            <Text style={styles.statValue}>{stats.totalDistance}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(0, 200, 83, 0.15)' }]}>
-                                <Text style={styles.statIcon}>⏱</Text>
-                            </View>
-                            <Text style={styles.statLabel}>Tempo Total</Text>
-                            <Text style={styles.statValue}>{stats.totalTime}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(33, 150, 243, 0.15)' }]}>
-                                <Text style={styles.statIcon}>🏃</Text>
-                            </View>
-                            <Text style={styles.statLabel}>Corridas</Text>
-                            <Text style={styles.statValue}>{stats.totalRuns}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 193, 7, 0.15)' }]}>
-                                <Text style={styles.statIcon}>⚡</Text>
-                            </View>
-                            <Text style={styles.statLabel}>Média Pace</Text>
-                            <Text style={styles.statValue}>{stats.averagePace}</Text>
-                        </View>
-                    </View>
-
-                    {/* Next Tier Progress */}
-                    <View style={styles.progressSection}>
-                        <View style={styles.progressHeader}>
-                            <Text style={styles.progressLabel}>Próximo Nível</Text>
-                            <Text style={styles.progressTier}>{stats.nextTier}</Text>
-                        </View>
-                        <View style={styles.progressTrack}>
-                            <LinearGradient
-                                colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={[styles.progressFill, { width: `${stats.nextTierProgress}%` }]}
-                            />
-                        </View>
-                        <Text style={styles.progressPercent}>{stats.nextTierProgress}% concluído</Text>
-                    </View>
-
-                    {/* Menu Items */}
-                    <View style={styles.menuSection}>
-                        {menuItems.map((item) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                style={styles.menuItem}
-                                onPress={item.onPress}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.menuItemLeft}>
-                                    {item.icon && (
-                                        <View style={styles.menuItemIcon}>
-                                            {item.icon}
+                        {/* Menu Items */}
+                        <View style={styles.menuSection}>
+                            {menuItems.map((item) => (
+                                <BlurView key={item.id} intensity={10} tint="dark" style={styles.menuItemGlass}>
+                                    <TouchableOpacity
+                                        style={styles.menuItem}
+                                        onPress={item.onPress}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.menuItemLeft}>
+                                            {item.icon && (
+                                                <View style={styles.menuItemIcon}>
+                                                    {item.icon}
+                                                </View>
+                                            )}
+                                            <Text style={[
+                                                styles.menuItemLabel,
+                                                item.isDestructive && styles.menuItemDestructive
+                                            ]}>
+                                                {item.label.toUpperCase()}
+                                            </Text>
                                         </View>
-                                    )}
-                                    <Text style={[
-                                        styles.menuItemLabel,
-                                        item.isDestructive && styles.menuItemDestructive
-                                    ]}>
-                                        {item.label}
-                                    </Text>
-                                </View>
-                                <View style={styles.menuItemRight}>
-                                    {item.badge && (
-                                        <View style={styles.menuBadge}>
-                                            <Text style={styles.menuBadgeText}>{item.badge}</Text>
+                                        <View style={styles.menuItemRight}>
+                                            {item.badge && (
+                                                <View style={styles.menuBadge}>
+                                                    <Text style={styles.menuBadgeText}>{item.badge}</Text>
+                                                </View>
+                                            )}
+                                            <ChevronRightIcon size={16} color="rgba(255,255,255,0.3)" />
                                         </View>
-                                    )}
-                                    <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                                    </TouchableOpacity>
+                                </BlurView>
+                            ))}
+                        </View>
 
-                    {/* Version */}
-                    <Text style={styles.version}>Corre App v1.0.0</Text>
-                </ScrollView>
-            </SafeAreaView>
+                        {/* Version */}
+                        <Text style={styles.version}>CORRE APP v1.0.0</Text>
+                    </ScrollView>
+                </SafeAreaView>
+            </ImageBackground>
         </View>
     );
 };
@@ -271,7 +241,16 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
     },
     safeArea: {
         flex: 1,
@@ -285,270 +264,194 @@ const styles = StyleSheet.create({
 
     // Header
     headerSection: {
-        position: 'relative',
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[4],
-        paddingBottom: theme.spacing[2],
-    },
-    headerGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 200,
+        paddingHorizontal: 24,
+        paddingTop: 10,
+        paddingBottom: 20,
+        alignItems: 'flex-start', // Fixed: Aligned to left
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        textAlign: 'right',
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 4,
+        textTransform: 'uppercase',
+    },
+    headerTitle: {
+        fontSize: 32,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 4 },
+        textShadowRadius: 10,
     },
 
     // Profile Section
-    profileSection: {
-        alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[4],
-        paddingBottom: theme.spacing[6],
+    profileGlassCard: {
+        marginHorizontal: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 30,
     },
-    avatarGlow: {
-        position: 'absolute',
-        top: theme.spacing[2],
-        width: 120,
-        height: 120,
+    profileContent: {
         alignItems: 'center',
-        justifyContent: 'center',
+        padding: 30,
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
-    avatarGlowInner: {
+    avatarContainer: {
         width: 100,
         height: 100,
         borderRadius: 50,
-        opacity: 0.5,
-    },
-    avatarContainer: {
-        width: 88,
-        height: 88,
-        borderRadius: 44,
-        borderWidth: 3,
+        borderWidth: 2,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: theme.spacing[4],
-        overflow: 'hidden',
-    },
-    avatarGradient: {
-        width: '100%',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
+        marginBottom: 16,
+        backgroundColor: '#000',
     },
     avatarText: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.white,
+        fontSize: 40,
+        fontWeight: '900',
+        color: '#FFF',
     },
     userName: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing[3],
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        marginBottom: 8,
+        letterSpacing: 1,
     },
     tierBadge: {
-        paddingHorizontal: theme.spacing[4],
-        paddingVertical: theme.spacing[1],
-        borderRadius: theme.radius.sm,
-        marginBottom: theme.spacing[2],
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginBottom: 12,
     },
     tierText: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.black,
-        letterSpacing: theme.typography.letterSpacing.wide,
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#000',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
     memberSince: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.4)',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
 
     // Points Section
     pointsSection: {
         alignItems: 'center',
-        paddingBottom: theme.spacing[6],
-        position: 'relative',
-    },
-    pointsGlow: {
-        position: 'absolute',
-        top: 0,
-        width: 200,
-        height: 80,
-        backgroundColor: theme.colors.brand.primary,
-        opacity: 0.1,
-        borderRadius: 100,
+        marginBottom: 30,
     },
     pointsNumber: {
-        fontSize: theme.typography.size.displayXL,
-        fontWeight: theme.typography.weight.black as any,
+        fontSize: 56,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.tighter,
-        lineHeight: theme.typography.size.displayXL,
+        letterSpacing: -2,
+        lineHeight: 56,
+        textShadowColor: 'rgba(255, 87, 34, 0.3)',
+        textShadowOffset: { width: 0, height: 4 },
+        textShadowRadius: 20,
     },
     pointsLabel: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
-    },
-    pointsDivider: {
-        marginTop: theme.spacing[2],
+        fontSize: 12,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 2,
+        marginBottom: 4,
     },
     lifetimePoints: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.disabled,
-    },
-
-    // Week Card
-    weekCard: {
-        marginHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[6],
-        borderRadius: theme.radius.lg, // 16px
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: theme.colors.brand.primary + '20',
-    },
-    weekCardGradient: {
-        padding: theme.spacing[5],
-    },
-    weekCardTitle: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.brand.primary,
-        letterSpacing: theme.typography.letterSpacing.wide,
-        marginBottom: theme.spacing[4],
-    },
-    weekStats: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    weekStat: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    weekStatValue: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-    },
-    weekStatLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginTop: theme.spacing[1],
-    },
-    weekStatDivider: {
-        width: 1,
-        height: 40,
-        backgroundColor: theme.colors.border.default,
+        fontSize: 10,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.4)',
+        textTransform: 'uppercase',
     },
 
     // Stats Grid
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingHorizontal: theme.spacing[4],
-        gap: theme.spacing[3],
-        marginBottom: theme.spacing[6],
+        paddingHorizontal: 16,
+        gap: 8,
+        marginBottom: 30,
     },
     statCard: {
-        width: '47%',
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
-        padding: theme.spacing[4],
+        width: '48%',
+        borderRadius: 16,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
+        borderColor: 'rgba(255,255,255,0.05)',
+        marginBottom: 8,
     },
-    statIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: theme.spacing[3],
+    statContent: {
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
-    statIcon: {
-        fontSize: 16,
-    },
-    statLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginBottom: theme.spacing[1],
-    },
-    statValue: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-    },
-
-    // Progress
-    progressSection: {
-        paddingHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[8],
-    },
-    progressHeader: {
+    statHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: theme.spacing[3],
+        marginBottom: 8,
     },
-    progressLabel: {
-        fontSize: theme.typography.size.bodySM,
-        color: theme.colors.text.secondary,
+    statIcon: {
+        fontSize: 12,
+        marginRight: 6,
     },
-    progressTier: {
-        fontSize: theme.typography.size.bodySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.brand.primary,
+    statLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
     },
-    progressTrack: {
-        height: 8,
-        backgroundColor: theme.colors.background.card,
-        borderRadius: 4,
-        overflow: 'hidden',
-        marginBottom: theme.spacing[2],
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: 4,
-    },
-    progressPercent: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        textAlign: 'right',
+    statValue: {
+        fontSize: 18,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
 
     // Menu
     menuSection: {
-        paddingHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[6],
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        gap: 8,
+    },
+    menuItemGlass: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: theme.spacing[4],
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.default,
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
     menuItemLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     menuItemIcon: {
-        marginRight: theme.spacing[3],
+        marginRight: 12,
+        width: 24,
+        alignItems: 'center',
     },
     menuItemLabel: {
-        fontSize: theme.typography.size.bodyLG,
-        color: theme.colors.text.primary,
+        fontSize: 12,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 1,
     },
     menuItemDestructive: {
-        color: theme.colors.error,
+        color: '#FF4444',
     },
     menuItemRight: {
         flexDirection: 'row',
@@ -556,22 +459,24 @@ const styles = StyleSheet.create({
     },
     menuBadge: {
         backgroundColor: theme.colors.brand.primary,
-        paddingHorizontal: theme.spacing[2],
+        paddingHorizontal: 6,
         paddingVertical: 2,
-        borderRadius: theme.radius.full,
-        marginRight: theme.spacing[2],
+        borderRadius: 4,
+        marginRight: 8,
     },
     menuBadgeText: {
-        fontSize: theme.typography.size.micro,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.white,
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#FFF',
     },
 
     // Version
     version: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.disabled,
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.2)',
         textAlign: 'center',
-        paddingVertical: theme.spacing[4],
+        paddingVertical: 20,
+        letterSpacing: 2,
     },
 });

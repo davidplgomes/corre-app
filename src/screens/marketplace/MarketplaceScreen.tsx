@@ -9,10 +9,13 @@ import {
     StatusBar,
     Alert,
     Modal,
-    RefreshControl
+    RefreshControl,
+    ImageBackground
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, LoadingSpinner } from '../../components/common';
@@ -23,7 +26,7 @@ type MarketplaceScreenProps = {
     navigation: any;
 };
 
-// Toggle Option Component
+// Toggle Option Component with Glass
 const ToggleOption: React.FC<{
     label: string;
     isActive: boolean;
@@ -41,6 +44,7 @@ const ToggleOption: React.FC<{
 );
 
 export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation }) => {
+    const { t } = useTranslation();
     const { profile } = useAuth();
     const [viewMode, setViewMode] = useState<'shop' | 'community'>('shop');
 
@@ -86,7 +90,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
     const handleCreateItem = async () => {
         if (!newItemTitle || !newItemPrice) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert('Erro', 'Preencha todos os campos obrigatórios.');
+            Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
 
@@ -103,14 +107,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                 category: 'gear',
             });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Sucesso', 'Seu item foi anunciado!');
+            Alert.alert(t('common.success'), t('success.itemAnnounced'));
             setCreateModalVisible(false);
             setNewItemTitle('');
             setNewItemPrice('');
             loadData(); // Reload
         } catch (error) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert('Erro', 'Não foi possível criar o anúncio.');
+            Alert.alert(t('common.error'), t('errors.createAd'));
         } finally {
             setCreating(false);
         }
@@ -125,168 +129,194 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
         const imageUrl: string = item.image_url ?? 'https://images.unsplash.com/photo-1556906250-9632af38096b?w=500&q=80'; // Fallback
 
         return (
-            <TouchableOpacity
-                style={styles.productCard}
-                onPress={() => {
-                    Haptics.selectionAsync();
-                    navigation.navigate('ProductDetail', { product: item, type: viewMode });
-                }}
-                activeOpacity={0.8}
-            >
-                <View style={styles.imageContainer}>
-                    <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
-                    {isShop && (item as ShopItem).stock < 5 && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>Poucas und.</Text>
-                        </View>
-                    )}
-                </View>
-                <View style={styles.productInfo}>
-                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
-                    <View style={styles.priceContainer}>
-                        <Text style={[styles.priceValue, !isShop && styles.priceValueCash]}>
-                            {priceLabel}
-                        </Text>
+            <BlurView intensity={20} tint="dark" style={styles.productCard}>
+                <TouchableOpacity
+                    style={styles.cardInternal}
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.navigate('ProductDetail', { product: item, type: viewMode });
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.imageContainer}>
+                        <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
+                        {isShop && (item as ShopItem).stock < 5 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{t('marketplace.fewUnits').toUpperCase()}</Text>
+                            </View>
+                        )}
                     </View>
-                    {!isShop && (
-                        <Text style={styles.sellerName} numberOfLines={1}>
-                            de {(item as MarketplaceItem).users?.full_name || 'Vendedor'}
-                        </Text>
-                    )}
-                </View>
-            </TouchableOpacity>
+                    <View style={styles.productInfo}>
+                        <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                        <View style={styles.priceContainer}>
+                            <Text style={[styles.priceValue, !isShop && styles.priceValueCash]}>
+                                {priceLabel}
+                            </Text>
+                        </View>
+                        {!isShop && (
+                            <Text style={styles.sellerName} numberOfLines={1}>
+                                {t('marketplace.by')} {(item as MarketplaceItem).users?.full_name || 'Vendedor'}
+                            </Text>
+                        )}
+                    </View>
+                </TouchableOpacity>
+            </BlurView>
         );
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.headerLabel}>SHOP</Text>
-                        <Text style={styles.headerTitle}>Marketplace</Text>
-                    </View>
-                    <View style={styles.balanceContainer}>
-                        <Text style={styles.balanceLabel}>SEUS PONTOS</Text>
-                        <Text style={styles.balanceValue}>{profile?.currentMonthPoints || 0}</Text>
-                    </View>
-                </View>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-                {/* Toggle */}
-                <View style={styles.toggleContainer}>
-                    <View style={styles.toggleWrapper}>
-                        <ToggleOption
-                            label="Loja Corre"
-                            isActive={viewMode === 'shop'}
-                            onPress={() => setViewMode('shop')}
-                        />
-                        <ToggleOption
-                            label="Comunidade"
-                            isActive={viewMode === 'community'}
-                            onPress={() => setViewMode('community')}
-                        />
-                    </View>
-                </View>
-
-                {/* Create Button (Only for Community) */}
-                {viewMode === 'community' && (
-                    <TouchableOpacity
-                        style={styles.createButtonFloat}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            setCreateModalVisible(true);
-                        }}
-                    >
-                        <Text style={styles.createButtonText}>+ Anunciar</Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* List */}
-                {loading && !refreshing ? (
-                    <LoadingSpinner />
-                ) : (
-                    <FlatList
-                        data={viewMode === 'shop' ? shopItems : communityItems}
-                        renderItem={renderItem}
-                        keyExtractor={item => item.id}
-                        numColumns={2}
-                        columnWrapperStyle={styles.columnWrapper}
-                        contentContainerStyle={styles.listContent}
-                        showsVerticalScrollIndicator={false}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor={theme.colors.brand.primary}
-                            />
-                        }
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>
-                                    {viewMode === 'shop'
-                                        ? 'Nenhum item na loja no momento.'
-                                        : 'Nenhum item anunciado pela comunidade.'}
-                                </Text>
-                            </View>
-                        }
-                    />
-                )}
-
-                {/* Create Modal */}
-                <Modal
-                    visible={isCreateModalVisible}
-                    transparent
-                    animationType="slide"
-                    onRequestClose={() => setCreateModalVisible(false)}
-                >
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Anunciar Produto</Text>
-
-                            <Input
-                                label="Título do Item"
-                                value={newItemTitle}
-                                onChangeText={setNewItemTitle}
-                                placeholder="Ex: Tênis Nike 42"
-                            />
-
-                            <Input
-                                label="Preço (EUR)"
-                                value={newItemPrice}
-                                onChangeText={setNewItemPrice}
-                                keyboardType="numeric"
-                                placeholder="50.00"
-                            />
-
-                            <View style={styles.modalActions}>
-                                <Button
-                                    title="Cancelar"
-                                    onPress={() => setCreateModalVisible(false)}
-                                    variant="ghost"
-                                    style={{ flex: 1 }}
-                                />
-                                <Button
-                                    title="Anunciar"
-                                    onPress={handleCreateItem}
-                                    loading={creating}
-                                    style={{ flex: 1 }}
-                                />
-                            </View>
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View>
+                            <Text style={styles.headerLabel}>{t('marketplace.shop').toUpperCase()}</Text>
+                            <Text style={styles.headerTitle}>{t('marketplace.title').toUpperCase()}</Text>
+                        </View>
+                        <View style={styles.balanceContainer}>
+                            <Text style={styles.balanceLabel}>{t('marketplace.pointsBalance').toUpperCase()}</Text>
+                            <Text style={styles.balanceValue}>{profile?.currentMonthPoints || 0}</Text>
                         </View>
                     </View>
-                </Modal>
 
-            </SafeAreaView>
-        </View>
+                    {/* Toggle */}
+                    <View style={styles.toggleContainer}>
+                        <BlurView intensity={20} tint="dark" style={styles.toggleWrapper}>
+                            <ToggleOption
+                                label={t('marketplace.correShop').toUpperCase()}
+                                isActive={viewMode === 'shop'}
+                                onPress={() => setViewMode('shop')}
+                            />
+                            <ToggleOption
+                                label={t('marketplace.community').toUpperCase()}
+                                isActive={viewMode === 'community'}
+                                onPress={() => setViewMode('community')}
+                            />
+                        </BlurView>
+                    </View>
+
+                    {/* Create Button (Only for Community) */}
+                    {viewMode === 'community' && (
+                        <TouchableOpacity
+                            style={styles.createButtonFloat}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                setCreateModalVisible(true);
+                            }}
+                        >
+                            <Text style={styles.createButtonText}>+ {t('marketplace.announce').toUpperCase()}</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* List */}
+                    {loading && !refreshing ? (
+                        <View style={styles.loadingContainer}>
+                            <LoadingSpinner />
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={viewMode === 'shop' ? shopItems : communityItems}
+                            renderItem={renderItem}
+                            keyExtractor={item => item.id}
+                            numColumns={2}
+                            columnWrapperStyle={styles.columnWrapper}
+                            contentContainerStyle={styles.listContent}
+                            showsVerticalScrollIndicator={false}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    tintColor="#FFF"
+                                />
+                            }
+                            ListEmptyComponent={
+                                <View style={styles.emptyContainer}>
+                                    <Text style={styles.emptyText}>
+                                        {viewMode === 'shop'
+                                            ? t('marketplace.noShopItems')
+                                            : t('marketplace.noCommunityItems')}
+                                    </Text>
+                                </View>
+                            }
+                        />
+                    )}
+
+                    {/* Create Modal */}
+                    <Modal
+                        visible={isCreateModalVisible}
+                        transparent
+                        animationType="slide"
+                        onRequestClose={() => setCreateModalVisible(false)}
+                    >
+                        <BlurView intensity={50} tint="dark" style={styles.modalOverlay}>
+                            <View style={styles.modalContent}>
+                                <Text style={styles.modalTitle}>{t('marketplace.announceProduct')}</Text>
+
+                                <Input
+                                    label={t('marketplace.itemTitle').toUpperCase()}
+                                    value={newItemTitle}
+                                    onChangeText={setNewItemTitle}
+                                    placeholder={t('marketplace.titlePlaceholder')}
+                                />
+
+                                <Input
+                                    label={t('marketplace.price').toUpperCase()}
+                                    value={newItemPrice}
+                                    onChangeText={setNewItemPrice}
+                                    keyboardType="numeric"
+                                    placeholder="50.00"
+                                />
+
+                                <View style={styles.modalActions}>
+                                    <Button
+                                        title={t('common.cancel').toUpperCase()}
+                                        onPress={() => setCreateModalVisible(false)}
+                                        variant="ghost"
+                                        style={{ flex: 1 }}
+                                    />
+                                    <Button
+                                        title={t('marketplace.announce').toUpperCase()}
+                                        onPress={handleCreateItem}
+                                        loading={creating}
+                                        style={{ flex: 1 }}
+                                    />
+                                </View>
+                            </View>
+                        </BlurView>
+                    </Modal>
+
+                </SafeAreaView>
+            </ImageBackground>
+        </View >
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     safeArea: {
         flex: 1,
@@ -295,84 +325,94 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[4], // Reduced bottom padding
+        paddingHorizontal: 24,
+        paddingTop: 10,
+        paddingBottom: 20,
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 4,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 32,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
+    // Removed balanceGlass - no longer used
     balanceContainer: {
-        alignItems: 'flex-end',
+        alignItems: 'flex-end', // Right aligned
+        // No background, no padding - minimal
     },
     balanceLabel: {
-        fontSize: theme.typography.size.micro,
-        color: theme.colors.text.tertiary,
-        marginBottom: 2,
+        fontSize: 10,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+        marginBottom: 4,
+        textTransform: 'uppercase',
     },
     balanceValue: {
-        fontSize: theme.typography.size.h3,
-        fontWeight: theme.typography.weight.black as any,
-        color: theme.colors.brand.primary,
+        fontSize: 24,
+        fontWeight: '900',
+        color: theme.colors.brand.primary, // Orange
     },
     toggleContainer: {
-        paddingHorizontal: theme.spacing[6],
-        marginBottom: theme.spacing[4],
+        paddingHorizontal: 24,
+        marginBottom: 24,
     },
     toggleWrapper: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.full,
+        borderRadius: 30, // Pill
         padding: 4,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
     },
     toggleOption: {
         flex: 1,
-        paddingVertical: theme.spacing[2],
+        paddingVertical: 10,
         alignItems: 'center',
-        borderRadius: theme.radius.full,
+        borderRadius: 24,
     },
     toggleOptionActive: {
-        backgroundColor: theme.colors.background.elevated,
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     toggleText: {
-        fontSize: theme.typography.size.bodySM,
-        color: theme.colors.text.tertiary,
-        fontWeight: theme.typography.weight.medium as any,
+        fontSize: 12,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
     },
     toggleTextActive: {
-        color: theme.colors.brand.primary,
-        fontWeight: theme.typography.weight.bold as any,
+        color: '#FFF',
+        fontWeight: '900',
     },
     listContent: {
-        paddingHorizontal: theme.spacing[6],
+        paddingHorizontal: 24,
         paddingBottom: 120,
     },
     columnWrapper: {
         justifyContent: 'space-between',
-        marginBottom: theme.spacing[4],
+        marginBottom: 16,
     },
     productCard: {
         width: '48%',
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg, // 16px soft corners
+        borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    cardInternal: {
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     imageContainer: {
         height: 140,
-        backgroundColor: theme.colors.background.elevated,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         position: 'relative',
     },
     productImage: {
@@ -383,90 +423,95 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 8,
         left: 8,
-        backgroundColor: theme.colors.error,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
+        backgroundColor: theme.colors.brand.primary,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderRadius: 4,
     },
     badgeText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontSize: 8,
+        fontWeight: '900',
+        color: '#000',
     },
     productInfo: {
-        padding: theme.spacing[3],
+        padding: 12,
     },
     productTitle: {
-        fontSize: theme.typography.size.bodySM,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing[2],
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 8,
+        letterSpacing: 0.5,
     },
     priceContainer: {
         flexDirection: 'row',
         alignItems: 'baseline',
     },
     priceValue: {
-        fontSize: theme.typography.size.h4,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.brand.primary, // Points color
+        fontSize: 16,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: theme.colors.brand.primary,
     },
     priceValueCash: {
-        color: theme.colors.success, // Cash color
+        color: '#FFF',
     },
     sellerName: {
         fontSize: 10,
-        color: theme.colors.text.tertiary,
+        color: 'rgba(255,255,255,0.5)',
         marginTop: 4,
+        fontWeight: '600',
     },
     emptyContainer: {
-        padding: theme.spacing[6],
+        padding: 24,
         alignItems: 'center',
     },
     emptyText: {
-        color: theme.colors.text.tertiary,
+        color: 'rgba(255,255,255,0.5)',
         textAlign: 'center',
+        fontSize: 14,
     },
     createButtonFloat: {
         position: 'absolute',
-        bottom: 24,
+        bottom: 110, // Increased to clear navbar (80-90px)
         alignSelf: 'center',
-        backgroundColor: theme.colors.brand.primary,
+        backgroundColor: theme.colors.brand.primary, // Solid orange
         paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: theme.radius.full,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.brand.primary,
         zIndex: 100,
-        shadowColor: theme.colors.brand.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
     },
     createButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
+        color: '#FFF', // White text
+        fontWeight: '700',
+        letterSpacing: 1,
+        fontSize: 12,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         padding: 24,
     },
     modalContent: {
-        backgroundColor: theme.colors.background.card,
-        borderRadius: theme.radius.lg,
+        backgroundColor: 'rgba(20,20,20,0.95)',
+        borderRadius: 16,
         padding: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     modalTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        marginBottom: 24,
         textAlign: 'center',
-        color: theme.colors.text.primary,
+        color: '#FFF',
     },
     modalActions: {
         flexDirection: 'row',
         gap: 12,
-        marginTop: 16,
+        marginTop: 24,
     },
 });

@@ -6,7 +6,7 @@ module.exports = {
   expo: {
     name: 'Corre App',
     slug: 'corre-app',
-    version: '1.0.0',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',

@@ -7,9 +7,11 @@ import {
     RefreshControl,
     TouchableOpacity,
     StatusBar,
+    ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { EventCard } from '../../components/events/EventCard';
 import { LoadingSpinner } from '../../components/common';
@@ -38,68 +40,16 @@ const MOCK_EVENTS: any[] = [
     },
     {
         id: '2',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
+        title: 'Maratona de São Paulo',
+        description: 'A maior maratona da cidade',
         event_type: 'race',
-        event_datetime: '2026-11-18T19:00:00',
-        location_name: '10km • Parque Central',
+        event_datetime: '2026-12-05T06:00:00',
+        location_name: '42km • Ibirapuera',
         location_lat: -23.5505,
         location_lng: -46.6333,
         check_in_radius_meters: 300,
         creator_id: '1',
-        points_value: 150,
-    },
-    {
-        id: '3',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
-        event_type: 'race',
-        event_datetime: '2026-11-20T06:00:00',
-        location_name: '10km • Parque Central',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 150,
-    },
-    {
-        id: '4',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
-        event_type: 'race',
-        event_datetime: '2026-11-25T07:00:00',
-        location_name: '10km • Parque Central',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 150,
-    },
-    {
-        id: '5',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
-        event_type: 'race',
-        event_datetime: '2026-11-26T19:00:00',
-        location_name: '10km • Parque Central',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 150,
-    },
-    {
-        id: '6',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
-        event_type: 'race',
-        event_datetime: '2026-11-27T06:30:00',
-        location_name: '10km • Parque Central',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 150,
+        points_value: 300,
     },
 ];
 
@@ -162,37 +112,42 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     }, [loadEvents]);
 
     if (loading && events.length === 0) {
-        return <LoadingSpinner />;
+        return (
+            <View style={styles.loadingContainer}>
+                <LoadingSpinner />
+            </View>
+        );
     }
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
-
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.headerLabel}>EVENTOS</Text>
-                    <Text style={styles.headerTitle}>Próximos</Text>
+                    <Text style={styles.headerLabel}>{t('navigation.events').toUpperCase()}</Text>
+                    <Text style={styles.headerTitle}>{t('home.next').toUpperCase()}</Text>
                 </View>
 
-                {/* Stats Row */}
-                <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Corridas</Text>
-                        <Text style={styles.statValue}>{stats.totalRuns}</Text>
+                {/* Stats Row with Blur */}
+                <BlurView intensity={20} tint="dark" style={styles.statsGlass}>
+                    <View style={styles.statsRow}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statValue}>{stats.totalRuns}</Text>
+                            <Text style={styles.statLabel}>{t('events.runs').toUpperCase()}</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statValue}>{stats.totalDistance}</Text>
+                            <Text style={styles.statLabel}>{t('events.distance').toUpperCase()}</Text>
+                        </View>
+                        <View style={styles.statDivider} />
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statValue, styles.statValueHighlight]}>{stats.totalPoints}</Text>
+                            <Text style={styles.statLabel}>{t('leaderboard.points').toUpperCase()}</Text>
+                        </View>
                     </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Distância</Text>
-                        <Text style={styles.statValue}>{stats.totalDistance}</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Pontos</Text>
-                        <Text style={[styles.statValue, styles.statValueHighlight]}>{stats.totalPoints}</Text>
-                    </View>
-                </View>
+                </BlurView>
 
                 {/* Filter Pills */}
                 <View style={styles.filtersContainer}>
@@ -203,23 +158,25 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.filtersList}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterPill,
-                                    activeFilter === item && styles.filterPillActive
-                                ]}
-                                onPress={() => {
-                                    Haptics.selectionAsync();
-                                    setActiveFilter(item);
-                                }}
-                            >
-                                <Text style={[
-                                    styles.filterText,
-                                    activeFilter === item && styles.filterTextActive
-                                ]}>
-                                    {item}
-                                </Text>
-                            </TouchableOpacity>
+                            <BlurView intensity={10} tint="dark" style={styles.filterPillGlass}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterPill,
+                                        activeFilter === item && styles.filterPillActive
+                                    ]}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setActiveFilter(item);
+                                    }}
+                                >
+                                    <Text style={[
+                                        styles.filterText,
+                                        activeFilter === item && styles.filterTextActive
+                                    ]}>
+                                        {item.toUpperCase()}
+                                    </Text>
+                                </TouchableOpacity>
+                            </BlurView>
                         )}
                     />
                 </View>
@@ -242,7 +199,7 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
-                            tintColor={theme.colors.brand.primary}
+                            tintColor="#FFF"
                         />
                     }
                     showsVerticalScrollIndicator={false}
@@ -255,7 +212,22 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#000',
+    },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
     },
     safeArea: {
         flex: 1,
@@ -263,86 +235,110 @@ const styles = StyleSheet.create({
 
     // Header
     header: {
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[4],
+        paddingHorizontal: 24,
+        paddingTop: 10,
+        paddingBottom: 20,
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 4,
+        textTransform: 'uppercase',
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-        letterSpacing: theme.typography.letterSpacing.tight,
+        fontSize: 32,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 4 },
+        textShadowRadius: 10,
     },
 
     // Stats
+    statsGlass: {
+        marginHorizontal: 20,
+        marginBottom: 20,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
     statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: theme.spacing[6],
-        paddingBottom: theme.spacing[5],
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
     statItem: {
         alignItems: 'center',
     },
     statLabel: {
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        marginTop: 4,
     },
     statValue: {
-        fontSize: theme.typography.size.h2,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: '#FFF',
     },
     statValueHighlight: {
         color: theme.colors.brand.primary,
     },
     statDivider: {
         width: 1,
-        height: 32,
-        backgroundColor: theme.colors.border.default,
+        height: 24,
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
 
     // Filters
     filtersContainer: {
-        paddingBottom: theme.spacing[4],
+        paddingBottom: 20,
     },
     filtersList: {
-        paddingHorizontal: theme.spacing[6],
-        gap: theme.spacing[2],
+        paddingHorizontal: 20,
+        gap: 8,
+    },
+    filterPillGlass: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        marginRight: 8,
     },
     filterPill: {
-        paddingHorizontal: theme.spacing[4],
-        paddingVertical: theme.spacing[2],
-        borderRadius: theme.radius.md, // Soft corners (12px)
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: theme.colors.border.default,
-        marginRight: theme.spacing[2],
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     filterPillActive: {
         backgroundColor: theme.colors.brand.primary,
         borderColor: theme.colors.brand.primary,
     },
     filterText: {
-        fontSize: theme.typography.size.bodySM,
-        color: theme.colors.text.secondary,
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.7)',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
     filterTextActive: {
-        color: theme.colors.white,
-        fontWeight: theme.typography.weight.semibold as any,
+        color: '#FFF',
     },
 
     // List
     listContent: {
-        paddingHorizontal: theme.spacing[6],
+        paddingHorizontal: 20,
         paddingBottom: 120,
     },
 });

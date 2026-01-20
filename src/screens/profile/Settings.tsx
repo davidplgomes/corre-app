@@ -62,20 +62,20 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                                 navigation.goBack();
                             }}
                         >
-                            <Text style={styles.backText}>← Voltar</Text>
+                            <Text style={styles.backText}>← {t('common.back')}</Text>
                         </TouchableOpacity>
-                        <Text style={styles.headerLabel}>CONFIGURAÇÕES</Text>
-                        <Text style={styles.headerTitle}>Preferências</Text>
+                        <Text style={styles.headerLabel}>{t('settings.title').toUpperCase()}</Text>
+                        <Text style={styles.headerTitle}>{t('settings.preferences')}</Text>
                     </View>
 
                     {/* Notifications Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>NOTIFICAÇÕES</Text>
+                        <Text style={styles.sectionTitle}>{t('settings.enableNotifications').toUpperCase()}</Text>
                         <View style={styles.settingCard}>
                             <View style={styles.settingInfo}>
-                                <Text style={styles.settingLabel}>Ativar Notificações</Text>
+                                <Text style={styles.settingLabel}>{t('settings.enableNotifications')}</Text>
                                 <Text style={styles.settingDescription}>
-                                    Receba alertas de eventos e lembretes
+                                    {t('settings.enableNotifications')}
                                 </Text>
                             </View>
                             <Switch
@@ -89,12 +89,12 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
                     {/* Appearance Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>APARÊNCIA</Text>
+                        <Text style={styles.sectionTitle}>{t('settings.darkMode').toUpperCase()}</Text>
                         <View style={styles.settingCard}>
                             <View style={styles.settingInfo}>
-                                <Text style={styles.settingLabel}>Modo Escuro</Text>
+                                <Text style={styles.settingLabel}>{t('settings.darkMode')}</Text>
                                 <Text style={styles.settingDescription}>
-                                    Interface com tema escuro
+                                    {t('settings.darkMode')}
                                 </Text>
                             </View>
                             <Switch
@@ -108,27 +108,27 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
                     {/* Integrations Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>INTEGRAÇÕES</Text>
+                        <Text style={styles.sectionTitle}>{t('settings.connectedApps').toUpperCase()}</Text>
                         <TouchableOpacity
                             style={styles.settingCard}
                             onPress={() => {
                                 Haptics.selectionAsync();
-                                Alert.alert('Strava', 'Redirecionando para login com Strava...');
+                                Alert.alert('Strava', 'Redirecting to Strava login...');
                             }}
                         >
                             <View style={styles.settingInfo}>
                                 <Text style={styles.settingLabel}>Strava</Text>
                                 <Text style={styles.settingDescription}>
-                                    Conectar para sincronizar corridas
+                                    {t('settings.connect')}
                                 </Text>
                             </View>
-                            <Text style={{ color: theme.colors.brand.primary, fontWeight: 'bold' }}>CONECTAR</Text>
+                            <Text style={{ color: theme.colors.brand.primary, fontWeight: 'bold' }}>{t('settings.connect').toUpperCase()}</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Language Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>IDIOMA</Text>
+                        <Text style={styles.sectionTitle}>{t('profile.language').toUpperCase()}</Text>
                         {languages.map((lang) => (
                             <TouchableOpacity
                                 key={lang.code}
@@ -147,7 +147,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
                     {/* Account Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>CONTA</Text>
+                        <Text style={styles.sectionTitle}>{t('common.edit').toUpperCase()}</Text>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => {
@@ -155,7 +155,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                                 navigation.navigate('EditProfile');
                             }}
                         >
-                            <Text style={styles.menuItemLabel}>Editar Perfil</Text>
+                            <Text style={styles.menuItemLabel}>{t('profile.editProfile')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -165,52 +165,52 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                                 navigation.navigate('ChangePassword');
                             }}
                         >
-                            <Text style={styles.menuItemLabel}>Alterar Senha</Text>
+                            <Text style={styles.menuItemLabel}>{t('profile.changePassword')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => {
                                 Haptics.selectionAsync();
-                                Alert.alert('Em breve', 'Configurações de privacidade estarão disponíveis na próxima atualização.');
+                                Alert.alert(t('common.error'), 'Coming soon...');
                             }}
                         >
-                            <Text style={styles.menuItemLabel}>Privacidade</Text>
+                            <Text style={styles.menuItemLabel}>{t('settings.privacy')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                     </View>
 
                     {/* About Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>SOBRE</Text>
+                        <Text style={styles.sectionTitle}>{t('settings.version').toUpperCase()}</Text>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => {
                                 Haptics.selectionAsync();
-                                Alert.alert('Termos de Uso', 'Todo o conteúdo do App Corre é protegido por direitos autorais.');
+                                Alert.alert(t('settings.termsOfUse'), 'Content protected by copyright.');
                             }}
                         >
-                            <Text style={styles.menuItemLabel}>Termos de Uso</Text>
+                            <Text style={styles.menuItemLabel}>{t('settings.termsOfUse')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => {
                                 Haptics.selectionAsync();
-                                Alert.alert('Política de Privacidade', 'Nós respeitamos seus dados. Leia nossa política completa no site.');
+                                Alert.alert(t('settings.privacyPolicy'), 'Read our full policy on the website.');
                             }}
                         >
-                            <Text style={styles.menuItemLabel}>Política de Privacidade</Text>
+                            <Text style={styles.menuItemLabel}>{t('settings.privacyPolicy')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                         <View style={styles.menuItem}>
-                            <Text style={styles.menuItemLabel}>Versão</Text>
-                            <Text style={styles.versionText}>1.0.0</Text>
+                            <Text style={styles.menuItemLabel}>{t('settings.version')}</Text>
+                            <Text style={styles.versionText}>1.0.2</Text>
                         </View>
                     </View>
                 </ScrollView>
             </SafeAreaView>
-        </View>
+        </View >
     );
 };
 
