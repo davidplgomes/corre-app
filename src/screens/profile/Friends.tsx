@@ -126,43 +126,56 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
     const renderUserItem = ({ item }: { item: UserSearchResult }) => {
         const tierColor = MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.color || theme.colors.border.default;
 
+        const handleViewProfile = () => {
+            Haptics.selectionAsync();
+            navigation.navigate('UserProfile', { userId: item.id });
+        };
+
         return (
-            <BlurView intensity={15} tint="dark" style={styles.userCard}>
-                <View style={styles.userInfo}>
-                    <View style={[styles.avatar, { borderColor: tierColor }]}>
-                        <Text style={[styles.avatarText, { color: tierColor }]}>
-                            {item.full_name?.charAt(0).toUpperCase() || '?'}
-                        </Text>
+            <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.8}>
+                <BlurView intensity={15} tint="dark" style={styles.userCard}>
+                    <View style={styles.userInfo}>
+                        <View style={[styles.avatar, { borderColor: tierColor }]}>
+                            <Text style={[styles.avatarText, { color: tierColor }]}>
+                                {item.full_name?.charAt(0).toUpperCase() || '?'}
+                            </Text>
+                        </View>
+                        <View style={styles.userDetails}>
+                            <Text style={styles.userName}>{item.full_name}</Text>
+                            <Text style={styles.userTier}>
+                                {MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.name || 'Member'}
+                            </Text>
+                        </View>
                     </View>
-                    <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{item.full_name}</Text>
-                        <Text style={styles.userTier}>
-                            {MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.name || 'Member'}
-                        </Text>
-                    </View>
-                </View>
-                {item.friendship_status === 'none' && (
-                    <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => handleSendRequest(item.id)}
-                    >
-                        <Text style={styles.addButtonText}>{t('friends.addFriend')}</Text>
-                    </TouchableOpacity>
-                )}
-                {item.friendship_status === 'pending' && (
-                    <View style={styles.pendingBadge}>
-                        <Text style={styles.pendingText}>{t('friends.pending')}</Text>
-                    </View>
-                )}
-                {item.friendship_status === 'accepted' && (
-                    <TouchableOpacity
-                        style={styles.removeButton}
-                        onPress={() => handleRemoveFriend(item.id)}
-                    >
-                        <Text style={styles.removeButtonText}>✕</Text>
-                    </TouchableOpacity>
-                )}
-            </BlurView>
+                    {item.friendship_status === 'none' && (
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                handleSendRequest(item.id);
+                            }}
+                        >
+                            <Text style={styles.addButtonText}>{t('friends.addFriend')}</Text>
+                        </TouchableOpacity>
+                    )}
+                    {item.friendship_status === 'pending' && (
+                        <View style={styles.pendingBadge}>
+                            <Text style={styles.pendingText}>{t('friends.pending')}</Text>
+                        </View>
+                    )}
+                    {item.friendship_status === 'accepted' && (
+                        <TouchableOpacity
+                            style={styles.removeButton}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFriend(item.id);
+                            }}
+                        >
+                            <Text style={styles.removeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    )}
+                </BlurView>
+            </TouchableOpacity>
         );
     };
 
@@ -170,9 +183,16 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         const requester = item.requester as any;
         const tierColor = MEMBERSHIP_TIERS[requester?.membership_tier as TierKey]?.color || theme.colors.border.default;
 
+        const handleProfilePress = () => {
+            if (requester?.id) {
+                Haptics.selectionAsync();
+                navigation.navigate('UserProfile', { userId: requester.id });
+            }
+        };
+
         return (
             <BlurView intensity={15} tint="dark" style={styles.userCard}>
-                <View style={styles.userInfo}>
+                <TouchableOpacity style={styles.userInfo} onPress={handleProfilePress}>
                     <View style={[styles.avatar, { borderColor: tierColor }]}>
                         <Text style={[styles.avatarText, { color: tierColor }]}>
                             {requester?.full_name?.charAt(0).toUpperCase() || '?'}
@@ -184,7 +204,7 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                             {t('friends.wantsToConnect')}
                         </Text>
                     </View>
-                </View>
+                </TouchableOpacity>
                 <View style={styles.requestActions}>
                     <TouchableOpacity
                         style={styles.acceptButton}

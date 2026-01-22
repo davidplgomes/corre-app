@@ -49,10 +49,12 @@
     "emailRequired": "Email is required",
     "passwordRequired": "Password is required",
     "passwordTooShort": "Password must be at least 6 characters",
-    "passwordTooShort": "Password must be at least 6 characters",
     "invalidEmail": "Invalid email format",
     "newPassword": "New Password",
-    "confirmPassword": "Confirm Password"
+    "confirmPassword": "Confirm Password",
+    "enterNewPasswordBelow": "Enter your new password below.",
+    "minSixCharacters": "Minimum 6 characters",
+    "repeatNewPassword": "Repeat new password"
   },
   "navigation": {
     "home": "Home",
@@ -216,7 +218,6 @@
     "changePassword": "Change Password",
     "settings": "Settings",
     "language": "Language",
-    "editProfile": "Edit Profile",
     "memberSince": "Member since",
     "currentPoints": "Points This Month",
     "totalPoints": "Total Points",
@@ -324,7 +325,20 @@
     "version": "Version",
     "connectedApps": "Connected Apps",
     "connect": "Connect",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "comingSoon": "Coming Soon"
+  },
+  "userProfile": {
+    "title": "Profile",
+    "privateProfile": "Private profile",
+    "stats": "Stats"
+  },
+  "privacy": {
+    "title": "Who can see your profile?",
+    "friends": "Friends only",
+    "anyone": "Anyone",
+    "nobody": "Nobody",
+    "updated": "Privacy updated"
   },
   "home": {
     "nextWorkout": "Next Workout",

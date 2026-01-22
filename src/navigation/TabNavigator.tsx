@@ -10,6 +10,7 @@ import { CheckIn } from '../screens/events/CheckIn';
 import { CreateEvent } from '../screens/events/CreateEvent';
 import { EventParticipants } from '../screens/events/EventParticipants'; // New Import
 import { FeedScreen } from '../screens/feed/FeedScreen';
+import { PostDetails } from '../screens/feed/PostDetails';
 import { Leaderboard } from '../screens/leaderboard/Leaderboard';
 import { LoyaltyCard } from '../screens/loyalty/LoyaltyCard';
 import { MerchantScanner } from '../screens/loyalty/MerchantScanner';
@@ -22,6 +23,7 @@ import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
 import { Friends } from '../screens/profile/Friends';
+import { UserProfile } from '../screens/profile/UserProfile';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
 import { HomeScreen } from '../screens/home/HomeScreen'; // Import HomeScreen
@@ -36,11 +38,14 @@ export type EventsStackParamList = {
     CheckIn: { eventId: string; event: any };
     CreateEvent: undefined;
     EventParticipants: { eventId: string; eventTitle: string };
+    UserProfile: { userId: string };
 };
 
 export type FeedStackParamList = {
     FeedMain: undefined;
     Leaderboard: undefined;
+    PostDetails: { postId: string; post?: any };
+    UserProfile: { userId: string };
 };
 
 export type LoyaltyStackParamList = {
@@ -63,6 +68,7 @@ export type ProfileStackParamList = {
     Achievements: undefined;
     RunMap: undefined;
     Friends: undefined;
+    UserProfile: { userId: string };
 };
 
 export type MainTabParamList = {
@@ -90,6 +96,7 @@ const EventsStackNavigator: React.FC = () => (
         <EventsStack.Screen name="CheckIn" component={CheckIn} />
         <EventsStack.Screen name="CreateEvent" component={CreateEvent} />
         <EventsStack.Screen name="EventParticipants" component={EventParticipants} />
+        <EventsStack.Screen name="UserProfile" component={UserProfile} />
     </EventsStack.Navigator>
 );
 
@@ -98,6 +105,8 @@ const FeedStackNavigator: React.FC = () => (
     <FeedStack.Navigator screenOptions={{ headerShown: false }}>
         <FeedStack.Screen name="FeedMain" component={FeedScreen} />
         <FeedStack.Screen name="Leaderboard" component={Leaderboard} />
+        <FeedStack.Screen name="PostDetails" component={PostDetails} />
+        <FeedStack.Screen name="UserProfile" component={UserProfile} />
     </FeedStack.Navigator>
 );
 
@@ -129,6 +138,7 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="Achievements" component={Achievements} />
         <ProfileStack.Screen name="RunMap" component={RunMap} />
         <ProfileStack.Screen name="Friends" component={Friends} />
+        <ProfileStack.Screen name="UserProfile" component={UserProfile} />
     </ProfileStack.Navigator>
 );
 

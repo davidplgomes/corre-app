@@ -77,14 +77,14 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                 <ScrollView style={styles.content}>
                     <View style={styles.formContainer}>
                         <Text style={styles.description}>
-                            Digite sua nova senha abaixo.
+                            {t('auth.enterNewPasswordBelow')}
                         </Text>
 
                         <Input
                             label={t('auth.newPassword')}
                             value={password}
                             onChangeText={setPassword}
-                            placeholder="Mínimo 6 caracteres"
+                            placeholder={t('auth.minSixCharacters')}
                             secureTextEntry
                         />
 
@@ -94,7 +94,7 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
                             label={t('auth.confirmPassword')}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
-                            placeholder="Repita a nova senha"
+                            placeholder={t('auth.repeatNewPassword')}
                             secureTextEntry
                         />
 

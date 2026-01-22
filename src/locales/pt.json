@@ -49,10 +49,12 @@
     "emailRequired": "E-mail é obrigatório",
     "passwordRequired": "Senha é obrigatória",
     "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
-    "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
     "invalidEmail": "Formato de e-mail inválido",
     "newPassword": "Nova Senha",
-    "confirmPassword": "Confirmar Senha"
+    "confirmPassword": "Confirmar Senha",
+    "enterNewPasswordBelow": "Digite sua nova senha abaixo.",
+    "minSixCharacters": "Mínimo 6 caracteres",
+    "repeatNewPassword": "Repita a nova senha"
   },
   "navigation": {
     "home": "Início",
@@ -216,7 +218,6 @@
     "changePassword": "Alterar Senha",
     "settings": "Configurações",
     "language": "Idioma",
-    "editProfile": "Editar Perfil",
     "memberSince": "Membro desde",
     "currentPoints": "Pontos Este Mês",
     "totalPoints": "Total de Pontos",
@@ -324,7 +325,20 @@
     "version": "Versão",
     "connectedApps": "Apps Conectados",
     "connect": "Conectar",
-    "disconnect": "Desconectar"
+    "disconnect": "Desconectar",
+    "comingSoon": "Em breve"
+  },
+  "userProfile": {
+    "title": "Perfil",
+    "privateProfile": "Perfil privado",
+    "stats": "Estatísticas"
+  },
+  "privacy": {
+    "title": "Quem pode ver seu perfil?",
+    "friends": "Apenas amigos",
+    "anyone": "Qualquer pessoa",
+    "nobody": "Ninguém",
+    "updated": "Privacidade atualizada"
   },
   "home": {
     "nextWorkout": "Próximo Treino",

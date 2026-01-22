@@ -23,14 +23,10 @@ import { TierBadge } from '../../components/profile';
 import { useAuth } from '../../contexts/AuthContext';
 import { TierKey } from '../../constants/tiers';
 import {
-    RunIcon,
-    PinIcon,
-    TextIcon,
-    HeartIcon,
-    ChatBubbleIcon,
     TrophyIcon
 } from '../../components/common/TabIcons';
 import { MEMBERSHIP_TIERS } from '../../constants/tiers';
+import { FeedPostItem } from '../../components/feed/FeedPostItem';
 
 type FeedScreenProps = {
     navigation: any;
@@ -116,92 +112,18 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
         </View>
     );
 
-    const renderPost = ({ item }: { item: FeedPost }) => {
-        const user = item.users as any;
-        const tierKey = (user?.membership_tier as TierKey) || 'free';
-        const tierColor = MEMBERSHIP_TIERS[tierKey]?.color || theme.colors.border.default;
-
-        let IconComponent = RunIcon;
-        let action = t('events.activityRun');
-        let iconColor = theme.colors.brand.primary;
-
-        if (item.activity_type === 'check_in') {
-            IconComponent = PinIcon;
-            action = t('events.activityCheckIn');
-            iconColor = theme.colors.success;
-        } else if (item.activity_type === 'post') {
-            IconComponent = TextIcon;
-            action = t('events.activityPost');
-            iconColor = theme.colors.warning;
-        }
-
-        return (
-            <BlurView intensity={20} tint="dark" style={styles.postCard}>
-                <View style={styles.postHeader}>
-                    <View style={styles.userInfo}>
-                        <View style={[styles.avatarPlaceholder, { borderColor: tierColor, borderWidth: 2 }]}>
-                            <Text style={[styles.avatarInitial, { color: tierColor }]}>{user?.full_name?.charAt(0) || 'U'}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <View style={styles.userRow}>
-                                <Text style={styles.userName}>{user?.full_name || 'Usuário'}</Text>
-                                {/* Removed TierBadge, using avatar border instead */}
-                            </View>
-                            <Text style={styles.postTime}>
-                                {new Date(item.created_at).toLocaleDateString()} • {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </Text>
-                        </View>
-                    </View>
-                    <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
-                        <IconComponent size={18} color={iconColor} />
-                    </View>
-                </View>
-
-                {item.content && (
-                    <Text style={styles.postText}>
-                        <Text style={styles.actionText}>{action ? action + ' ' : ''}</Text>
-                        {item.content}
-                    </Text>
-                )}
-
-                {item.activity_type === 'run' && item.meta_data && (
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>{t('events.distance') || 'DISTANCE'}</Text>
-                            <Text style={styles.statValue}>{item.meta_data.distance || '0km'}</Text>
-                        </View>
-                        <View style={styles.verticalDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>{t('events.duration') || 'TIME'}</Text>
-                            <Text style={styles.statValue}>{item.meta_data.time || '00:00'}</Text>
-                        </View>
-                        <View style={styles.verticalDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={styles.statLabel}>{t('events.pace') || 'PACE'}</Text>
-                            <Text style={styles.statValue}>{item.meta_data.pace || '-'}</Text>
-                        </View>
-                    </View>
-                )}
-
-                <View style={styles.cardFooter}>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                    >
-                        <HeartIcon size={20} color={theme.colors.text.tertiary} />
-                        <Text style={styles.actionButtonText}>{t('common.like') || 'Curtir'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                    >
-                        <ChatBubbleIcon size={20} color={theme.colors.text.tertiary} />
-                        <Text style={styles.actionButtonText}>{t('common.comment') || 'Comentar'}</Text>
-                    </TouchableOpacity>
-                </View>
-            </BlurView>
-        );
+    const handleCommentPress = (postId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const post = posts.find(p => p.id === postId);
+        navigation.navigate('PostDetails', { postId, post });
     };
+
+    const renderPost = useCallback(({ item }: { item: FeedPost }) => (
+        <FeedPostItem
+            item={item}
+            onCommentPress={handleCommentPress}
+        />
+    ), [t]);
 
     if (loading && !refreshing) {
         return <LoadingSpinner />;

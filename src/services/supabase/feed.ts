@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import { FeedPost } from '../../types';
+import { FeedPost, PostComment } from '../../types';
 
 /**
  * Get feed posts (pagination supported)
@@ -57,6 +57,127 @@ export const getUserRuns = async (userId: string): Promise<FeedPost[]> => {
         return data || [];
     } catch (error) {
         console.error('Error getting user runs:', error);
+        throw error;
+    }
+};
+
+/**
+ * Like a post
+ */
+export const likePost = async (postId: string, userId: string): Promise<void> => {
+    try {
+        const { error } = await supabase
+            .from('post_likes')
+            .insert({ post_id: postId, user_id: userId });
+
+        if (error) throw error;
+    } catch (error: any) {
+        // Ignore unique constraint violation (already liked)
+        if (error.code !== '23505') {
+            console.error('Error liking post:', error);
+            throw error;
+        }
+    }
+};
+
+/**
+ * Unlike a post
+ */
+export const unlikePost = async (postId: string, userId: string): Promise<void> => {
+    try {
+        const { error } = await supabase
+            .from('post_likes')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error unliking post:', error);
+        throw error;
+    }
+};
+
+/**
+ * Check if user liked a post
+ */
+export const hasUserLikedPost = async (postId: string, userId: string): Promise<boolean> => {
+    try {
+        const { data, error } = await supabase
+            .from('post_likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+        return !!data;
+    } catch (error) {
+        console.error('Error checking like status:', error);
+        return false;
+    }
+};
+
+/**
+ * Get like count for a post
+ */
+export const getPostLikesCount = async (postId: string): Promise<number> => {
+    try {
+        const { count, error } = await supabase
+            .from('post_likes')
+            .select('id', { count: 'exact', head: true })
+            .eq('post_id', postId);
+
+        if (error) throw error;
+        return count || 0;
+    } catch (error) {
+        console.error('Error getting like count:', error);
+        return 0;
+    }
+};
+
+/**
+ * Add a comment to a post
+ */
+export const addComment = async (
+    postId: string,
+    userId: string,
+    content: string
+): Promise<PostComment> => {
+    try {
+        const { data, error } = await supabase
+            .from('post_comments')
+            .insert({
+                post_id: postId,
+                user_id: userId,
+                content
+            })
+            .select('*, users(id, full_name, membership_tier)')
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get comments for a post
+ */
+export const getComments = async (postId: string): Promise<PostComment[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('post_comments')
+            .select('*, users(id, full_name, membership_tier)')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error getting comments:', error);
         throw error;
     }
 };

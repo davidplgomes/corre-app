@@ -25,10 +25,13 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
     const { profile, refreshProfile } = useAuth();
     const [fullName, setFullName] = useState(profile?.fullName || '');
     const [neighborhood, setNeighborhood] = useState(profile?.neighborhood || '');
+    const [city, setCity] = useState(profile?.city || '');
+    const [bio, setBio] = useState(profile?.bio || '');
+    const [instagramHandle, setInstagramHandle] = useState(profile?.instagramHandle || '');
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
-        if (!fullName.trim() || !neighborhood.trim()) {
+        if (!fullName.trim()) {
             Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
@@ -40,6 +43,9 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                 .update({
                     full_name: fullName,
                     neighborhood: neighborhood,
+                    city: city,
+                    bio: bio,
+                    instagram_handle: instagramHandle,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', profile?.id);
@@ -91,6 +97,42 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                             value={neighborhood}
                             onChangeText={setNeighborhood}
                             placeholder={t('auth.selectNeighborhood')}
+                        />
+
+                        <View style={styles.spacer} />
+
+                        <Input
+                            label={t('profile.city')}
+                            value={city}
+                            onChangeText={setCity}
+                            placeholder={t('profile.enterCity')}
+                        />
+
+                        <View style={styles.spacer} />
+
+                        <Input
+                            label={t('profile.bio')}
+                            value={bio}
+                            onChangeText={setBio}
+                            placeholder={t('profile.enterBio')}
+                            multiline
+                            numberOfLines={4}
+                            maxLength={500}
+                            // Custom style for multiline input if needed, usually Input supports it or we pass style
+                            style={{ minHeight: 100, textAlignVertical: 'top' }}
+                        />
+                        <Text style={styles.charCount}>{bio.length}/500</Text>
+
+                        <View style={styles.spacer} />
+
+                        <Input
+                            label={t('profile.instagram')}
+                            value={instagramHandle}
+                            onChangeText={(text) => setInstagramHandle(text.replace('@', ''))}
+                            placeholder={t('profile.enterInstagram')}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            leftIcon={<Text style={{ color: '#FFF', fontWeight: 'bold' }}>@</Text>}
                         />
 
                         {/* Future: Avatar Upload could go here */}
@@ -149,5 +191,11 @@ const styles = StyleSheet.create({
     },
     spacerLarge: {
         height: theme.spacing[8],
+    },
+    charCount: {
+        fontSize: theme.typography.size.micro,
+        color: theme.colors.text.tertiary,
+        textAlign: 'right',
+        marginTop: 4,
     },
 });

@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { useAuth } from '../../contexts/AuthContext';
+import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
 
 type SettingsProps = {
     navigation: any;
@@ -19,8 +21,28 @@ type SettingsProps = {
 
 export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const { t, i18n } = useTranslation();
+    const { profile } = useAuth();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
     const [darkMode, setDarkMode] = React.useState(true);
+    const [privacyVisibility, setPrivacyVisibility] = React.useState<PrivacyVisibility>('friends');
+
+    React.useEffect(() => {
+        if (profile?.id) {
+            getPrivacySetting(profile.id).then(setPrivacyVisibility);
+        }
+    }, [profile?.id]);
+
+    const handlePrivacyChange = async (visibility: PrivacyVisibility) => {
+        if (!profile?.id) return;
+        Haptics.selectionAsync();
+        try {
+            await updatePrivacySettings(profile.id, visibility);
+            setPrivacyVisibility(visibility);
+            Alert.alert(t('common.success'), t('privacy.updated'));
+        } catch (error) {
+            Alert.alert(t('common.error'), t('errors.unknownError'));
+        }
+    };
 
     const changeLanguage = (lang: string) => {
         Haptics.selectionAsync();
@@ -109,21 +131,17 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     {/* Integrations Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('settings.connectedApps').toUpperCase()}</Text>
-                        <TouchableOpacity
-                            style={styles.settingCard}
-                            onPress={() => {
-                                Haptics.selectionAsync();
-                                Alert.alert('Strava', 'Redirecting to Strava login...');
-                            }}
-                        >
+                        <View style={styles.settingCard}>
                             <View style={styles.settingInfo}>
                                 <Text style={styles.settingLabel}>Strava</Text>
                                 <Text style={styles.settingDescription}>
                                     {t('settings.connect')}
                                 </Text>
                             </View>
-                            <Text style={{ color: theme.colors.brand.primary, fontWeight: 'bold' }}>{t('settings.connect').toUpperCase()}</Text>
-                        </TouchableOpacity>
+                            <View style={styles.comingSoonBadge}>
+                                <Text style={styles.comingSoonText}>{t('settings.comingSoon').toUpperCase()}</Text>
+                            </View>
+                        </View>
                     </View>
 
                     {/* Language Section */}
@@ -168,16 +186,35 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             <Text style={styles.menuItemLabel}>{t('profile.changePassword')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => {
-                                Haptics.selectionAsync();
-                                Alert.alert(t('common.error'), 'Coming soon...');
-                            }}
-                        >
+                        <View style={styles.menuItem}>
                             <Text style={styles.menuItemLabel}>{t('settings.privacy')}</Text>
-                            <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
-                        </TouchableOpacity>
+                        </View>
+                        <View style={styles.privacyOptions}>
+                            <TouchableOpacity
+                                style={[styles.privacyOption, privacyVisibility === 'friends' && styles.privacyOptionActive]}
+                                onPress={() => handlePrivacyChange('friends')}
+                            >
+                                <Text style={[styles.privacyOptionText, privacyVisibility === 'friends' && styles.privacyOptionTextActive]}>
+                                    {t('privacy.friends')}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.privacyOption, privacyVisibility === 'anyone' && styles.privacyOptionActive]}
+                                onPress={() => handlePrivacyChange('anyone')}
+                            >
+                                <Text style={[styles.privacyOptionText, privacyVisibility === 'anyone' && styles.privacyOptionTextActive]}>
+                                    {t('privacy.anyone')}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.privacyOption, privacyVisibility === 'nobody' && styles.privacyOptionActive]}
+                                onPress={() => handlePrivacyChange('nobody')}
+                            >
+                                <Text style={[styles.privacyOptionText, privacyVisibility === 'nobody' && styles.privacyOptionTextActive]}>
+                                    {t('privacy.nobody')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* About Section */}
@@ -337,5 +374,44 @@ const styles = StyleSheet.create({
     versionText: {
         fontSize: theme.typography.size.bodyMD,
         color: theme.colors.text.tertiary,
+    },
+    comingSoonBadge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    comingSoonText: {
+        fontSize: 10,
+        fontWeight: '600' as const,
+        color: theme.colors.text.tertiary,
+        letterSpacing: 0.5,
+    },
+    privacyOptions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 12,
+    },
+    privacyOption: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+    },
+    privacyOptionActive: {
+        backgroundColor: theme.colors.brand.primary,
+        borderColor: theme.colors.brand.primary,
+    },
+    privacyOptionText: {
+        fontSize: 11,
+        fontWeight: '600' as const,
+        color: theme.colors.text.tertiary,
+    },
+    privacyOptionTextActive: {
+        color: '#FFF',
     },
 });

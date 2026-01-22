@@ -35,7 +35,7 @@ const MOCK_LEADERBOARD = [
 export const Leaderboard: React.FC = () => {
     const { t } = useTranslation();
     const { profile } = useAuth();
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
 
     const [leaderboard, setLeaderboard] = useState<any[]>(MOCK_LEADERBOARD);
     const [userRank, setUserRank] = useState<{ rank: number | null; points: number; total: number }>({
@@ -55,12 +55,42 @@ export const Leaderboard: React.FC = () => {
     };
 
     const loadData = useCallback(async () => {
+        if (!profile?.id) return;
+
         try {
             setLoading(true);
-            // Simulate fetch
-            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Fetch real data from Supabase
+            const [leaderboardData, userRankData] = await Promise.all([
+                getCurrentMonthLeaderboard(50),
+                getUserRank(profile.id),
+            ]);
+
+            // If we have real data, use it; otherwise fallback to mock
+            if (leaderboardData && leaderboardData.length > 0) {
+                // Transform data to match expected format
+                const transformedData = leaderboardData.map((entry: any, index: number) => ({
+                    id: entry.id,
+                    user_id: entry.user_id,
+                    points: entry.points,
+                    rank: entry.rank || index + 1,
+                    name: entry.users?.full_name || 'Corredor',
+                    tier: entry.users?.membership_tier || 'free',
+                }));
+                setLeaderboard(transformedData);
+            } else {
+                // No real data, use mock
+                setLeaderboard(MOCK_LEADERBOARD);
+            }
+
+            // Update user rank
+            if (userRankData && userRankData.rank !== null) {
+                setUserRank(userRankData);
+            }
         } catch (error) {
             console.error('Error loading leaderboard:', error);
+            // Fallback to mock data on error
+            setLeaderboard(MOCK_LEADERBOARD);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -100,38 +130,46 @@ export const Leaderboard: React.FC = () => {
         const isTop3 = rank <= 3;
         const rankColor = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : '#FFF';
 
+        const handlePress = () => {
+            if (item.user_id && item.user_id !== profile?.id) {
+                navigation.navigate('UserProfile', { userId: item.user_id });
+            }
+        };
+
         return (
-            <BlurView intensity={isCurrentUser ? 20 : 0} tint="dark" style={[styles.rowCard, isCurrentUser && styles.rowHighlight]}>
-                <View style={[styles.rowInner, isCurrentUser && { backgroundColor: 'rgba(255,87,34,0.1)' }]}>
-                    {/* Rank */}
-                    <View style={styles.rankContainer}>
-                        <Text style={[styles.rankNumber, isTop3 && { color: rankColor, fontSize: 18 }]}>
-                            {rank < 10 ? `0${rank}` : rank}
-                        </Text>
-                    </View>
+            <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+                <BlurView intensity={isCurrentUser ? 20 : 0} tint="dark" style={[styles.rowCard, isCurrentUser && styles.rowHighlight]}>
+                    <View style={[styles.rowInner, isCurrentUser && { backgroundColor: 'rgba(255,87,34,0.1)' }]}>
+                        {/* Rank */}
+                        <View style={styles.rankContainer}>
+                            <Text style={[styles.rankNumber, isTop3 && { color: rankColor, fontSize: 18 }]}>
+                                {rank < 10 ? `0${rank}` : rank}
+                            </Text>
+                        </View>
 
-                    {/* Avatar */}
-                    <View style={styles.avatarContainer}>
-                        <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : '#333' }]}>
-                            <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                        {/* Avatar */}
+                        <View style={styles.avatarContainer}>
+                            <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : '#333' }]}>
+                                <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                            </View>
+                        </View>
+
+                        {/* Info */}
+                        <View style={styles.userInfo}>
+                            <Text style={[styles.userName, isCurrentUser && { color: theme.colors.brand.primary }]}>{name.toUpperCase()}</Text>
+                            <View style={styles.tierRow}>
+                                <Text style={[styles.tierText, { color: getTierColor(tier) }]}>{getTierLabel(tier)}</Text>
+                            </View>
+                        </View>
+
+                        {/* Points */}
+                        <View style={styles.pointsContainer}>
+                            <Text style={styles.points}>{points}</Text>
+                            <Text style={styles.pointsLabel}>PTS</Text>
                         </View>
                     </View>
-
-                    {/* Info */}
-                    <View style={styles.userInfo}>
-                        <Text style={[styles.userName, isCurrentUser && { color: theme.colors.brand.primary }]}>{name.toUpperCase()}</Text>
-                        <View style={styles.tierRow}>
-                            <Text style={[styles.tierText, { color: getTierColor(tier) }]}>{getTierLabel(tier)}</Text>
-                        </View>
-                    </View>
-
-                    {/* Points */}
-                    <View style={styles.pointsContainer}>
-                        <Text style={styles.points}>{points}</Text>
-                        <Text style={styles.pointsLabel}>PTS</Text>
-                    </View>
-                </View>
-            </BlurView>
+                </BlurView>
+            </TouchableOpacity>
         );
     };
 

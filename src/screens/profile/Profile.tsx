@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -135,6 +135,17 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
                         {/* Avatar Section */}
                         <BlurView intensity={20} tint="dark" style={styles.profileGlassCard}>
+                            <View style={styles.cardHeaderAction}>
+                                <TouchableOpacity
+                                    style={styles.editButton}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        navigation.navigate('EditProfile');
+                                    }}
+                                >
+                                    <PencilIcon size={16} color="rgba(255,255,255,0.8)" />
+                                </TouchableOpacity>
+                            </View>
                             <View style={styles.profileContent}>
                                 <View style={[styles.avatarContainer, { borderColor: tierConfig.primary }]}>
                                     <Text style={styles.avatarText}>{userInitial}</Text>
@@ -295,6 +306,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
         marginBottom: 30,
+        position: 'relative',
+    },
+    cardHeaderAction: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 10,
+    },
+    editButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     profileContent: {
         alignItems: 'center',

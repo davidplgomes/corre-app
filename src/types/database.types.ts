@@ -49,6 +49,16 @@ export interface Database {
         Insert: Omit<ShopItem, 'id' | 'created_at'>;
         Update: Partial<Omit<ShopItem, 'id' | 'created_at'>>;
       };
+      post_likes: {
+        Row: PostLike;
+        Insert: Omit<PostLike, 'id' | 'created_at'>;
+        Update: never;
+      };
+      post_comments: {
+        Row: PostComment;
+        Insert: Omit<PostComment, 'id' | 'created_at'>;
+        Update: Partial<Omit<PostComment, 'id' | 'created_at' | 'post_id' | 'user_id'>>;
+      };
     };
   };
 }
@@ -58,6 +68,9 @@ export interface User {
   email: string;
   full_name: string;
   neighborhood: string | null;
+  bio: string | null;
+  city: string | null;
+  instagram_handle: string | null;
   membership_tier: MembershipTier;
   current_month_points: number;
   total_lifetime_points: number;
@@ -161,4 +174,21 @@ export interface ShopItem {
   image_url: string | null;
   stock: number;
   created_at: string;
+}
+
+export interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  // Joins
+  users?: Partial<User>;
 }

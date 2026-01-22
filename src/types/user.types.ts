@@ -6,6 +6,9 @@ export interface UserProfile {
   email: string;
   fullName: string;
   neighborhood: string | null;
+  bio: string | null;
+  city: string | null;
+  instagramHandle: string | null;
   membershipTier: MembershipTier;
   currentMonthPoints: number;
   totalLifetimePoints: number;

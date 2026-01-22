@@ -43,23 +43,31 @@ export const EventParticipants: React.FC<EventParticipantsProps> = ({ route, nav
         }
     };
 
-    const renderItem = ({ item }: { item: any }) => (
-        <View style={styles.participantRow}>
-            <View style={styles.userInfo}>
-                <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>
-                        {item.users?.full_name?.charAt(0).toUpperCase() || 'U'}
-                    </Text>
-                </View>
-                <View>
-                    <Text style={styles.userName}>{item.users?.full_name || 'User'}</Text>
-                    {item.users?.membership_tier && (
-                        <TierBadge tier={item.users.membership_tier as TierKey} size="small" />
-                    )}
-                </View>
+    const renderItem = ({ item }: { item: any }) => {
+        const handlePress = () => {
+            if (item.user_id) {
+                navigation.navigate('UserProfile', { userId: item.user_id });
+            }
+        };
+
+        return (
+            <View style={styles.participantRow}>
+                <TouchableOpacity style={styles.userInfo} onPress={handlePress}>
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarText}>
+                            {item.users?.full_name?.charAt(0).toUpperCase() || 'U'}
+                        </Text>
+                    </View>
+                    <View>
+                        <Text style={styles.userName}>{item.users?.full_name || 'User'}</Text>
+                        {item.users?.membership_tier && (
+                            <TierBadge tier={item.users.membership_tier as TierKey} size="small" />
+                        )}
+                    </View>
+                </TouchableOpacity>
             </View>
-        </View>
-    );
+        );
+    };
 
     if (loading) {
         return <LoadingSpinner />;
