@@ -77,16 +77,16 @@ const styles = StyleSheet.create({
 
     // Date Section
     dateSection: {
-        width: 60,
+        width: 70, // Increased from 60 to fit 2-digit days
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: theme.spacing[2],
+        paddingHorizontal: theme.spacing[3], // More padding
     },
     dateDay: {
-        fontSize: 32,
+        fontSize: 28, // Slightly smaller for safety
         fontWeight: '900' as any,
         color: theme.colors.text.primary,
-        lineHeight: 32,
+        lineHeight: 34, // Proper line height
         includeFontPadding: false,
     },
     dateMonth: {

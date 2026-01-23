@@ -244,7 +244,17 @@
     "completed": "Completed",
     "inProgress": "In Progress",
     "unlocked": "Unlocked",
-    "your": "Your"
+    "your": "Your",
+    "about": "About",
+    "noBio": "No bio.",
+    "recentActivity": "Recent Activity",
+    "city": "City",
+    "enterCity": "Enter your city",
+    "bio": "Bio",
+    "enterBio": "Tell us about yourself",
+    "instagram": "Instagram",
+    "enterInstagram": "Your Instagram handle",
+    "tapToChange": "Tap to change photo"
   },
   "friends": {
     "title": "Friends",
@@ -259,7 +269,8 @@
     "noFriends": "No friends yet",
     "noRequests": "No pending requests",
     "removeFriend": "Remove Friend",
-    "confirmRemove": "Are you sure you want to remove this friend?"
+    "confirmRemove": "Are you sure you want to remove this friend?",
+    "suggested": "Suggested Friends"
   },
   "achievements": {
     "firstRun": "First Run",
@@ -300,7 +311,8 @@
     "passwordLength": "Password must be at least 6 characters.",
     "updatePassword": "Could not update password.",
     "createAd": "Could not create ad.",
-    "loadFeed": "Could not load feed."
+    "loadFeed": "Could not load feed.",
+    "permissionRequired": "Permission is required to continue."
   },
   "validation": {
     "required": "This field is required",

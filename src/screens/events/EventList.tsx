@@ -23,14 +23,21 @@ type EventListProps = {
     navigation: any;
 };
 
-// Mock events for demo (matching the design)
+// Helper to create future date strings
+const futureDate = (daysFromNow: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromNow);
+    return d.toISOString();
+};
+
+// Mock events for demo (matching the design) - always in the future
 const MOCK_EVENTS: any[] = [
     {
         id: '1',
         title: 'Corrida Urbana Noturna',
         description: 'Corrida noturna pelas ruas do centro',
         event_type: 'race',
-        event_datetime: '2026-11-18T19:00:00',
+        event_datetime: futureDate(7), // 1 week from now
         location_name: '10km • Parque Central',
         location_lat: -23.5505,
         location_lng: -46.6333,
@@ -43,7 +50,7 @@ const MOCK_EVENTS: any[] = [
         title: 'Maratona de São Paulo',
         description: 'A maior maratona da cidade',
         event_type: 'race',
-        event_datetime: '2026-12-05T06:00:00',
+        event_datetime: futureDate(30), // 1 month from now
         location_name: '42km • Ibirapuera',
         location_lat: -23.5505,
         location_lng: -46.6333,
@@ -55,8 +62,8 @@ const MOCK_EVENTS: any[] = [
 
 export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const [events, setEvents] = useState<Event[]>(MOCK_EVENTS);
-    const [loading, setLoading] = useState(false);
+    const [events, setEvents] = useState<Event[]>([]); // Start empty, not with mocks
+    const [loading, setLoading] = useState(true); // Start loading
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState<string>('Todos');
 
@@ -72,7 +79,14 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     const loadEvents = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await getUpcomingEvents();
+            let data = await getUpcomingEvents();
+
+            // Fallback to all events if no upcoming events
+            if (!data || data.length === 0) {
+                const { getAllEvents } = await import('../../services/supabase/events');
+                data = await getAllEvents();
+            }
+
             if (data && data.length > 0) {
                 setEvents(data);
             } else {

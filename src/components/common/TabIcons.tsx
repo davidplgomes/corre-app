@@ -420,3 +420,113 @@ export const PencilIcon: React.FC<IconProps> = ({
         />
     </Svg>
 );
+
+// Instagram Icon
+export const InstagramIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Rect x="2" y="2" width="20" height="20" rx="5" stroke={color} strokeWidth="1.5" />
+        <Path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" stroke={color} strokeWidth="1.5" />
+        <Path d="M17.5 6.5h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+);
+
+// Info Icon (About)
+export const InfoIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" />
+        <Path d="M12 16v-4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        <Path d="M12 8h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+);
+
+// Lock Icon
+export const LockIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke={color} strokeWidth="1.5" />
+        <Path d="M7 11V7a5 5 0 0 1 10 0v4" stroke={color} strokeWidth="1.5" />
+    </Svg>
+);
+
+// Close Icon
+export const CloseIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M18 6L6 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M6 6L18 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+// Sunrise Icon (Early Bird) - Cleaner design
+export const SunriseIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {/* Horizon line */}
+        <Path d="M3 18H21" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        {/* Half sun circle above horizon */}
+        <Path d="M5 18C5 14.14 8.14 11 12 11C15.86 11 19 14.14 19 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        {/* Sun rays */}
+        <Path d="M12 3V6" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        <Path d="M5.64 6.64L7.76 8.76" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        <Path d="M18.36 6.64L16.24 8.76" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </Svg>
+);
+
+// Party Icon (Social) - Simple Confetti/Balloon style
+export const PartyIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" />
+        <Path d="M8 14s1.5 2 4 2 4-2 4-2" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M9 9h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        <Path d="M15 9h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+);
+
+// Eye Icon (View)
+export const EyeIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {filled ? (
+            <>
+                <Path
+                    d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+                    fill={color}
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+                <Circle cx="12" cy="12" r="3" fill="#000" />
+            </>
+        ) : (
+            <>
+                <Path
+                    d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+                    stroke={color}
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+                <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </>
+        )}
+    </Svg>
+);

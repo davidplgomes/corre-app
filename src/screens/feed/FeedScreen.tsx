@@ -17,7 +17,8 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics'; // Import Haptics
 import { theme } from '../../constants/theme';
 import { FeedPost } from '../../types';
-import { getFeedPosts } from '../../services/supabase/feed';
+import { getFeedPosts, getFriendFeedPosts } from '../../services/supabase/feed';
+import { getFriends } from '../../services/supabase/friendships';
 import { LoadingSpinner } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { useAuth } from '../../contexts/AuthContext';
@@ -40,13 +41,24 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'community' | 'friends'>('community');
 
-    const filteredPosts = activeTab === 'friends'
-        ? posts.filter((_, i) => i % 2 === 0) // Mock filter for friends
-        : posts;
-
     const loadPosts = useCallback(async () => {
         try {
-            const data = await getFeedPosts();
+            setLoading(true);
+            let data: FeedPost[] = [];
+
+            if (activeTab === 'friends') {
+                if (profile?.id) {
+                    const friends = await getFriends();
+                    const friendIds = friends.map(f => f.id);
+                    if (friendIds.length > 0) {
+                        // Include self in friends feed? Usually yes or no. Let's include ONLY friends for now as requested.
+                        data = await getFriendFeedPosts(friendIds);
+                    }
+                }
+            } else {
+                data = await getFeedPosts();
+            }
+
             if (data && data.length > 0) {
                 setPosts(data);
             } else {
@@ -54,12 +66,12 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Error loading feed:', error);
-            Alert.alert(t('common.error'), t('errors.loadFeed'));
+            // Don't show alert on every error to avoid annoyance, just log
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [activeTab, profile?.id]);
 
     useEffect(() => {
         loadPosts();
@@ -142,7 +154,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
                     {renderHeader()}
 
                     <FlatList
-                        data={filteredPosts}
+                        data={posts}
                         renderItem={renderPost}
                         keyExtractor={item => item.id}
                         contentContainerStyle={styles.listContent}

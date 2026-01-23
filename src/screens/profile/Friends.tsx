@@ -25,6 +25,7 @@ import {
     rejectFriendRequest,
     getFriends,
     removeFriend,
+    getSuggestedFriends,
     UserSearchResult,
     Friendship,
 } from '../../services/supabase/friendships';
@@ -39,6 +40,8 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [pendingRequests, setPendingRequests] = useState<Friendship[]>([]);
     const [friends, setFriends] = useState<UserSearchResult[]>([]);
+    const [suggestedFriends, setSuggestedFriends] = useState<UserSearchResult[]>([]);
+    const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends');
@@ -46,12 +49,14 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [friendsData, requestsData] = await Promise.all([
+            const [friendsData, requestsData, suggestionsData] = await Promise.all([
                 getFriends(),
                 getPendingRequests(),
+                getSuggestedFriends()
             ]);
             setFriends(friendsData);
             setPendingRequests(requestsData);
+            setSuggestedFriends(suggestionsData);
         } catch (error) {
             console.error('Error loading friends data:', error);
         } finally {
@@ -76,12 +81,23 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
 
     const handleSendRequest = async (userId: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setProcessingIds(prev => new Set(prev).add(userId));
+
         const success = await sendFriendRequest(userId);
+
+        setProcessingIds(prev => {
+            const next = new Set(prev);
+            next.delete(userId);
+            return next;
+        });
+
         if (success) {
             Alert.alert(t('common.success'), t('friends.requestSent'));
-            setSearchResults(prev =>
-                prev.map(u => u.id === userId ? { ...u, friendship_status: 'pending' } : u)
-            );
+            const updateStatus = (list: UserSearchResult[]) =>
+                list.map(u => u.id === userId ? { ...u, friendship_status: 'pending' } as const : u);
+
+            setSearchResults(prev => updateStatus(prev));
+            setSuggestedFriends(prev => updateStatus(prev));
         } else {
             Alert.alert(t('common.error'), t('errors.unknownError'));
         }
@@ -149,13 +165,18 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                     </View>
                     {item.friendship_status === 'none' && (
                         <TouchableOpacity
-                            style={styles.addButton}
+                            style={[styles.addButton, processingIds.has(item.id) && { opacity: 0.7 }]}
                             onPress={(e) => {
                                 e.stopPropagation();
-                                handleSendRequest(item.id);
+                                if (!processingIds.has(item.id)) {
+                                    handleSendRequest(item.id);
+                                }
                             }}
+                            disabled={processingIds.has(item.id)}
                         >
-                            <Text style={styles.addButtonText}>{t('friends.addFriend')}</Text>
+                            <Text style={styles.addButtonText}>
+                                {processingIds.has(item.id) ? '...' : t('friends.addFriend')}
+                            </Text>
                         </TouchableOpacity>
                     )}
                     {item.friendship_status === 'pending' && (
@@ -261,6 +282,21 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                             renderItem={renderUserItem}
                             keyExtractor={(item) => item.id}
                             scrollEnabled={false}
+                        />
+                    </View>
+                )}
+
+                {/* Suggested Friends */}
+                {searchResults.length === 0 && suggestedFriends.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('friends.suggested')}</Text>
+                        <FlatList
+                            data={suggestedFriends}
+                            renderItem={renderUserItem}
+                            keyExtractor={(item) => item.id}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{ gap: 12, paddingBottom: 12 }}
                         />
                     </View>
                 )}

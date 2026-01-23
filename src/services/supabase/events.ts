@@ -42,6 +42,25 @@ export const getUpcomingEvents = async (): Promise<Event[]> => {
 };
 
 /**
+ * Get ALL events (including past ones) - useful for fallback
+ */
+export const getAllEvents = async (): Promise<Event[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .order('event_datetime', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error getting all events:', error);
+        throw error;
+    }
+};
+
+/**
  * Get events for a specific date range
  */
 export const getEventsByDateRange = async (
@@ -126,6 +145,9 @@ export const deleteEvent = async (eventId: string): Promise<void> => {
 /**
  * Join an event
  */
+/**
+ * Join an event
+ */
 export const joinEvent = async (
     eventId: string,
     userId: string
@@ -141,6 +163,12 @@ export const joinEvent = async (
             .single();
 
         if (error) throw error;
+
+        // Check for 'Social' achievement
+        import('./achievements').then(({ checkAndUnlockAchievement }) => {
+            checkAndUnlockAchievement(userId, 'event_joined');
+        });
+
         return data;
     } catch (error) {
         console.error('Error joining event:', error);

@@ -12,104 +12,99 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
-import { ChevronRightIcon, TrophyIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, TrophyIcon, RunIcon, SunriseIcon, MedalIcon, PartyIcon, CompassIcon } from '../../components/common/TabIcons';
+import { getAllAchievements, getUserAchievements, Achievement as AchievementType } from '../../services/supabase/achievements';
+import { useAuth } from '../../contexts/AuthContext';
 
 type AchievementsProps = {
     navigation: any;
 };
 
-interface Achievement {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
+interface Achievement extends AchievementType {
     unlocked: boolean;
-    unlockedDate?: string;
+    unlockedDate?: string; // Mapped from earned_at
     progress?: number;
     target?: number;
 }
 
-// Mock achievements
-const ACHIEVEMENTS: Achievement[] = [
-    { id: '1', title: 'Primeira Corrida', description: 'Complete sua primeira corrida', icon: '🏃', unlocked: true, unlockedDate: '2025-12-01' },
-    { id: '2', title: '5km Concluído', description: 'Complete uma corrida de 5km', icon: '🎯', unlocked: true, unlockedDate: '2025-12-05' },
-    { id: '3', title: '10km Concluído', description: 'Complete uma corrida de 10km', icon: '🔥', unlocked: true, unlockedDate: '2025-12-15' },
-    { id: '4', title: 'Meia Maratona', description: 'Complete uma meia maratona (21.1km)', icon: '🏅', unlocked: true, unlockedDate: '2026-01-01' },
-    { id: '5', title: 'Maratona', description: 'Complete uma maratona (42.2km)', icon: '🏆', unlocked: false, progress: 21, target: 42 },
-    { id: '6', title: '50km Total', description: 'Acumule 50km de corrida', icon: '⭐', unlocked: true, unlockedDate: '2025-12-20' },
-    { id: '7', title: '100km Total', description: 'Acumule 100km de corrida', icon: '💫', unlocked: true, unlockedDate: '2026-01-05' },
-    { id: '8', title: '500km Total', description: 'Acumule 500km de corrida', icon: '🌟', unlocked: false, progress: 350, target: 500 },
-    { id: '9', title: 'Corredor Noturno', description: 'Complete 5 corridas noturnas', icon: '🌙', unlocked: true, unlockedDate: '2026-01-10' },
-    { id: '10', title: 'Madrugador', description: 'Complete 5 corridas antes das 7h', icon: '🌅', unlocked: false, progress: 3, target: 5 },
-    { id: '11', title: 'Consistência', description: 'Corra 7 dias seguidos', icon: '📅', unlocked: false, progress: 4, target: 7 },
-    { id: '12', title: 'Velocista', description: 'Pace abaixo de 5 min/km', icon: '⚡', unlocked: true, unlockedDate: '2026-01-12' },
-];
+
 
 export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
     const { t } = useTranslation();
 
-    // Mock achievements with translations
-    const achievements: Achievement[] = [
-        { id: '1', title: t('achievements.firstRun'), description: t('achievements.firstRunDesc'), icon: '🏃', unlocked: true, unlockedDate: '2025-12-01' },
-        { id: '2', title: t('achievements.5km'), description: t('achievements.5kmDesc'), icon: '🎯', unlocked: true, unlockedDate: '2025-12-05' },
-        { id: '3', title: t('achievements.10km'), description: t('achievements.10kmDesc'), icon: '🔥', unlocked: true, unlockedDate: '2025-12-15' },
-        { id: '4', title: t('achievements.halfMarathon'), description: t('achievements.halfMarathonDesc'), icon: '🏅', unlocked: true, unlockedDate: '2026-01-01' },
-        { id: '5', title: t('achievements.marathon'), description: t('achievements.marathonDesc'), icon: '🏆', unlocked: false, progress: 21, target: 42 },
-        { id: '6', title: t('achievements.50kmTotal'), description: t('achievements.50kmTotalDesc'), icon: '⭐', unlocked: true, unlockedDate: '2025-12-20' },
-        { id: '7', title: t('achievements.100kmTotal'), description: t('achievements.100kmTotalDesc'), icon: '💫', unlocked: true, unlockedDate: '2026-01-05' },
-        { id: '8', title: t('achievements.500kmTotal'), description: t('achievements.500kmTotalDesc'), icon: '🌟', unlocked: false, progress: 350, target: 500 },
-        { id: '9', title: t('achievements.nightRunner'), description: t('achievements.nightRunnerDesc'), icon: '🌙', unlocked: true, unlockedDate: '2026-01-10' },
-        { id: '10', title: t('achievements.earlyBird'), description: t('achievements.earlyBirdDesc'), icon: '🌅', unlocked: false, progress: 3, target: 5 },
-        { id: '11', title: t('achievements.consistency'), description: t('achievements.consistencyDesc'), icon: '📅', unlocked: false, progress: 4, target: 7 },
-        { id: '12', title: t('achievements.speedster'), description: t('achievements.speedsterDesc'), icon: '⚡', unlocked: true, unlockedDate: '2026-01-12' },
-    ];
+    const [achievements, setAchievements] = React.useState<Achievement[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    const { profile: user } = useAuth();
+
+    React.useEffect(() => {
+        if (user?.id) loadAchievements();
+    }, [user]);
+
+    const loadAchievements = async () => {
+        if (!user?.id) return;
+        try {
+            const all = await getAllAchievements();
+            const unlocked = await getUserAchievements(user.id);
+            const unlockedIds = new Set(unlocked.map(u => u.id));
+
+            // Merge
+            const merged = all.map(a => {
+                const isUnlocked = unlockedIds.has(a.id);
+                const userAchievement = unlocked.find(u => u.id === a.id);
+                return {
+                    ...a,
+                    unlocked: isUnlocked,
+                    unlockedDate: userAchievement?.earned_at
+                };
+            });
+            setAchievements(merged);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const unlockedCount = achievements.filter(a => a.unlocked).length;
     const totalCount = achievements.length;
 
-    const renderAchievement = (achievement: Achievement) => (
-        <View
-            key={achievement.id}
-            style={[styles.achievementCard, !achievement.unlocked && styles.achievementLocked]}
-        >
-            <View style={[styles.iconContainer, achievement.unlocked && styles.iconContainerUnlocked]}>
-                <Text style={styles.icon}>{achievement.icon}</Text>
-            </View>
-            <View style={styles.achievementInfo}>
-                <Text style={[styles.achievementTitle, !achievement.unlocked && styles.textLocked]}>
-                    {achievement.title}
-                </Text>
-                <Text style={styles.achievementDescription}>{achievement.description}</Text>
+    const renderAchievement = (achievement: Achievement) => {
+        let IconComponent = TrophyIcon;
+        // Map codes/icons to components (same as UserProfile)
+        switch (achievement.icon) {
+            case 'run': case '👟': IconComponent = RunIcon; break;
+            case 'sunrise': case '🌅': IconComponent = SunriseIcon; break;
+            case 'medal': case 'medalha': case '🥇': case '🏃': IconComponent = MedalIcon; break;
+            case 'party': case '🎉': IconComponent = PartyIcon; break;
+            case 'compass': case '📍': IconComponent = CompassIcon; break;
+            default: IconComponent = TrophyIcon;
+        }
 
-                {/* Progress bar for locked achievements */}
-                {!achievement.unlocked && achievement.progress !== undefined && (
-                    <View style={styles.progressContainer}>
-                        <View style={styles.progressTrack}>
-                            <LinearGradient
-                                colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
-                                style={[
-                                    styles.progressFill,
-                                    { width: `${(achievement.progress / (achievement.target || 1)) * 100}%` }
-                                ]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                            />
-                        </View>
-                        <Text style={styles.progressText}>
-                            {achievement.progress}/{achievement.target}
-                        </Text>
-                    </View>
-                )}
-
-                {/* Unlocked date */}
-                {achievement.unlocked && achievement.unlockedDate && (
-                    <Text style={styles.unlockedDate}>
-                        ✓ {new Date(achievement.unlockedDate).toLocaleDateString('pt-BR')}
+        return (
+            <View
+                key={achievement.id}
+                style={[styles.achievementCard, !achievement.unlocked && styles.achievementLocked]}
+            >
+                <View style={[styles.iconContainer, achievement.unlocked && styles.iconContainerUnlocked]}>
+                    <IconComponent size={24} color={achievement.unlocked ? theme.colors.brand.primary : '#FFF'} />
+                </View>
+                <View style={styles.achievementInfo}>
+                    <Text style={[styles.achievementTitle, !achievement.unlocked && styles.textLocked]}>
+                        {achievement.title}
                     </Text>
-                )}
+                    <Text style={styles.achievementDescription}>{achievement.description}</Text>
+
+                    {/* Unlocked date */}
+                    {achievement.unlocked && achievement.unlockedDate && (
+                        <Text style={styles.unlockedDate}>
+                            ✓ {new Date(achievement.unlockedDate).toLocaleDateString('pt-BR')}
+                        </Text>
+                    )}
+                </View>
             </View>
-        </View>
-    );
+        )
+    };
 
     return (
         <View style={styles.container}>

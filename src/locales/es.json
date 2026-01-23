@@ -148,7 +148,48 @@
       "es": "Español"
     },
     "selectLanguage": "Seleccionar Idioma",
-    "changeLanguageSuccess": "Idioma cambiado exitosamente"
+    "changeLanguageSuccess": "Idioma cambiado exitosamente",
+    "about": "Sobre mí",
+    "noBio": "Sin biografía.",
+    "recentActivity": "Actividad Reciente",
+    "runHistory": "Historial de Carreras",
+    "runMap": "Mapa de Carreras",
+    "achievements": "Logros",
+    "friends": "Amigos",
+    "logout": "Cerrar Sesión",
+    "myProfile": "Mi Perfil"
+  },
+  "userProfile": {
+    "title": "Perfil",
+    "privateProfile": "Perfil privado",
+    "stats": "Estadísticas"
+  },
+  "friends": {
+    "title": "Amigos",
+    "searchPlaceholder": "Buscar usuarios...",
+    "searchResults": "RESULTADOS",
+    "myFriends": "Mis Amigos",
+    "pendingRequests": "Solicitudes",
+    "addFriend": "Añadir",
+    "pending": "Pendiente",
+    "requestSent": "¡Solicitud enviada!",
+    "wantsToConnect": "quiere conectar",
+    "noFriends": "Aún no tienes amigos",
+    "noRequests": "No hay solicitudes pendientes",
+    "removeFriend": "Eliminar Amigo",
+    "confirmRemove": "¿Estás seguro de que quieres eliminar a este amigo?"
+  },
+  "achievements": {
+    "firstRun": "Primera Carrera",
+    "firstRunDesc": "Completa tu primera carrera",
+    "5km": "5km Completados",
+    "5kmDesc": "Completa una carrera de 5km",
+    "10km": "10km Completados",
+    "10kmDesc": "Completa una carrera de 10km",
+    "halfMarathon": "Media Maratón",
+    "halfMarathonDesc": "Completa una media maratón (21.1km)",
+    "marathon": "Maratón",
+    "marathonDesc": "Completa una maratón (42.2km)"
   },
   "errors": {
     "networkError": "Error de red. Verifica tu conexión.",

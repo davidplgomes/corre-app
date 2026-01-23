@@ -62,6 +62,33 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
 };
 
 /**
+ * Get suggested friends (random users who are not friends for now)
+ */
+export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    // Get current friends IDs
+    const friends = await getFriends();
+    const friendIds = friends.map(f => f.id);
+    const excludeIds = [user.id, ...friendIds];
+
+    // Fetch users NOT in exclude list
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, membership_tier')
+        .not('id', 'in', `(${excludeIds.join(',')})`)
+        .limit(5);
+
+    if (error) {
+        console.error('Error fetching suggestions:', error);
+        return [];
+    }
+
+    return data.map(u => ({ ...u, friendship_status: 'none' }));
+};
+
+/**
  * Get friendship status with a user
  */
 export const getFriendshipStatus = async (userId: string): Promise<'pending' | 'accepted' | 'none'> => {

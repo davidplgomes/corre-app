@@ -67,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bio: data.bio,
           city: data.city,
           instagramHandle: data.instagram_handle,
+          avatarUrl: data.avatar_url
+            ? `${data.avatar_url}?t=${new Date().getTime()}`
+            : null, // NEW
           membershipTier: data.membership_tier,
           currentMonthPoints: data.current_month_points,
           totalLifetimePoints: data.total_lifetime_points,

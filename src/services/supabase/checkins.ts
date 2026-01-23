@@ -32,6 +32,11 @@ export const createCheckIn = async (
             return { success: false, error: data.error_message };
         }
 
+        // Check for 'Explorer' achievement
+        import('./achievements').then(({ checkAndUnlockAchievement }) => {
+            checkAndUnlockAchievement(userId, 'check_in');
+        });
+
         return { success: true, checkIn: data.check_in };
     } catch (error: any) {
         console.error('Error creating check-in:', error);

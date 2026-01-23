@@ -9,6 +9,7 @@ export interface UserProfile {
   bio: string | null;
   city: string | null;
   instagramHandle: string | null;
+  avatarUrl: string | null; // NEW: Profile picture URL
   membershipTier: MembershipTier;
   currentMonthPoints: number;
   totalLifetimePoints: number;

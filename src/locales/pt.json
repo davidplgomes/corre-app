@@ -244,7 +244,17 @@
     "completed": "Concluído",
     "inProgress": "Em Progresso",
     "unlocked": "Desbloqueadas",
-    "your": "Suas"
+    "your": "Suas",
+    "about": "Sobre",
+    "noBio": "Sem biografia.",
+    "recentActivity": "Atividade Recente",
+    "city": "Cidade",
+    "enterCity": "Digite sua cidade",
+    "bio": "Bio",
+    "enterBio": "Conte um pouco sobre você",
+    "instagram": "Instagram",
+    "enterInstagram": "Seu usuário do Instagram",
+    "tapToChange": "Toque para trocar a foto"
   },
   "friends": {
     "title": "Amigos",
@@ -259,7 +269,8 @@
     "noFriends": "Nenhum amigo ainda",
     "noRequests": "Nenhuma solicitação pendente",
     "removeFriend": "Remover Amigo",
-    "confirmRemove": "Tem certeza que deseja remover este amigo?"
+    "confirmRemove": "Tem certeza que deseja remover este amigo?",
+    "suggested": "Sugestões de Amizade"
   },
   "achievements": {
     "firstRun": "Primeira Corrida",
@@ -300,7 +311,8 @@
     "passwordLength": "A senha deve ter pelo menos 6 caracteres.",
     "updatePassword": "Não foi possível atualizar a senha.",
     "createAd": "Não foi possível criar o anúncio.",
-    "loadFeed": "Não foi possível carregar o feed."
+    "loadFeed": "Não foi possível carregar o feed.",
+    "permissionRequired": "Permissão necessária para continuar."
   },
   "validation": {
     "required": "Este campo é obrigatório",

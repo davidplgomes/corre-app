@@ -14,7 +14,19 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import {
+    ChevronRightIcon,
+    InstagramIcon,
+    InfoIcon,
+    LockIcon,
+    CloseIcon,
+    TrophyIcon,
+    RunIcon,
+    MedalIcon,
+    SunriseIcon,
+    PartyIcon,
+    CompassIcon
+} from '../../components/common/TabIcons';
 import { LoadingSpinner } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPublicProfile, PublicProfile } from '../../services/supabase/users';
@@ -126,12 +138,24 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
     // Render helpers
     const renderAchievements = () => (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achievementsScroll}>
-            {achievements.map((badge) => (
-                <View key={badge.id} style={styles.achievementCard}>
-                    <Text style={styles.achievementIcon}>{badge.icon}</Text>
-                    <Text style={styles.achievementTitle}>{badge.title}</Text>
-                </View>
-            ))}
+            {achievements.map((badge) => {
+                let Icon = TrophyIcon;
+                switch (badge.icon) {
+                    case 'run': case '👟': Icon = RunIcon; break;
+                    case 'sunrise': case '🌅': Icon = SunriseIcon; break;
+                    case 'medal': case 'medalha': case '🥇': case '🏃': Icon = MedalIcon; break;
+                    case 'party': case '🎉': Icon = PartyIcon; break;
+                    case 'compass': case '📍': Icon = CompassIcon; break;
+                    default: Icon = TrophyIcon;
+                }
+
+                return (
+                    <View key={badge.id} style={styles.achievementCard}>
+                        <Icon size={32} color="rgba(255,255,255,0.8)" />
+                        <Text style={styles.achievementTitle} numberOfLines={2}>{badge.title}</Text>
+                    </View>
+                );
+            })}
         </ScrollView>
     );
 
@@ -162,13 +186,20 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>{t('profile.title').toUpperCase()}</Text>
                         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-                            <Text style={styles.closeIcon}>×</Text>
+                            <CloseIcon size={20} color="#FFF" />
                         </TouchableOpacity>
                     </View>
 
                     {/* Hero Text / Name */}
                     <View style={styles.heroContainer}>
-                        <Text style={styles.heroText}>{profile.full_name?.toUpperCase()}</Text>
+                        <View style={[styles.heroAvatar, { borderColor: tierConfig.primary }]}>
+                            <Text style={[styles.heroAvatarText, { color: tierConfig.primary }]}>
+                                {userInitial}
+                            </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.heroText}>{profile.full_name?.toUpperCase()}</Text>
+                        </View>
                     </View>
 
                     {/* Stats Bar (Glass) */}
@@ -176,7 +207,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Text style={[styles.statText, { color: tierConfig.primary }]}>{tierConfig.label.toUpperCase()}</Text>
                         </View>
-                        <Text style={styles.statIcon}>✦</Text>
+                        <TrophyIcon size={16} color={tierConfig.primary} filled />
                         {hasFullAccess && (
                             <Text style={styles.pointsText}>{profile.current_month_points}PTS</Text>
                         )}
@@ -188,7 +219,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
 
                             {/* Bio & Details Section */}
                             <View style={styles.section}>
-                                <Text style={styles.label}>{t('profile.about').toUpperCase()}</Text>
+                                <View style={styles.sectionHeader}>
+                                    <InfoIcon size={14} color="rgba(255,255,255,0.5)" />
+                                    <Text style={[styles.label, { marginBottom: 0, marginLeft: 6 }]}>{t('profile.about').toUpperCase()}</Text>
+                                </View>
                                 <Text style={styles.bioText}>
                                     {profile.bio || t('profile.noBio')}
                                 </Text>
@@ -205,8 +239,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                                     {/* Instagram */}
                                     {profile.instagram_handle && (
                                         <TouchableOpacity style={styles.detailItem} onPress={openInstagram}>
-                                            <Text style={styles.detailIcon}>📸</Text>
-                                            <Text style={[styles.detailText, { textDecorationLine: 'underline' }]}>
+                                            <InstagramIcon size={16} color="#FFF" />
+                                            <Text style={[styles.detailText, { textDecorationLine: 'underline', marginLeft: 6 }]}>
                                                 @{profile.instagram_handle}
                                             </Text>
                                         </TouchableOpacity>
@@ -218,17 +252,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                             {hasFullAccess && achievements.length > 0 && (
                                 <View style={styles.section}>
                                     <View style={styles.sectionHeader}>
-                                        <Text style={styles.label}>{t('profile.achievements').toUpperCase()}</Text>
+                                        <TrophyIcon size={14} color="rgba(255,255,255,0.5)" />
+                                        <Text style={[styles.label, { marginBottom: 0, marginLeft: 6 }]}>{t('profile.achievements').toUpperCase()}</Text>
                                         <Text style={styles.countBadge}>{achievements.length}</Text>
                                     </View>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achievementsScroll}>
-                                        {achievements.map((badge) => (
-                                            <View key={badge.id} style={styles.achievementCard}>
-                                                <Text style={styles.achievementIcon}>{badge.icon}</Text>
-                                                <Text style={styles.achievementTitle}>{badge.title}</Text>
-                                            </View>
-                                        ))}
-                                    </ScrollView>
+                                    {renderAchievements()}
                                 </View>
                             )}
 
@@ -247,7 +275,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                             {/* Privacy Lock */}
                             {!hasFullAccess && (
                                 <View style={styles.privateContainer}>
-                                    <Text style={styles.privateIcon}>🔒</Text>
+                                    <LockIcon size={32} color="rgba(255,255,255,0.5)" />
                                     <Text style={styles.privateText}>{t('userProfile.privateProfile')}</Text>
                                 </View>
                             )}
@@ -342,16 +370,32 @@ const styles = StyleSheet.create({
     heroContainer: {
         marginVertical: 40,
         paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    heroAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 3,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    heroAvatarText: {
+        fontSize: 32,
+        fontWeight: 'bold',
     },
     heroText: {
-        fontSize: 48,
+        fontSize: 32, // Slightly smaller to fit with avatar
         fontWeight: '900',
         fontStyle: 'italic',
         color: '#FFF',
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 0, height: 4 },
         textShadowRadius: 10,
-        lineHeight: 50,
+        lineHeight: 36,
     },
     statsBar: {
         flexDirection: 'row',

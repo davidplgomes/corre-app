@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -136,6 +136,20 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                         {/* Avatar Section */}
                         <BlurView intensity={20} tint="dark" style={styles.profileGlassCard}>
                             <View style={styles.cardHeaderAction}>
+                                {/* View Profile (Left) */}
+                                <TouchableOpacity
+                                    style={[styles.editButton, { marginRight: 'auto' }]} // Style tweak if needed, or separate absolute pos
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        if (user?.id) {
+                                            navigation.navigate('UserProfile', { userId: user.id });
+                                        }
+                                    }}
+                                >
+                                    <EyeIcon size={16} color="rgba(255,255,255,0.8)" />
+                                </TouchableOpacity>
+
+                                {/* Edit Profile (Right) - Keeping existing, but need to handle positioning */}
                                 <TouchableOpacity
                                     style={styles.editButton}
                                     onPress={() => {
@@ -311,7 +325,10 @@ const styles = StyleSheet.create({
     cardHeaderAction: {
         position: 'absolute',
         top: 16,
+        left: 16,
         right: 16,
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Pushes buttons to edges
         zIndex: 10,
     },
     editButton: {

@@ -23,6 +23,31 @@ export const getFeedPosts = async (limit = 20, offset = 0): Promise<FeedPost[]> 
 /**
  * Create a new feed post
  */
+/**
+ * Get feed posts from friends only
+ */
+export const getFriendFeedPosts = async (friendIds: string[], limit = 20, offset = 0): Promise<FeedPost[]> => {
+    try {
+        if (friendIds.length === 0) return [];
+
+        const { data, error } = await supabase
+            .from('feed_posts')
+            .select('*, users(id, full_name, membership_tier, is_merchant)')
+            .in('user_id', friendIds)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error getting friend feed posts:', error);
+        throw error;
+    }
+};
+
+/**
+ * Create a new feed post
+ */
 export const createFeedPost = async (
     post: Omit<FeedPost, 'id' | 'created_at' | 'users'>
 ): Promise<FeedPost> => {
@@ -34,6 +59,14 @@ export const createFeedPost = async (
             .single();
 
         if (error) throw error;
+
+        if (post.activity_type === 'run' && post.user_id) {
+            // Lazy load - don't await to not block UI
+            import('./achievements').then(({ checkAndUnlockAchievement }) => {
+                checkAndUnlockAchievement(post.user_id, 'run_finished', { date: new Date(), distance: (post as any).distance_km });
+            });
+        }
+
         return data;
     } catch (error) {
         console.error('Error creating feed post:', error);
