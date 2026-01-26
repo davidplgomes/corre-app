@@ -6,7 +6,7 @@ import { TabNavigator } from './TabNavigator';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
 
-const APP_VERSION = 'v1.0.2';
+const APP_VERSION = 'v1.0.5';
 
 const SplashScreen = () => (
     <View style={styles.splashContainer}>

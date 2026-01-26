@@ -1,6 +1,6 @@
 {
   "name": "corre-app",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-picker/picker": "2.11.1",
@@ -25,6 +26,7 @@
     "expo-barcode-scanner": "~13.0.0",
     "expo-blur": "~15.0.8",
     "expo-camera": "~17.0.10",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "^18.0.13",
     "expo-crypto": "~15.0.8",
     "expo-file-system": "~19.0.21",
@@ -33,6 +35,8 @@
     "expo-linear-gradient": "~15.0.8",
     "expo-localization": "~17.0.8",
     "expo-location": "~19.0.8",
+    "expo-random": "^14.0.1",
+    "expo-sensors": "^15.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.16",
     "i18next": "^23.7.0",
@@ -40,6 +44,7 @@
     "react-i18next": "^14.0.0",
     "react-native": "0.81.5",
     "react-native-calendars": "^1.1305.0",
+    "react-native-confetti-cannon": "^1.5.2",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-maps": "1.20.1",
     "react-native-qrcode-svg": "^6.3.0",

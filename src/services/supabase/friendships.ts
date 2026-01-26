@@ -24,6 +24,7 @@ export interface UserSearchResult {
     id: string;
     full_name: string;
     membership_tier: string;
+    avatar_url?: string;
     friendship_status?: 'pending' | 'accepted' | 'none';
 }
 
@@ -38,7 +39,7 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
 
     const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, membership_tier')
+        .select('id, full_name, membership_tier, avatar_url')
         .ilike('full_name', `%${query}%`)
         .neq('id', user.id)
         .limit(20);
@@ -76,7 +77,7 @@ export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
     // Fetch users NOT in exclude list
     const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, membership_tier')
+        .select('id, full_name, membership_tier, avatar_url')
         .not('id', 'in', `(${excludeIds.join(',')})`)
         .limit(5);
 
@@ -198,7 +199,7 @@ export const getFriends = async (): Promise<UserSearchResult[]> => {
     const { data: asRequester } = await supabase
         .from('friendships')
         .select(`
-            addressee:addressee_id(id, full_name, membership_tier)
+            addressee:addressee_id(id, full_name, membership_tier, avatar_url)
         `)
         .eq('requester_id', user.id)
         .eq('status', 'accepted');
@@ -207,7 +208,7 @@ export const getFriends = async (): Promise<UserSearchResult[]> => {
     const { data: asAddressee } = await supabase
         .from('friendships')
         .select(`
-            requester:requester_id(id, full_name, membership_tier)
+            requester:requester_id(id, full_name, membership_tier, avatar_url)
         `)
         .eq('addressee_id', user.id)
         .eq('status', 'accepted');

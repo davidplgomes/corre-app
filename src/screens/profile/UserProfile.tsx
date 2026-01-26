@@ -8,6 +8,7 @@ import {
     StatusBar,
     ImageBackground,
     Alert,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -193,9 +194,13 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                     {/* Hero Text / Name */}
                     <View style={styles.heroContainer}>
                         <View style={[styles.heroAvatar, { borderColor: tierConfig.primary }]}>
-                            <Text style={[styles.heroAvatarText, { color: tierConfig.primary }]}>
-                                {userInitial}
-                            </Text>
+                            {profile.avatar_url ? (
+                                <Image source={{ uri: profile.avatar_url }} style={styles.heroAvatarImage} />
+                            ) : (
+                                <Text style={[styles.heroAvatarText, { color: tierConfig.primary }]}>
+                                    {userInitial}
+                                </Text>
+                            )}
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.heroText}>{profile.full_name?.toUpperCase()}</Text>
@@ -386,6 +391,11 @@ const styles = StyleSheet.create({
     heroAvatarText: {
         fontSize: 32,
         fontWeight: 'bold',
+    },
+    heroAvatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 40,
     },
     heroText: {
         fontSize: 32, // Slightly smaller to fit with avatar

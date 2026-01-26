@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { EventCard } from '../../components/events/EventCard';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, AnimatedListItem } from '../../components/common';
 import { getUpcomingEvents } from '../../services/supabase/events';
 import { Event } from '../../types';
 import { theme } from '../../constants/theme';
@@ -199,14 +199,16 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                 <FlatList
                     data={filteredEvents}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <EventCard
-                            event={item}
-                            onPress={() => {
-                                Haptics.selectionAsync();
-                                navigation.navigate('EventDetail', { eventId: item.id });
-                            }}
-                        />
+                    renderItem={({ item, index }) => (
+                        <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={60}>
+                            <EventCard
+                                event={item}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    navigation.navigate('EventDetail', { eventId: item.id });
+                                }}
+                            />
+                        </AnimatedListItem>
                     )}
                     contentContainerStyle={styles.listContent}
                     refreshControl={

@@ -7,16 +7,20 @@ import {
     TouchableOpacity,
     StatusBar,
     Modal,
-    Dimensions
+    Dimensions,
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { redeemPartnerCoupon } from '../../services/supabase/coupons';
 
 const { width } = Dimensions.get('window');
 
@@ -103,12 +107,13 @@ const categoryColors: Record<string, string> = {
 };
 
 export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
-    const { profile } = useAuth();
+    const { profile, refreshProfile } = useAuth();
     const { t } = useTranslation();
     const userPoints = profile?.currentMonthPoints || 0;
 
     const [selectedCoupon, setSelectedCoupon] = useState<typeof mockCoupons[0] | null>(null);
     const [filter, setFilter] = useState<string>('all');
+    const [isRedeeming, setIsRedeeming] = useState(false);
 
     const filteredCoupons = (filter === 'all'
         ? mockCoupons
@@ -125,8 +130,8 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
         });
     };
 
-    const handleUseCoupon = () => {
-        if (!selectedCoupon) return;
+    const handleUseCoupon = async () => {
+        if (!selectedCoupon || !profile?.id) return;
 
         if (userPoints < selectedCoupon.pointsRequired) {
             Alert.alert("Saldo Insuficiente", `Você precisa de ${selectedCoupon.pointsRequired} pontos para este cupom.`);
@@ -140,10 +145,41 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Confirmar",
-                    onPress: () => {
-                        // TODO: Call API to deduct points
-                        Alert.alert("Sucesso!", `Cupom resgatado com sucesso!\n\nCódigo: ${selectedCoupon.code}`);
-                        // Optionally copy to clipboard here
+                    onPress: async () => {
+                        setIsRedeeming(true);
+                        try {
+                            const result = await redeemPartnerCoupon(
+                                profile.id,
+                                selectedCoupon.pointsRequired,
+                                selectedCoupon.code
+                            );
+
+                            if (result.success) {
+                                // Haptic feedback for success
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                                // Copy code to clipboard
+                                await Clipboard.setStringAsync(selectedCoupon.code);
+
+                                // Refresh user profile to update points display
+                                await refreshProfile();
+
+                                Alert.alert(
+                                    "Sucesso! 🎉",
+                                    `Cupom resgatado com sucesso!\n\nCódigo: ${selectedCoupon.code}\n\n(Código copiado para a área de transferência)\n\nNovo saldo: ${result.newPointsBalance} pontos`,
+                                    [{ text: "OK", onPress: () => setSelectedCoupon(null) }]
+                                );
+                            } else {
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                                Alert.alert("Erro", result.error || "Não foi possível resgatar o cupom.");
+                            }
+                        } catch (error) {
+                            console.error('Error redeeming coupon:', error);
+                            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                            Alert.alert("Erro", "Ocorreu um erro inesperado. Tente novamente.");
+                        } finally {
+                            setIsRedeeming(false);
+                        }
                     }
                 }
             ]
@@ -296,14 +332,18 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                                         <TouchableOpacity
                                             style={[
                                                 styles.useButton,
-                                                !selectedCoupon.isAvailable && styles.useButtonDisabled
+                                                (!selectedCoupon.isAvailable || isRedeeming) && styles.useButtonDisabled
                                             ]}
                                             onPress={handleUseCoupon}
-                                            disabled={!selectedCoupon.isAvailable}
+                                            disabled={!selectedCoupon.isAvailable || isRedeeming}
                                         >
-                                            <Text style={styles.useButtonText}>
-                                                {selectedCoupon.isAvailable ? 'USAR CUPOM' : 'SALDO INSUFICIENTE'}
-                                            </Text>
+                                            {isRedeeming ? (
+                                                <ActivityIndicator size="small" color="#FFF" />
+                                            ) : (
+                                                <Text style={styles.useButtonText}>
+                                                    {selectedCoupon.isAvailable ? 'USAR CUPOM' : 'SALDO INSUFICIENTE'}
+                                                </Text>
+                                            )}
                                         </TouchableOpacity>
                                     </View>
                                 </>

@@ -497,36 +497,62 @@ export const PartyIcon: React.FC<IconProps> = ({
     </Svg>
 );
 
-// Eye Icon (View)
-export const EyeIcon: React.FC<IconProps> = ({
+// Verified Icon (Checkmark Badge)
+export const VerifiedIcon: React.FC<IconProps> = ({
     size = 24,
     color = '#FFFFFF',
     filled = false
 }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        {filled ? (
-            <>
-                <Path
-                    d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
-                    fill={color}
-                    stroke={color}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-                <Circle cx="12" cy="12" r="3" fill="#000" />
-            </>
-        ) : (
-            <>
-                <Path
-                    d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
-                    stroke={color}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-                <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </>
-        )}
+        <Path d="M9 12l2 2 4-4" stroke={filled ? '#000' : color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <Path
+            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
+            fill={filled ? color : 'none'}
+            stroke={color}
+            strokeWidth="1.5"
+        />
+    </Svg>
+);
+
+// Plus Icon (Add)
+export const PlusIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 5V19" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M5 12H19" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+// Filter Icon
+export const FilterIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M22 3H2L10 12.46V19L14 21V12.46L22 3Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+// Search Icon
+export const SearchIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M21 21L16.65 16.65" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+// Eye Icon (View)
+export const EyeIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" />
     </Svg>
 );

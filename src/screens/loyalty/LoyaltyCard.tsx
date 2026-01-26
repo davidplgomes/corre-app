@@ -44,6 +44,49 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
         tierColor: tierConfig.primary,
     };
 
+    // Dynamic QR Code Logic
+    const [qrValue, setQrValue] = React.useState('');
+    const [timer, setTimer] = React.useState(30);
+
+    React.useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        const updateQR = async () => {
+            if (!user?.id) return;
+
+            try {
+                // In production, fetch this once and cache securely, or generate on server
+                // For this demo, we assume we can fetch it (RLS should protect it)
+                const { getUserQRSecret } = require('../../services/supabase/users');
+                const { generateQRPayload } = require('../../utils/totp');
+
+                const secret = await getUserQRSecret(user.id);
+                if (secret) {
+                    const payload = await generateQRPayload(user.id, secret);
+                    setQrValue(payload);
+                }
+            } catch (err) {
+                console.error('QR Gen Error:', err);
+            }
+        };
+
+        // Initial update
+        updateQR();
+
+        // Update every 30 seconds
+        interval = setInterval(() => {
+            const seconds = Math.floor(Date.now() / 1000);
+            const remaining = 30 - (seconds % 30);
+            setTimer(remaining);
+
+            if (remaining === 30 || remaining === 0) {
+                updateQR();
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [user?.id]);
+
     const stats = {
         points: profile?.currentMonthPoints || 1250,
         lifetime: profile?.totalLifetimePoints || 4850,
@@ -82,7 +125,11 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
 
                     {/* Digital Card Section */}
                     <View style={styles.cardSection}>
-                        <DigitalCard member={memberData} />
+                        <DigitalCard member={memberData} qrData={qrValue || 'loading'} />
+                        <View style={styles.timerContainer}>
+                            <ClockIcon size={12} color="rgba(255,255,255,0.5)" />
+                            <Text style={styles.timerText}>Atualiza em {timer}s</Text>
+                        </View>
                     </View>
 
                     {/* Stats Grid - Two Separate Boxes */}
@@ -571,5 +618,23 @@ const styles = StyleSheet.create({
     },
     negativePoints: {
         color: '#FFF',
+    },
+    // Timer styles
+    timerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        gap: 6,
+    },
+    timerText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 10,
+        fontWeight: '700',
+        fontVariant: ['tabular-nums'],
     },
 });

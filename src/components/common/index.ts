@@ -6,3 +6,6 @@ export { ErrorMessage } from './ErrorMessage';
 export { LanguageSwitcher } from './LanguageSwitcher';
 export * from './TabIcons';
 export * from './Skeleton';
+export * from './AnimatedList';
+export * from './ShakeView';
+export * from './Confetti';

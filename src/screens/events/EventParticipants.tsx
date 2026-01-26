@@ -6,6 +6,7 @@ import {
     FlatList,
     TouchableOpacity,
     StatusBar,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -54,9 +55,13 @@ export const EventParticipants: React.FC<EventParticipantsProps> = ({ route, nav
             <View style={styles.participantRow}>
                 <TouchableOpacity style={styles.userInfo} onPress={handlePress}>
                     <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>
-                            {item.users?.full_name?.charAt(0).toUpperCase() || 'U'}
-                        </Text>
+                        {item.users?.avatar_url ? (
+                            <Image source={{ uri: item.users.avatar_url }} style={styles.avatarImage} />
+                        ) : (
+                            <Text style={styles.avatarText}>
+                                {item.users?.full_name?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
+                        )}
                     </View>
                     <View>
                         <Text style={styles.userName}>{item.users?.full_name || 'User'}</Text>
@@ -176,6 +181,11 @@ const styles = StyleSheet.create({
         fontSize: theme.typography.size.bodyLG,
         fontWeight: theme.typography.weight.bold as any,
         color: theme.colors.text.primary,
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 20,
     },
     userName: {
         fontSize: theme.typography.size.bodyMD,

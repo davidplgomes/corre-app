@@ -242,7 +242,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                         </TouchableOpacity>
                         <View style={styles.menuItem}>
                             <Text style={styles.menuItemLabel}>{t('settings.version')}</Text>
-                            <Text style={styles.versionText}>1.0.2</Text>
+                            <Text style={styles.versionText}>1.0.5</Text>
                         </View>
                     </View>
                 </ScrollView>

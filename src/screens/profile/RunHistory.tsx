@@ -169,6 +169,14 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                         }
                     />
                 )}
+
+                {/* FAB - Start New Run */}
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => navigation.navigate('RunTracker')}
+                >
+                    <Text style={styles.fabText}>+ {t('common.new').toUpperCase()}</Text>
+                </TouchableOpacity>
             </SafeAreaView>
         </View>
     );
@@ -340,5 +348,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '900',
         color: theme.colors.brand.primary,
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 100,
+        right: 20,
+        backgroundColor: theme.colors.brand.primary,
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 30,
+        shadowColor: theme.colors.brand.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    fabText: {
+        fontSize: 14,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 1,
     },
 });

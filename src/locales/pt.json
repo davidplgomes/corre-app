@@ -210,7 +210,24 @@
     "announceProduct": "ANUNCIAR PRODUTO",
     "titlePlaceholder": "Ex: Tênis Nike 42",
     "noShopItems": "Nenhum item na loja no momento.",
-    "noCommunityItems": "Nenhum item anunciado."
+    "noCommunityItems": "Nenhum item anunciado.",
+    "sellItem": "Vender Item",
+    "addPhoto": "Adicionar Foto",
+    "condition": "Condição",
+    "descriptionPlaceholder": "Descreva o item, tempo de uso, etc.",
+    "conditions": {
+      "new": "Novo",
+      "like_new": "Como Novo",
+      "good": "Bom",
+      "fair": "Justo"
+    },
+    "categories": {
+      "shoes": "Tênis",
+      "clothing": "Roupas",
+      "accessories": "Acessórios",
+      "electronics": "Eletrônicos",
+      "other": "Outros"
+    }
   },
   "profile": {
     "title": "Perfil",

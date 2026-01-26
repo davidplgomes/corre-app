@@ -19,7 +19,7 @@ import { theme } from '../../constants/theme';
 import { FeedPost } from '../../types';
 import { getFeedPosts, getFriendFeedPosts } from '../../services/supabase/feed';
 import { getFriends } from '../../services/supabase/friendships';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, AnimatedListItem } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { useAuth } from '../../contexts/AuthContext';
 import { TierKey } from '../../constants/tiers';
@@ -130,11 +130,13 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
         navigation.navigate('PostDetails', { postId, post });
     };
 
-    const renderPost = useCallback(({ item }: { item: FeedPost }) => (
-        <FeedPostItem
-            item={item}
-            onCommentPress={handleCommentPress}
-        />
+    const renderPost = useCallback(({ item, index }: { item: FeedPost; index: number }) => (
+        <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={60}>
+            <FeedPostItem
+                item={item}
+                onCommentPress={handleCommentPress}
+            />
+        </AnimatedListItem>
     ), [t]);
 
     if (loading && !refreshing) {

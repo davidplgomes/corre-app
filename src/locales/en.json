@@ -210,7 +210,24 @@
     "announceProduct": "ANNOUNCE PRODUCT",
     "titlePlaceholder": "Ex: Nike Shoes 42",
     "noShopItems": "No items in the shop at the moment.",
-    "noCommunityItems": "No items announced."
+    "noCommunityItems": "No items announced.",
+    "sellItem": "Sell Item",
+    "addPhoto": "Add Photo",
+    "condition": "Condition",
+    "descriptionPlaceholder": "Describe the item, usage time, etc.",
+    "conditions": {
+      "new": "New",
+      "like_new": "Like New",
+      "good": "Good",
+      "fair": "Fair"
+    },
+    "categories": {
+      "shoes": "Shoes",
+      "clothing": "Clothing",
+      "accessories": "Accessories",
+      "electronics": "Electronics",
+      "other": "Other"
+    }
   },
   "profile": {
     "title": "Profile",

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, ErrorMessage } from '../../components/common';
+import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import { GoogleIcon, AppleIcon } from '../../components/auth/AuthIcons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -33,6 +33,10 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Shake animation refs
+    const emailShakeRef = useRef<ShakeViewRef>(null);
+    const passwordShakeRef = useRef<ShakeViewRef>(null);
+
     const handleLogin = async () => {
         setEmailError('');
         setPasswordError('');
@@ -43,11 +47,13 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 
         if (emailValidation) {
             setEmailError(emailValidation);
+            emailShakeRef.current?.shake();
             return;
         }
 
         if (passwordValidation) {
             setPasswordError(passwordValidation);
+            passwordShakeRef.current?.shake();
             return;
         }
 
@@ -91,31 +97,35 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <View style={styles.formContainer}>
                     {error && <ErrorMessage message={error} />}
 
-                    <Input
-                        label="Email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChangeText={setEmail}
-                        error={emailError}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        textContentType="emailAddress"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={emailShakeRef}>
+                        <Input
+                            label="Email"
+                            placeholder="your@email.com"
+                            value={email}
+                            onChangeText={setEmail}
+                            error={emailError}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoComplete="email"
+                            textContentType="emailAddress"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
-                    <Input
-                        label="Password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChangeText={setPassword}
-                        error={passwordError}
-                        isPassword
-                        autoCapitalize="none"
-                        autoComplete="password"
-                        textContentType="password"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={passwordShakeRef}>
+                        <Input
+                            label="Password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChangeText={setPassword}
+                            error={passwordError}
+                            isPassword
+                            autoCapitalize="none"
+                            autoComplete="password"
+                            textContentType="password"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
                     <TouchableOpacity
                         onPress={() => navigation.navigate('ForgotPassword')}

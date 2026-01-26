@@ -209,7 +209,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                             style={styles.createButtonFloat}
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                setCreateModalVisible(true);
+                                navigation.navigate('CreateListing');
                             }}
                         >
                             <Text style={styles.createButtonText}>+ {t('marketplace.announce').toUpperCase()}</Text>
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     },
     createButtonFloat: {
         position: 'absolute',
-        bottom: 110, // Increased to clear navbar (80-90px)
+        bottom: 180, // Safely clear TabBar (approx 120px) + margin
         alignSelf: 'center',
         backgroundColor: theme.colors.brand.primary, // Solid orange
         paddingHorizontal: 24,

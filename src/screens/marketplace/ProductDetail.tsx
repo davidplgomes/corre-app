@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { supabase } from '../../services/supabase/client';
 
 type ProductDetailProps = {
     route: any;
@@ -30,8 +31,46 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
         return null;
     }
 
-    const handleRedeem = () => {
-        // Mock redeem action
+    const handleRedeem = async () => {
+        // 1. If Community Item -> Pay with Stripe
+        const isCommunity = !product.points_price && !product.points;
+        const listingId = product.id;
+
+        if (isCommunity) {
+            try {
+                // Call Edge Function
+                const { data, error } = await supabase.functions.invoke('create-marketplace-payment', {
+                    body: { listing_id: listingId }
+                });
+
+                if (error) throw error;
+                if (data?.error) throw new Error(data.error);
+
+                // Simulate Stripe Sheet (Placeholder)
+                Alert.alert(
+                    'Pagamento (Simulação)',
+                    `Cliente Secret Gerado: ${data.clientSecret?.substring(0, 8)}...\n\nO Stripe PaymentSheet abriria aqui.`,
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                            text: 'Pagar R$ ' + (product.price || 0).toFixed(2),
+                            onPress: () => {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                Alert.alert('Sucesso', 'Compra realizada com sucesso!');
+                                navigation.goBack();
+                            }
+                        }
+                    ]
+                );
+
+            } catch (err: any) {
+                console.error('Payment error:', err);
+                Alert.alert('Erro no Pagamento', err.message || 'Não foi possível iniciar o pagamento.');
+            }
+            return;
+        }
+
+        // 2. If Shop Item -> Redeem with Points (Mock)
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(t('common.success'), t('success.redeemRequestSent'));
     };

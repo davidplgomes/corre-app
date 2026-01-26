@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, ErrorMessage } from '../../components/common';
+import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { signUp } from '../../services/supabase/auth';
@@ -34,6 +34,11 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Shake animation refs
+    const fullNameShakeRef = useRef<ShakeViewRef>(null);
+    const emailShakeRef = useRef<ShakeViewRef>(null);
+    const passwordShakeRef = useRef<ShakeViewRef>(null);
+
     const handleSignUp = async () => {
         setEmailError('');
         setPasswordError('');
@@ -46,16 +51,19 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
         if (fullNameValidation) {
             setFullNameError(fullNameValidation);
+            fullNameShakeRef.current?.shake();
             return;
         }
 
         if (emailValidation) {
             setEmailError(emailValidation);
+            emailShakeRef.current?.shake();
             return;
         }
 
         if (passwordValidation) {
             setPasswordError(passwordValidation);
+            passwordShakeRef.current?.shake();
             return;
         }
 
@@ -103,43 +111,49 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 <View style={styles.formContainer}>
                     {error && <ErrorMessage message={error} />}
 
-                    <Input
-                        label="Full Name"
-                        placeholder="John Doe"
-                        value={fullName}
-                        onChangeText={setFullName}
-                        error={fullNameError}
-                        autoCapitalize="words"
-                        autoComplete="name"
-                        textContentType="name"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={fullNameShakeRef}>
+                        <Input
+                            label="Full Name"
+                            placeholder="John Doe"
+                            value={fullName}
+                            onChangeText={setFullName}
+                            error={fullNameError}
+                            autoCapitalize="words"
+                            autoComplete="name"
+                            textContentType="name"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
-                    <Input
-                        label="Email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChangeText={setEmail}
-                        error={emailError}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        textContentType="emailAddress"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={emailShakeRef}>
+                        <Input
+                            label="Email"
+                            placeholder="your@email.com"
+                            value={email}
+                            onChangeText={setEmail}
+                            error={emailError}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoComplete="email"
+                            textContentType="emailAddress"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
-                    <Input
-                        label="Password"
-                        placeholder="Min. 8 characters"
-                        value={password}
-                        onChangeText={setPassword}
-                        error={passwordError}
-                        isPassword
-                        autoCapitalize="none"
-                        autoComplete="password-new"
-                        textContentType="newPassword"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={passwordShakeRef}>
+                        <Input
+                            label="Password"
+                            placeholder="Min. 8 characters"
+                            value={password}
+                            onChangeText={setPassword}
+                            error={passwordError}
+                            isPassword
+                            autoCapitalize="none"
+                            autoComplete="password-new"
+                            textContentType="newPassword"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
                     <Input
                         label="Neighborhood (optional)"

@@ -9,12 +9,14 @@ import {
     StatusBar,
     Alert,
     RefreshControl,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
+import { AnimatedListItem } from '../../components/common';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { MEMBERSHIP_TIERS, TierKey } from '../../constants/tiers';
 import {
@@ -139,7 +141,7 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         );
     };
 
-    const renderUserItem = ({ item }: { item: UserSearchResult }) => {
+    const renderUserItem = ({ item, index }: { item: UserSearchResult; index: number }) => {
         const tierColor = MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.color || theme.colors.border.default;
 
         const handleViewProfile = () => {
@@ -148,13 +150,18 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         };
 
         return (
+            <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={50}>
             <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.8}>
                 <BlurView intensity={15} tint="dark" style={styles.userCard}>
                     <View style={styles.userInfo}>
                         <View style={[styles.avatar, { borderColor: tierColor }]}>
-                            <Text style={[styles.avatarText, { color: tierColor }]}>
-                                {item.full_name?.charAt(0).toUpperCase() || '?'}
-                            </Text>
+                            {item.avatar_url ? (
+                                <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+                            ) : (
+                                <Text style={[styles.avatarText, { color: tierColor }]}>
+                                    {item.full_name?.charAt(0).toUpperCase() || '?'}
+                                </Text>
+                            )}
                         </View>
                         <View style={styles.userDetails}>
                             <Text style={styles.userName}>{item.full_name}</Text>
@@ -197,10 +204,11 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                     )}
                 </BlurView>
             </TouchableOpacity>
+            </AnimatedListItem>
         );
     };
 
-    const renderRequestItem = ({ item }: { item: Friendship }) => {
+    const renderRequestItem = ({ item, index }: { item: Friendship; index: number }) => {
         const requester = item.requester as any;
         const tierColor = MEMBERSHIP_TIERS[requester?.membership_tier as TierKey]?.color || theme.colors.border.default;
 
@@ -212,35 +220,41 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         };
 
         return (
-            <BlurView intensity={15} tint="dark" style={styles.userCard}>
-                <TouchableOpacity style={styles.userInfo} onPress={handleProfilePress}>
-                    <View style={[styles.avatar, { borderColor: tierColor }]}>
-                        <Text style={[styles.avatarText, { color: tierColor }]}>
-                            {requester?.full_name?.charAt(0).toUpperCase() || '?'}
-                        </Text>
-                    </View>
-                    <View style={styles.userDetails}>
-                        <Text style={styles.userName}>{requester?.full_name}</Text>
-                        <Text style={styles.userTier}>
-                            {t('friends.wantsToConnect')}
-                        </Text>
-                    </View>
-                </TouchableOpacity>
-                <View style={styles.requestActions}>
-                    <TouchableOpacity
-                        style={styles.acceptButton}
-                        onPress={() => handleAcceptRequest(item.id)}
-                    >
-                        <Text style={styles.acceptButtonText}>✓</Text>
+            <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={50}>
+                <BlurView intensity={15} tint="dark" style={styles.userCard}>
+                    <TouchableOpacity style={styles.userInfo} onPress={handleProfilePress}>
+                        <View style={[styles.avatar, { borderColor: tierColor }]}>
+                            {requester?.avatar_url ? (
+                                <Image source={{ uri: requester.avatar_url }} style={styles.avatarImage} />
+                            ) : (
+                                <Text style={[styles.avatarText, { color: tierColor }]}>
+                                    {requester?.full_name?.charAt(0).toUpperCase() || '?'}
+                                </Text>
+                            )}
+                        </View>
+                        <View style={styles.userDetails}>
+                            <Text style={styles.userName}>{requester?.full_name}</Text>
+                            <Text style={styles.userTier}>
+                                {t('friends.wantsToConnect')}
+                            </Text>
+                        </View>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.rejectButton}
-                        onPress={() => handleRejectRequest(item.id)}
-                    >
-                        <Text style={styles.rejectButtonText}>✕</Text>
-                    </TouchableOpacity>
-                </View>
-            </BlurView>
+                    <View style={styles.requestActions}>
+                        <TouchableOpacity
+                            style={styles.acceptButton}
+                            onPress={() => handleAcceptRequest(item.id)}
+                        >
+                            <Text style={styles.acceptButtonText}>✓</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.rejectButton}
+                            onPress={() => handleRejectRequest(item.id)}
+                        >
+                            <Text style={styles.rejectButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
+            </AnimatedListItem>
         );
     };
 
@@ -495,6 +509,11 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 20,
         fontWeight: 'bold',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 24,
     },
     userDetails: {
         flex: 1,

@@ -24,8 +24,11 @@ import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
 import { Friends } from '../screens/profile/Friends';
 import { UserProfile } from '../screens/profile/UserProfile';
+import { RunTracker } from '../screens/runs/RunTracker';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
+import { CreateListing } from '../screens/marketplace/CreateListing';
+import { SellerOnboarding } from '../screens/marketplace/SellerOnboarding';
 import { HomeScreen } from '../screens/home/HomeScreen'; // Import HomeScreen
 import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons'; // Import HomeIcon
 import { useTranslation } from 'react-i18next';
@@ -56,7 +59,9 @@ export type LoyaltyStackParamList = {
 
 export type MarketplaceStackParamList = {
     MarketplaceMain: undefined;
-    ProductDetail: { product: any };
+    ProductDetail: { product: any; type: 'shop' | 'community' };
+    CreateListing: undefined;
+    SellerOnboarding: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -65,6 +70,7 @@ export type ProfileStackParamList = {
     EditProfile: undefined;
     ChangePassword: undefined;
     RunHistory: undefined;
+    RunTracker: undefined;
     Achievements: undefined;
     RunMap: undefined;
     Friends: undefined;
@@ -124,6 +130,8 @@ const MarketplaceStackNavigator: React.FC = () => (
     <MarketplaceStack.Navigator screenOptions={{ headerShown: false }}>
         <MarketplaceStack.Screen name="MarketplaceMain" component={MarketplaceScreen} />
         <MarketplaceStack.Screen name="ProductDetail" component={ProductDetail} />
+        <MarketplaceStack.Screen name="CreateListing" component={CreateListing} />
+        <MarketplaceStack.Screen name="SellerOnboarding" component={SellerOnboarding} />
     </MarketplaceStack.Navigator>
 );
 
@@ -135,6 +143,7 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="EditProfile" component={EditProfile} />
         <ProfileStack.Screen name="ChangePassword" component={ChangePassword} />
         <ProfileStack.Screen name="RunHistory" component={RunHistory} />
+        <ProfileStack.Screen name="RunTracker" component={RunTracker} />
         <ProfileStack.Screen name="Achievements" component={Achievements} />
         <ProfileStack.Screen name="RunMap" component={RunMap} />
         <ProfileStack.Screen name="Friends" component={Friends} />

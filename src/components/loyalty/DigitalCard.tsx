@@ -24,9 +24,10 @@ type DigitalCardProps = {
         tier: string;
         tierColor: string;
     };
+    qrData?: string;
 };
 
-export const DigitalCard: React.FC<DigitalCardProps> = ({ member }) => {
+export const DigitalCard: React.FC<DigitalCardProps> = ({ member, qrData }) => {
     const rotate = useSharedValue(0);
 
     const handleFlip = () => {
@@ -133,7 +134,7 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member }) => {
 
                             <View style={styles.qrContainer}>
                                 <QRCode
-                                    value={JSON.stringify({ id: member.id, type: 'member_checkin' })}
+                                    value={qrData || JSON.stringify({ id: member.id, type: 'member_checkin' })}
                                     size={CARD_HEIGHT * 0.5} // Responsive size
                                     color="black"
                                     backgroundColor="white"

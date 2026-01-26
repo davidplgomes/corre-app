@@ -13,7 +13,7 @@ export const getCurrentMonthLeaderboard = async (
 
         const { data, error } = await supabase
             .from('monthly_leaderboard')
-            .select('*, users(full_name, neighborhood, membership_tier)')
+            .select('*, users(full_name, neighborhood, membership_tier, avatar_url)')
             .eq('month', currentMonth.toISOString().split('T')[0])
             .order('points', { ascending: false })
             .limit(limit);
@@ -38,7 +38,7 @@ export const getLeaderboardByMonth = async (
 
         const { data, error } = await supabase
             .from('monthly_leaderboard')
-            .select('*, users(full_name, neighborhood, membership_tier)')
+            .select('*, users(full_name, neighborhood, membership_tier, avatar_url)')
             .eq('month', monthKey.toISOString().split('T')[0])
             .order('points', { ascending: false })
             .limit(limit);
@@ -119,7 +119,7 @@ export const getUserLeaderboardContext = async (
         // Get users in range
         const { data, error } = await supabase
             .from('monthly_leaderboard')
-            .select('*, users(full_name, neighborhood, membership_tier)')
+            .select('*, users(full_name, neighborhood, membership_tier, avatar_url)')
             .eq('month', currentMonth.toISOString().split('T')[0])
             .gte('rank', startRank)
             .lte('rank', endRank)

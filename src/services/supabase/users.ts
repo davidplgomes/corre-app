@@ -112,6 +112,55 @@ export const toggleMerchantMode = async (
     }
 };
 
+// Helper to get user's QR secret (should be protected in real app)
+export const getUserQRSecret = async (userId: string): Promise<string> => {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('qr_secret')
+            .eq('id', userId)
+            .single();
+
+        if (error) throw error;
+        return data?.qr_secret || '';
+    } catch (error) {
+        console.error('Error getting QR secret:', error);
+        return '';
+    }
+};
+
+/**
+ * Validate a user's QR code (Merchant side)
+ */
+export const validateUserQR = async (userId: string, timestamp: number, signature: string) => {
+    try {
+        const { data, error } = await supabase.rpc('validate_qr_code', {
+            p_user_id: userId,
+            p_timestamp: timestamp,
+            p_signature: signature
+        });
+
+        if (error) throw error;
+
+        // RPC returns rows, data[0] is the result
+        const result = Array.isArray(data) ? data[0] : data;
+
+        return {
+            valid: result.valid,
+            tier: result.tier,
+            discount: result.discount,
+            userName: result.user_name,
+            error: result.error_message
+        };
+    } catch (error: any) {
+        console.error('Error validating QR:', error);
+        return { valid: false, error: error.message };
+    }
+};
+
+
+
+
 /**
  * Privacy visibility options
  */
@@ -125,6 +174,7 @@ export type PublicProfile = {
     full_name: string;
     membership_tier: string;
     privacy_visibility: PrivacyVisibility;
+    avatar_url?: string; // Profile picture
     // These fields are only present if privacy allows
     current_month_points?: number;
     total_lifetime_points?: number;
@@ -145,7 +195,7 @@ export const getPublicProfile = async (
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('id, full_name, membership_tier, privacy_visibility, current_month_points, total_lifetime_points, neighborhood, city, bio, instagram_handle, created_at')
+            .select('id, full_name, membership_tier, privacy_visibility, avatar_url, current_month_points, total_lifetime_points, neighborhood, city, bio, instagram_handle, created_at')
             .eq('id', userId)
             .single();
 
@@ -154,13 +204,14 @@ export const getPublicProfile = async (
 
         const profile = data as PublicProfile;
 
-        // If privacy is 'nobody', only return basic info
+        // If privacy is 'nobody', only return basic info (avatar always visible)
         if (profile.privacy_visibility === 'nobody') {
             return {
                 id: profile.id,
                 full_name: profile.full_name,
                 membership_tier: profile.membership_tier,
                 privacy_visibility: profile.privacy_visibility,
+                avatar_url: profile.avatar_url,
             };
         }
 
@@ -174,12 +225,13 @@ export const getPublicProfile = async (
                 .single();
 
             if (!friendship) {
-                // Not friends, return limited info
+                // Not friends, return limited info (avatar always visible)
                 return {
                     id: profile.id,
                     full_name: profile.full_name,
                     membership_tier: profile.membership_tier,
                     privacy_visibility: profile.privacy_visibility,
+                    avatar_url: profile.avatar_url,
                 };
             }
         }

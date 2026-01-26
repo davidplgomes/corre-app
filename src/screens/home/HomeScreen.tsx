@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserJoinedEvents } from '../../services/supabase/events';
 import { getFeedPosts } from '../../services/supabase/feed';
+import { getWeatherForEvent, getCurrentLocationWeather, formatWeather } from '../../services/weather';
 import { Skeleton } from '../../components/common';
 import {
     CalendarIcon,
@@ -50,6 +51,15 @@ export const HomeScreen = ({ navigation }: any) => {
                     const weekday = date.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase().replace('.', '');
                     const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
+                    // Fetch weather for event location or current location
+                    let weatherStr = '';
+                    if (event.location_lat && event.location_lng) {
+                        weatherStr = await getWeatherForEvent(event.location_lat, event.location_lng);
+                    } else {
+                        const currentWeather = await getCurrentLocationWeather();
+                        weatherStr = currentWeather ? formatWeather(currentWeather) : '';
+                    }
+
                     setNextRun({
                         title: event.title,
                         day: day,
@@ -58,7 +68,7 @@ export const HomeScreen = ({ navigation }: any) => {
                         time: time,
                         location: event.location_name || 'Local a definir',
                         points: `${event.points_value}PTS`,
-                        weather: "☁️ 12°C" // Mock weather for now
+                        weather: weatherStr || '🌡️ --°C'
                     });
                 } else {
                     setNextRun(null);

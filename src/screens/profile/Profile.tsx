@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     StatusBar,
     ImageBackground,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -162,7 +163,11 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                             </View>
                             <View style={styles.profileContent}>
                                 <View style={[styles.avatarContainer, { borderColor: tierConfig.primary }]}>
-                                    <Text style={styles.avatarText}>{userInitial}</Text>
+                                    {profile?.avatarUrl ? (
+                                        <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                                    ) : (
+                                        <Text style={styles.avatarText}>{userInitial}</Text>
+                                    )}
                                 </View>
                                 <Text style={styles.userName}>{userName.toUpperCase()}</Text>
                                 <View style={[styles.tierBadge, { backgroundColor: tierConfig.primary }]}>
@@ -255,7 +260,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                         </View>
 
                         {/* Version */}
-                        <Text style={styles.version}>CORRE APP v1.0.2</Text>
+                        <Text style={styles.version}>CORRE APP v1.0.5</Text>
                     </ScrollView>
                 </SafeAreaView>
             </ImageBackground>
@@ -358,6 +363,11 @@ const styles = StyleSheet.create({
         fontSize: 40,
         fontWeight: '900',
         color: '#FFF',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 50,
     },
     userName: {
         fontSize: 24,

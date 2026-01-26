@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, AnimatedListItem } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCurrentMonthLeaderboard, getUserRank } from '../../services/supabase/leaderboard';
 import { LeaderboardEntry } from '../../types';
@@ -137,39 +137,45 @@ export const Leaderboard: React.FC = () => {
         };
 
         return (
-            <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
-                <BlurView intensity={isCurrentUser ? 20 : 0} tint="dark" style={[styles.rowCard, isCurrentUser && styles.rowHighlight]}>
-                    <View style={[styles.rowInner, isCurrentUser && { backgroundColor: 'rgba(255,87,34,0.1)' }]}>
-                        {/* Rank */}
-                        <View style={styles.rankContainer}>
-                            <Text style={[styles.rankNumber, isTop3 && { color: rankColor, fontSize: 18 }]}>
-                                {rank < 10 ? `0${rank}` : rank}
-                            </Text>
-                        </View>
+            <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={50}>
+                <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+                    <BlurView intensity={isCurrentUser ? 20 : 0} tint="dark" style={[styles.rowCard, isCurrentUser && styles.rowHighlight]}>
+                        <View style={[styles.rowInner, isCurrentUser && { backgroundColor: 'rgba(255,87,34,0.1)' }]}>
+                            {/* Rank */}
+                            <View style={styles.rankContainer}>
+                                <Text style={[styles.rankNumber, isTop3 && { color: rankColor, fontSize: 18 }]}>
+                                    {rank < 10 ? `0${rank}` : rank}
+                                </Text>
+                            </View>
 
-                        {/* Avatar */}
-                        <View style={styles.avatarContainer}>
-                            <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : '#333' }]}>
-                                <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                            {/* Avatar */}
+                            <View style={styles.avatarContainer}>
+                                <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : '#333' }]}>
+                                    {item.users?.avatar_url ? (
+                                        <Image source={{ uri: item.users.avatar_url }} style={styles.avatarImage} />
+                                    ) : (
+                                        <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                                    )}
+                                </View>
+                            </View>
+
+                            {/* Info */}
+                            <View style={styles.userInfo}>
+                                <Text style={[styles.userName, isCurrentUser && { color: theme.colors.brand.primary }]}>{name.toUpperCase()}</Text>
+                                <View style={styles.tierRow}>
+                                    <Text style={[styles.tierText, { color: getTierColor(tier) }]}>{getTierLabel(tier)}</Text>
+                                </View>
+                            </View>
+
+                            {/* Points */}
+                            <View style={styles.pointsContainer}>
+                                <Text style={styles.points}>{points}</Text>
+                                <Text style={styles.pointsLabel}>PTS</Text>
                             </View>
                         </View>
-
-                        {/* Info */}
-                        <View style={styles.userInfo}>
-                            <Text style={[styles.userName, isCurrentUser && { color: theme.colors.brand.primary }]}>{name.toUpperCase()}</Text>
-                            <View style={styles.tierRow}>
-                                <Text style={[styles.tierText, { color: getTierColor(tier) }]}>{getTierLabel(tier)}</Text>
-                            </View>
-                        </View>
-
-                        {/* Points */}
-                        <View style={styles.pointsContainer}>
-                            <Text style={styles.points}>{points}</Text>
-                            <Text style={styles.pointsLabel}>PTS</Text>
-                        </View>
-                    </View>
-                </BlurView>
-            </TouchableOpacity>
+                    </BlurView>
+                </TouchableOpacity>
+            </AnimatedListItem>
         );
     };
 
@@ -439,6 +445,11 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '900',
         color: '#FFF',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 18,
     },
     userInfo: {
         flex: 1,

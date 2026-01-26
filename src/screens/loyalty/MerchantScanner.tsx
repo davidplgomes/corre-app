@@ -37,21 +37,42 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
         setLoading(true);
 
         try {
-            const qrData = parseQRData(data);
-
-            if (!qrData) {
-                Alert.alert(t('common.error'), t('loyalty.invalidQR'));
-                setScanned(false);
-                return;
+            // Parse QR Data
+            let qrPayload: any;
+            try {
+                qrPayload = JSON.parse(data);
+            } catch (e) {
+                // Legacy format support
+                const qrData = parseQRData(data);
+                if (qrData) {
+                    const user = await getUserByQRSecret(qrData.secret);
+                    if (user) {
+                        setScannedUser(user);
+                        return;
+                    }
+                }
+                throw new Error('Invalid QR Format');
             }
 
-            const user = await getUserByQRSecret(qrData.secret);
+            // New Secure QR Logic
+            if (qrPayload.id && qrPayload.ts && qrPayload.sig) {
+                const { validateUserQR } = require('../../services/supabase/users');
+                const result = await validateUserQR(qrPayload.id, qrPayload.ts, qrPayload.sig);
 
-            if (user) {
-                setScannedUser(user);
+                if (result.valid) {
+                    setScannedUser({
+                        id: qrPayload.id,
+                        full_name: result.userName,
+                        membership_tier: result.tier,
+                        email: '', // Not needed for display
+                        qr_code_secret: '' // Not needed
+                    });
+                } else {
+                    Alert.alert(t('common.error'), result.error || t('loyalty.invalidQR'));
+                    setScanned(false);
+                }
             } else {
-                Alert.alert(t('common.error'), t('loyalty.invalidQR'));
-                setScanned(false);
+                throw new Error('Invalid QR Format');
             }
         } catch (error) {
             console.error('Error scanning QR:', error);
