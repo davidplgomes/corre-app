@@ -32,6 +32,7 @@ import { formatDateTime, formatEventDate, isUpcoming, isWithinCheckInWindow } fr
 // import { EVENT_POINTS } from '../../constants/points'; // Unused in new design for now
 // import { TierKey } from '../../constants/tiers'; // Unused in new design for now
 import { ChevronRightIcon, MapIcon } from '../../components/common/TabIcons';
+import { ArrowLogo } from '../../components/common/ArrowLogo';
 
 const { width, height } = Dimensions.get('window');
 
@@ -244,9 +245,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                     <Text style={styles.actionButtonText}>
                                         {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEventButton').toUpperCase()) : t('events.participate').toUpperCase()}
                                     </Text>
-                                    <View style={styles.arrowContainer}>
-                                        <Text style={styles.arrowText}>→</Text>
-                                    </View>
+                                    <ArrowLogo size={44} color="#FFF" backgroundColor="#000" />
                                 </TouchableOpacity>
                             )}
                             {/* Checked In State */}
@@ -482,19 +481,7 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         marginLeft: 24,
     },
-    arrowContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#000',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    arrowText: {
-        color: '#FFF',
-        fontSize: 24,
-        marginTop: -4,
-    },
+
     bibCard: {
         backgroundColor: '#FFF',
         marginHorizontal: 20,

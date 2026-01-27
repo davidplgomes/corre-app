@@ -26,7 +26,7 @@ import {
     MedalIcon,
     SunriseIcon,
     PartyIcon,
-    CompassIcon
+    MapIcon
 } from '../../components/common/TabIcons';
 import { LoadingSpinner } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,6 +35,7 @@ import { sendFriendRequest, removeFriend, getFriendshipStatus } from '../../serv
 import { getUserAchievements } from '../../services/supabase/achievements';
 import { getUserRuns } from '../../services/supabase/feed';
 import { FeedPostItem } from '../../components/feed/FeedPostItem';
+import { ArrowLogo } from '../../components/common/ArrowLogo';
 
 type UserProfileProps = {
     route: { params: { userId: string } };
@@ -146,7 +147,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                     case 'sunrise': case '🌅': Icon = SunriseIcon; break;
                     case 'medal': case 'medalha': case '🥇': case '🏃': Icon = MedalIcon; break;
                     case 'party': case '🎉': Icon = PartyIcon; break;
-                    case 'compass': case '📍': Icon = CompassIcon; break;
+                    case 'compass': case '📍': Icon = MapIcon; break;
                     default: Icon = TrophyIcon;
                 }
 
@@ -212,7 +213,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Text style={[styles.statText, { color: tierConfig.primary }]}>{tierConfig.label.toUpperCase()}</Text>
                         </View>
-                        <TrophyIcon size={16} color={tierConfig.primary} filled />
+                        <ArrowLogo size={80} color="#FFF" backgroundColor="transparent" style={{ marginHorizontal: 20 }} />
                         {hasFullAccess && (
                             <Text style={styles.pointsText}>{profile.current_month_points}PTS</Text>
                         )}

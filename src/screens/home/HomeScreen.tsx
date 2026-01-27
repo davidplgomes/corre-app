@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, ImageBackground } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, ImageBackground, Dimensions, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserJoinedEvents } from '../../services/supabase/events';
 import { getFeedPosts } from '../../services/supabase/feed';
 import { getWeatherForEvent, getCurrentLocationWeather, formatWeather } from '../../services/weather';
+import { getUserGamificationProfile, PlanType } from '../../services/monetization.mock';
 import { Skeleton } from '../../components/common';
 import {
     CalendarIcon,
@@ -20,6 +22,35 @@ import {
 import { TierBadge } from '../../components/profile';
 import { TierKey } from '../../constants/tiers';
 
+const SwipeIndicator = () => {
+    const translateX = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(translateX, {
+                    toValue: 6,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(translateX, {
+                    toValue: 0,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={[styles.swipeIndicatorContainer, { transform: [{ translateX }] }]}>
+            <BlurView intensity={20} tint="light" style={styles.swipeIndicatorGlass}>
+                <ChevronRightIcon color="#FFF" size={24} />
+            </BlurView>
+        </Animated.View>
+    );
+};
+
 export const HomeScreen = ({ navigation }: any) => {
     const { user, profile } = useAuth();
     const { t, i18n } = useTranslation();
@@ -27,9 +58,11 @@ export const HomeScreen = ({ navigation }: any) => {
     const locale = i18n.language?.startsWith('en') ? 'en-US' : 'pt-BR';
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
 
-    const [nextRun, setNextRun] = useState<any>(null);
+    const [nextRuns, setNextRuns] = useState<any[]>([]);
     const [latestPost, setLatestPost] = useState<any>(null);
+    const [userPlan, setUserPlan] = useState<PlanType>('free');
 
     const loadData = useCallback(async () => {
         try {
@@ -39,39 +72,47 @@ export const HomeScreen = ({ navigation }: any) => {
             if (user) {
                 const joinedEvents = await getUserJoinedEvents(user.id);
                 const now = new Date();
+                // Include events from the last 4 hours to keep them visible while active/for check-in
+                const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+
                 const futureEvents = joinedEvents
-                    .filter(e => new Date(e.event_datetime) > now)
-                    .sort((a, b) => new Date(a.event_datetime).getTime() - new Date(b.event_datetime).getTime());
+                    .filter(e => new Date(e.event_datetime) > fourHoursAgo)
+                    .sort((a, b) => new Date(a.event_datetime).getTime() - new Date(b.event_datetime).getTime())
+                    .slice(0, 3); // Get top 3
 
                 if (futureEvents.length > 0) {
-                    const event = futureEvents[0];
-                    const date = new Date(event.event_datetime);
-                    const day = date.getDate();
-                    const month = date.toLocaleDateString(locale, { month: 'short' }).toUpperCase().replace('.', '');
-                    const weekday = date.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase().replace('.', '');
-                    const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+                    const processedRuns = await Promise.all(futureEvents.map(async (event) => {
+                        const date = new Date(event.event_datetime);
+                        const day = date.getDate();
+                        const month = date.toLocaleDateString(locale, { month: 'short' }).toUpperCase().replace('.', '');
+                        const weekday = date.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase().replace('.', '');
+                        const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
-                    // Fetch weather for event location or current location
-                    let weatherStr = '';
-                    if (event.location_lat && event.location_lng) {
-                        weatherStr = await getWeatherForEvent(event.location_lat, event.location_lng);
-                    } else {
-                        const currentWeather = await getCurrentLocationWeather();
-                        weatherStr = currentWeather ? formatWeather(currentWeather) : '';
-                    }
+                        // Fetch weather for event location or current location
+                        let weatherStr = '';
+                        if (event.location_lat && event.location_lng) {
+                            weatherStr = await getWeatherForEvent(event.location_lat, event.location_lng);
+                        } else if (futureEvents.indexOf(event) === 0) {
+                            // Only fallback to current location for the very first event if needed, or keep it empty
+                            const currentWeather = await getCurrentLocationWeather();
+                            weatherStr = currentWeather ? formatWeather(currentWeather) : '';
+                        }
 
-                    setNextRun({
-                        title: event.title,
-                        day: day,
-                        month: month,
-                        weekday: weekday,
-                        time: time,
-                        location: event.location_name || 'Local a definir',
-                        points: `${event.points_value}PTS`,
-                        weather: weatherStr || '🌡️ --°C'
-                    });
+                        return {
+                            id: event.id,
+                            title: event.title,
+                            day: day,
+                            month: month,
+                            weekday: weekday,
+                            time: time,
+                            location: event.location_name || 'Local a definir',
+                            points: `${event.points_value}PTS`,
+                            weather: weatherStr || '🌡️ --°C'
+                        };
+                    }));
+                    setNextRuns(processedRuns);
                 } else {
-                    setNextRun(null);
+                    setNextRuns([]);
                 }
             }
 
@@ -90,6 +131,16 @@ export const HomeScreen = ({ navigation }: any) => {
                 });
             } else {
                 setLatestPost(null);
+            }
+
+            // Load user subscription plan
+            if (user?.id) {
+                try {
+                    const gamification = await getUserGamificationProfile(user.id);
+                    setUserPlan(gamification.subscription?.planType || 'free');
+                } catch (e) {
+                    console.error('Error loading user plan:', e);
+                }
             }
 
         } catch (error) {
@@ -145,9 +196,30 @@ export const HomeScreen = ({ navigation }: any) => {
                             <Text style={styles.greeting}>{t('common.greeting', 'Olá')},</Text>
                             <Text style={styles.userName}>{profile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Runner'}!</Text>
                         </View>
-                        {profile?.membershipTier && (
-                            <TierBadge tier={profile.membershipTier as TierKey} size="small" />
-                        )}
+                        <View style={styles.headerBadges}>
+                            {/* Plan Badge */}
+                            <TouchableOpacity
+                                style={styles.planBadgeContainer}
+                                onPress={() => navigation.navigate('Profile', {
+                                    screen: 'SubscriptionScreen',
+                                    params: { from: 'Home' }
+                                })}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={userPlan === 'club' ? ['#FFD700', '#FFA500'] :
+                                        (userPlan === 'pro' ? [theme.colors.brand.primary, theme.colors.brand.secondary] :
+                                            ['rgba(100,100,100,0.8)', 'rgba(60,60,60,0.8)'])}
+                                    style={styles.planBadge}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Text style={[styles.planBadgeText, userPlan === 'club' && { color: '#000' }]}>
+                                        {userPlan.toUpperCase()}
+                                    </Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Hero Card: Next Run */}
@@ -155,34 +227,58 @@ export const HomeScreen = ({ navigation }: any) => {
                         <Text style={styles.sectionTitle}>{t('home.nextWorkout')}</Text>
                         {loading ? (
                             <Skeleton height={200} borderRadius={30} />
-                        ) : nextRun ? (
-                            <TouchableOpacity style={styles.heroCardContainer} onPress={() => navigation.navigate('Events')} activeOpacity={0.8}>
-                                <BlurView intensity={30} tint="dark" style={styles.heroCard}>
-                                    <View style={styles.heroGlassContent}>
-                                        <View style={styles.heroTopRow}>
-                                            <View style={styles.heroBadge}>
-                                                <Text style={styles.heroBadgeText}>{t('home.next').toUpperCase()}</Text>
+                        ) : nextRuns.length > 0 ? (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={{ marginHorizontal: -20 }} // Break out of parent padding
+                                contentContainerStyle={{ paddingHorizontal: 20 }} // Add padding to content instead
+                                decelerationRate="fast"
+                                snapToInterval={Dimensions.get('window').width * 0.85 + 16} // card width + margin
+                                onScroll={(e) => setIsScrolled(e.nativeEvent.contentOffset.x > 10)}
+                                scrollEventThrottle={16}
+                            >
+                                {nextRuns.map((run, index) => (
+                                    <TouchableOpacity
+                                        key={run.id}
+                                        style={[styles.heroCardContainer, { marginRight: 16, zIndex: index === 0 ? 100 : 1 }]}
+                                        onPress={() => navigation.navigate('Events', { screen: 'EventDetail', params: { eventId: run.id } })}
+                                        activeOpacity={0.8}
+                                    >
+                                        <BlurView intensity={30} tint="dark" style={styles.heroCard}>
+                                            <View style={styles.heroGlassContent}>
+                                                <View style={styles.heroTopRow}>
+                                                    <View style={styles.heroBadge}>
+                                                        <Text style={styles.heroBadgeText}>{index === 0 ? t('home.next').toUpperCase() : t('events.upcoming').toUpperCase()}</Text>
+                                                    </View>
+                                                    <View style={styles.weatherBadge}>
+                                                        <Text style={styles.weatherText}>{run.weather}</Text>
+                                                    </View>
+                                                </View>
+                                                <View style={styles.heroMainContent}>
+                                                    <View style={styles.heroDateSection}>
+                                                        <Text style={styles.heroDateDay}>{run.day}</Text>
+                                                        <Text style={styles.heroDateMonth}>{run.month}</Text>
+                                                        <Text style={styles.heroDateWeekday}>{run.weekday}</Text>
+                                                        <Text style={styles.heroDateTime}>{run.time}</Text>
+                                                    </View>
+                                                    <View style={styles.heroInfoSection}>
+                                                        <Text style={styles.totalDistance}>{run.points}</Text>
+                                                        <Text style={styles.heroTitle} numberOfLines={2}>{run.title}</Text>
+                                                        <Text style={styles.heroLocation} numberOfLines={1}>📍 {run.location}</Text>
+                                                    </View>
+                                                </View>
                                             </View>
-                                            <View style={styles.weatherBadge}>
-                                                <Text style={styles.weatherText}>{nextRun.weather}</Text>
-                                            </View>
-                                        </View>
-                                        <View style={styles.heroMainContent}>
-                                            <View style={styles.heroDateSection}>
-                                                <Text style={styles.heroDateDay}>{nextRun.day}</Text>
-                                                <Text style={styles.heroDateMonth}>{nextRun.month}</Text>
-                                                <Text style={styles.heroDateWeekday}>{nextRun.weekday}</Text>
-                                                <Text style={styles.heroDateTime}>{nextRun.time}</Text>
-                                            </View>
-                                            <View style={styles.heroInfoSection}>
-                                                <Text style={styles.totalDistance}>{nextRun.points}</Text>
-                                                <Text style={styles.heroTitle}>{nextRun.title}</Text>
-                                                <Text style={styles.heroLocation}>📍 {nextRun.location}</Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                </BlurView>
-                            </TouchableOpacity>
+                                        </BlurView>
+
+                                        {/* Swipe Indicator in the margin space */}
+                                        {index === 0 && nextRuns.length > 1 && !isScrolled && (
+                                            <SwipeIndicator />
+                                        )}
+
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
                         ) : (
                             <BlurView intensity={30} tint="dark" style={styles.emptyStateCard}>
                                 <View style={styles.emptyStateContent}>
@@ -247,9 +343,9 @@ export const HomeScreen = ({ navigation }: any) => {
                         )}
                     </View>
 
-                </ScrollView>
-            </ImageBackground>
-        </View>
+                </ScrollView >
+            </ImageBackground >
+        </View >
     );
 };
 
@@ -326,12 +422,13 @@ const styles = StyleSheet.create({
     },
     // Hero Card
     heroCardContainer: {
-        transform: [{ rotate: '-1deg' }],
+        // transform: [{ rotate: '-1deg' }], // Removed rotation
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.4,
         shadowRadius: 12,
         elevation: 8,
+        width: Dimensions.get('window').width * 0.85,
     },
     heroCard: {
         borderRadius: 30,
@@ -443,6 +540,24 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.7)',
         fontSize: 13,
         fontWeight: '600',
+    },
+    swipeIndicatorContainer: {
+        position: 'absolute',
+        right: -32, // Adjusted for new container size to be centered in gap
+        top: '50%',
+        marginTop: -20, // Half of height
+        zIndex: 10,
+    },
+    swipeIndicatorGlass: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.1)', // Subtle tint
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     // Decorative
     decorativeCircle1: {
@@ -600,5 +715,29 @@ const styles = StyleSheet.create({
     feedAction: {
         color: 'rgba(255,255,255,0.6)',
         fontSize: 12,
+    },
+    // Plan Badge Styles
+    headerBadges: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    planBadgeContainer: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    planBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    planBadgeText: {
+        color: '#FFF',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
 });

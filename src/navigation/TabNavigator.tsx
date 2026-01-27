@@ -19,6 +19,7 @@ import { Profile } from '../screens/profile/Profile';
 import { Settings } from '../screens/profile/Settings';
 import { EditProfile } from '../screens/profile/EditProfile';
 import { ChangePassword } from '../screens/profile/ChangePassword'; // New Import
+import { SubscriptionScreen } from '../screens/profile/SubscriptionScreen';
 import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
@@ -75,6 +76,7 @@ export type ProfileStackParamList = {
     RunMap: undefined;
     Friends: undefined;
     UserProfile: { userId: string };
+    SubscriptionScreen: undefined;
 };
 
 export type MainTabParamList = {
@@ -148,6 +150,7 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="RunMap" component={RunMap} />
         <ProfileStack.Screen name="Friends" component={Friends} />
         <ProfileStack.Screen name="UserProfile" component={UserProfile} />
+        <ProfileStack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />
     </ProfileStack.Navigator>
 );
 

@@ -87,6 +87,7 @@
       "special": "Evento Especial",
       "race": "Competencia"
     },
+    "upcoming": "Próximos",
     "points": {
       "routine": "3 puntos",
       "special": "5 puntos",
@@ -204,5 +205,15 @@
     "invalidEmail": "Formato de correo electrónico inválido",
     "invalidDate": "Fecha inválida",
     "invalidLocation": "Ubicación inválida"
+  },
+  "onboarding": {
+    "slide1Title": "Bienvenido a Corre",
+    "slide1Desc": "La comunidad que te motiva a ir más lejos. Únete a miles de corredores.",
+    "slide2Title": "Gana Puntos",
+    "slide2Desc": "Cada kilómetro cuenta. Convierte tu esfuerzo en recompensas exclusivas y descuentos.",
+    "slide3Title": "Conecta",
+    "slide3Desc": "Encuentra compañeros de carrera, únete a eventos e intercambia equipo en el Marketplace.",
+    "getStarted": "Comenzar",
+    "skip": "Omitir"
   }
 }

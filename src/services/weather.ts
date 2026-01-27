@@ -1,7 +1,16 @@
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
 
-const OPENWEATHER_API_KEY = Constants.expoConfig?.extra?.openWeatherApiKey || process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY || '';
+const OPENWEATHER_API_KEY = (
+    Constants.expoConfig?.extra?.openWeatherApiKey ||
+    process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY ||
+    ''
+).trim();
+
+// Debug log to ensure key is loaded (only first 4 chars for security)
+if (__DEV__) {
+    console.log('Weather API Key loaded:', OPENWEATHER_API_KEY ? `${OPENWEATHER_API_KEY.substring(0, 4)}...` : 'MISSING');
+}
 
 interface WeatherData {
     temp: number;

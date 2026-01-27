@@ -55,6 +55,7 @@ module.exports = {
       ENABLE_MERCHANT_MODE: process.env.ENABLE_MERCHANT_MODE || 'true',
       CHECK_IN_RADIUS_METERS: process.env.CHECK_IN_RADIUS_METERS || '300',
       CHECK_IN_TIME_WINDOW_MINUTES: process.env.CHECK_IN_TIME_WINDOW_MINUTES || '30',
+      openWeatherApiKey: process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY,
       eas: {
         projectId: '64b3844f-ce00-402b-976b-8e4d8f36714e'
       }

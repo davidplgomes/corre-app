@@ -126,7 +126,8 @@
     "runs": "Corridas",
     "streetRun": "Corrida de Rua",
     "morningRun": "Corrida Matinal",
-    "meetingPoint": "Ponto de Encontro"
+    "meetingPoint": "Ponto de Encontro",
+    "upcoming": "Próximos"
   },
   "leaderboard": {
     "title": "Classificação",
@@ -346,6 +347,8 @@
   "settings": {
     "title": "Configurações",
     "preferences": "Preferências",
+    "subscription": "Assinatura",
+    "manageSubscription": "Gerenciar Assinatura",
     "enableNotifications": "Ativar Notificações",
     "darkMode": "Modo Escuro",
     "privacy": "Privacidade",
@@ -396,5 +399,15 @@
     "used": "Usado",
     "your": "Seus",
     "validUntil": "Válido até"
+  },
+  "onboarding": {
+    "slide1Title": "Bem-vindo ao Corre",
+    "slide1Desc": "A comunidade que te motiva a ir mais longe. Junte-se a milhares de corredores.",
+    "slide2Title": "Ganhe Pontos",
+    "slide2Desc": "Cada quilômetro conta. Transforme seu suor em recompensas exclusivas e descontos.",
+    "slide3Title": "Conecte-se",
+    "slide3Desc": "Encontre parceiros de corrida, participe de eventos e troque equipamentos no Marketplace.",
+    "getStarted": "Começar Agora",
+    "skip": "Pular"
   }
 }

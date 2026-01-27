@@ -221,6 +221,25 @@ export const tierColors = {
     },
 };
 
+// New Level Colors (Gamification)
+export const levelColors = {
+    starter: {
+        primary: '#A1A1AA', // Zinc 400
+        label: 'STARTER',
+        gradient: ['#71717A', '#52525B'],
+    },
+    pacer: {
+        primary: '#FF5722', // Brand Primary
+        label: 'PACER',
+        gradient: ['#FF5722', '#E64A19'],
+    },
+    elite: {
+        primary: '#FFD700', // Gold
+        label: 'ELITE',
+        gradient: ['#FFD700', '#FFA500'],
+    },
+};
+
 // Event type styles - Minimal
 export const eventStyles = {
     routine: {

@@ -126,7 +126,8 @@
     "runs": "Runs",
     "streetRun": "Street Run",
     "morningRun": "Morning Run",
-    "meetingPoint": "Meeting Point"
+    "meetingPoint": "Meeting Point",
+    "upcoming": "Upcoming"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -189,11 +190,6 @@
     "contact": "Contact",
     "imageLink": "Image Link",
     "category": "Category",
-    "categories": {
-      "eletronicos": "Electronics",
-      "roupas": "Clothing",
-      "outros": "Others"
-    },
     "interested": "I'm interested",
     "contactSeller": "Contact Seller",
     "details": "Details",
@@ -346,6 +342,8 @@
   "settings": {
     "title": "Settings",
     "preferences": "Preferences",
+    "subscription": "Subscription",
+    "manageSubscription": "Manage Subscription",
     "enableNotifications": "Enable Notifications",
     "darkMode": "Dark Mode",
     "privacy": "Privacy",
@@ -396,5 +394,15 @@
     "used": "Used",
     "your": "Your",
     "validUntil": "Valid until"
+  },
+  "onboarding": {
+    "slide1Title": "Welcome to Corre",
+    "slide1Desc": "The community that motivates you to go further. Join thousands of runners.",
+    "slide2Title": "Earn Points",
+    "slide2Desc": "Every kilometer counts. Turn your sweat into exclusive rewards and discounts.",
+    "slide3Title": "Connect",
+    "slide3Desc": "Find running partners, join events, and trade gear in the Marketplace.",
+    "getStarted": "Get Started",
+    "skip": "Skip"
   }
 }

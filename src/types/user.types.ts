@@ -13,6 +13,11 @@ export interface UserProfile {
   membershipTier: MembershipTier;
   currentMonthPoints: number;
   totalLifetimePoints: number;
+  // NEW: Gamification fields
+  current_xp?: number;
+  total_xp?: number;
+  current_points?: number;
+  level?: number;
   languagePreference: 'en' | 'pt' | 'es';
   qrCodeSecret: string;
   isMerchant: boolean;

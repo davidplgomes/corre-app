@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
+import { OnboardingNavigator } from './OnboardingNavigator';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
 
@@ -26,16 +28,41 @@ const SplashScreen = () => (
     </View>
 );
 
+
+
 export const RootNavigator: React.FC = () => {
     const { user, loading } = useAuth();
+    const [isCheckingOnboarding, setIsCheckingOnboarding] = React.useState(true);
+    const [hasSeenOnboarding, setHasSeenOnboarding] = React.useState(false);
 
-    if (loading) {
+    React.useEffect(() => {
+        const checkOnboarding = async () => {
+            try {
+                const value = await AsyncStorage.getItem('hasSeenOnboarding');
+                setHasSeenOnboarding(value === 'true');
+            } catch (e) {
+                console.error('Error checking onboarding status', e);
+            } finally {
+                setIsCheckingOnboarding(false);
+            }
+        };
+
+        checkOnboarding();
+    }, []);
+
+    if (loading || isCheckingOnboarding) {
         return <SplashScreen />;
     }
 
     return (
         <NavigationContainer>
-            {user ? <TabNavigator /> : <AuthNavigator />}
+            {!user ? (
+                <AuthNavigator />
+            ) : !hasSeenOnboarding ? (
+                <OnboardingNavigator />
+            ) : (
+                <TabNavigator />
+            )}
         </NavigationContainer>
     );
 };

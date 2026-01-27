@@ -6,14 +6,23 @@ import {
     TouchableOpacity,
     ScrollView,
     StatusBar,
-    ImageBackground
+    ImageBackground,
+    LayoutAnimation,
+    Platform,
+    UIManager
 } from 'react-native';
+
+if (Platform.OS === 'android') {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { theme, tierColors } from '../../constants/theme';
+import { theme, tierColors, levelColors } from '../../constants/theme';
 import { DigitalCard } from '../../components/loyalty/DigitalCard';
 import { QRCodeIcon, GiftIcon, ClockIcon } from '../../components/common/TabIcons';
 
@@ -34,14 +43,21 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
     const { t } = useTranslation();
 
     // Use profile data or fallback to mock data
-    const tier = (profile?.membershipTier || 'basico') as keyof typeof tierColors;
-    const tierConfig = tierColors[tier] || tierColors.basico;
+    // New Logic: Level based on XP, not Plan
+    const currentXP = profile?.current_xp || 0; // Fallback to 0 if not in DB yet
+    const currentPoints = profile?.current_points || 0;
+
+    let currentLevel = 'starter';
+    if (currentXP >= 15000) currentLevel = 'elite';
+    else if (currentXP >= 10000) currentLevel = 'pacer';
+
+    const levelConfig = levelColors[currentLevel as keyof typeof levelColors] || levelColors.starter;
 
     const memberData = {
         name: profile?.fullName || user?.email?.split('@')[0] || 'Membro CORRE',
         id: profile?.id?.slice(0, 10).toUpperCase() || '0123456789',
-        tier: tierConfig.label,
-        tierColor: tierConfig.primary,
+        tier: levelConfig.label,
+        tierColor: levelConfig.primary,
     };
 
     // Dynamic QR Code Logic
@@ -55,8 +71,6 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
             if (!user?.id) return;
 
             try {
-                // In production, fetch this once and cache securely, or generate on server
-                // For this demo, we assume we can fetch it (RLS should protect it)
                 const { getUserQRSecret } = require('../../services/supabase/users');
                 const { generateQRPayload } = require('../../utils/totp');
 
@@ -70,10 +84,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
             }
         };
 
-        // Initial update
         updateQR();
-
-        // Update every 30 seconds
         interval = setInterval(() => {
             const seconds = Math.floor(Date.now() / 1000);
             const remaining = 30 - (seconds % 30);
@@ -88,15 +99,20 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
     }, [user?.id]);
 
     const stats = {
-        points: profile?.currentMonthPoints || 1250,
-        lifetime: profile?.totalLifetimePoints || 4850,
-        nextTier: 5000,
-        currentTierName: tierConfig.label,
-        nextTierName: 'ELITE',
+        points: currentPoints, // Spendable
+        xp: currentXP,       // Level Progress
+        nextLevelXP: currentLevel === 'starter' ? 10000 : (currentLevel === 'pacer' ? 15000 : 30000),
+        currentLevelName: levelConfig.label,
+        nextLevelName: currentLevel === 'starter' ? 'PACER' : (currentLevel === 'pacer' ? 'ELITE' : 'MAX'),
     };
 
-    const progress = Math.min((stats.lifetime / stats.nextTier) * 100, 100);
-    const pointsToNextLevel = stats.nextTier - stats.lifetime;
+    const xpToNext = stats.nextLevelXP - stats.xp;
+    const tierFloor = currentLevel === 'starter' ? 0 : (currentLevel === 'pacer' ? 10000 : 15000);
+    const progress = Math.min(((stats.xp - tierFloor) / (stats.nextLevelXP - tierFloor)) * 100, 100);
+
+    React.useEffect(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }, [progress]);
 
     const benefits = [
         { id: '1', text: t('loyalty.discountPartners'), icon: '🛍️' },
@@ -132,15 +148,15 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                         </View>
                     </View>
 
-                    {/* Stats Grid - Two Separate Boxes */}
+                    {/* Stats Grid - Split XP vs Points */}
                     <View style={styles.statsRow}>
                         <View style={styles.statBoxSeparate}>
                             <Text style={styles.statValueLarge}>{stats.points.toLocaleString()}</Text>
-                            <Text style={styles.statLabelSmall}>POINTS</Text>
+                            <Text style={styles.statLabelSmall}>PONTOS (R$)</Text>
                         </View>
-                        <View style={[styles.statBoxSeparate, styles.statBoxAccent]}>
-                            <Text style={[styles.statValueLarge, styles.accentText]}>{stats.lifetime.toLocaleString()}</Text>
-                            <Text style={styles.statLabelSmall}>TOTAL</Text>
+                        <View style={[styles.statBoxSeparate, styles.statBoxAccent, { borderColor: levelConfig.primary }]}>
+                            <Text style={[styles.statValueLarge, { color: levelConfig.primary }]}>{stats.xp.toLocaleString()}</Text>
+                            <Text style={styles.statLabelSmall}>XP (NÍVEL)</Text>
                         </View>
                     </View>
 
@@ -148,7 +164,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                     <View style={styles.progressSection}>
                         <View style={styles.progressHeader}>
                             <Text style={styles.progressLabelLeft}>NEXT LEVEL</Text>
-                            <Text style={styles.progressLabelRight}>{stats.nextTierName}</Text>
+                            <Text style={styles.progressLabelRight}>{stats.nextLevelName}</Text>
                         </View>
                         <View style={styles.progressBarBg}>
                             <LinearGradient
@@ -159,8 +175,8 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                             />
                         </View>
                         <View style={styles.progressFooter}>
-                            <Text style={styles.progressCurrent}>{t('loyalty.current')}: {stats.currentTierName}</Text>
-                            <Text style={styles.progressRemaining}>{pointsToNextLevel} {t('loyalty.ptsToNextLevel')}</Text>
+                            <Text style={styles.progressCurrent}>{t('loyalty.current')}: {stats.currentLevelName}</Text>
+                            <Text style={styles.progressRemaining}>{xpToNext} XP para {stats.nextLevelName}</Text>
                         </View>
                     </View>
 
@@ -260,8 +276,8 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                     </View>
 
                 </ScrollView>
-            </SafeAreaView>
-        </View>
+            </SafeAreaView >
+        </View >
     );
 };
 

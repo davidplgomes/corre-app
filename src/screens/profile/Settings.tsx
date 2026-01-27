@@ -163,6 +163,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                         ))}
                     </View>
 
+
                     {/* Account Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('common.edit').toUpperCase()}</Text>

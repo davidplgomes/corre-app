@@ -556,3 +556,14 @@ export const EyeIcon: React.FC<IconProps> = ({
         <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" />
     </Svg>
 );
+
+// Compass Icon (Explorer)
+export const CompassIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="1.5" />
+        <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);

@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -93,6 +93,17 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('Friends');
             },
+        },
+        {
+            id: 'subscription',
+            label: t('settings.subscription'),
+            icon: <CardIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('SubscriptionScreen', { from: 'Profile' });
+            },
+            badge: null,
+            highlight: true, // Optional: make it stand out
         },
         {
             id: 'settings',
