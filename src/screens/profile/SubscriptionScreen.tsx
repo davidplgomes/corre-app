@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -198,8 +199,13 @@ export const SubscriptionScreen: React.FC<any> = ({ navigation, route }) => {
                         onPress={() => {
                             const from = route.params?.from;
                             if (from === 'Home') {
-                                // Reset Profile stack to main screen first
-                                navigation.navigate('ProfileMain');
+                                // Hard reset the stack to just contain ProfileMain
+                                navigation.dispatch(
+                                    CommonActions.reset({
+                                        index: 0,
+                                        routes: [{ name: 'ProfileMain' }],
+                                    })
+                                );
                                 // Then switch to Home tab
                                 navigation.navigate('Home');
                             } else {
