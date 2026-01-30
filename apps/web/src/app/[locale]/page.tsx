@@ -106,7 +106,7 @@ export default function Home() {
             </section>
 
             {/* 3. Section 2: "The Culture" (Sticky Split) */}
-            <section className="bg-[#050505] relative w-full border-b border-white/10">
+            <section id="features" className="bg-[#050505] relative w-full border-b border-white/10">
                 <div className="flex flex-col lg:flex-row">
                     {/* LEFT PANE: Sticky Visuals */}
                     {/* LEFT PANE: Sticky Visuals */}
@@ -136,7 +136,9 @@ export default function Home() {
                             </div>
 
                             <p className="text-lg text-gray-400 max-w-xl leading-relaxed mt-4">
-                                Unlock the full Corre experience. The app isn't just a tracker; it's your <span className="text-white font-bold">passport</span> to the city's most exclusive running community. Earn points for every kilometer, redeem items in the shop, join the rankings. Your best run is waiting inside.
+                                {t.rich('sections.culture.manifesto', {
+                                    span_bold: (chunks) => <span className="text-white font-bold">{chunks}</span>
+                                })}
                             </p>
                         </div>
 
@@ -149,7 +151,7 @@ export default function Home() {
                             <div className="flex flex-col gap-6">
                                 <div className="flex items-center gap-4">
                                     <div className="h-px bg-white/20 flex-1" />
-                                    <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em]">JOIN EVENTS</h3>
+                                    <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em] uppercase">{t('sections.culture.events.header')}</h3>
                                 </div>
 
                                 <div className="py-2">
@@ -214,7 +216,7 @@ export default function Home() {
             </section>
 
             {/* 3. Section: Plans / Membership */}
-            <section className="py-24 bg-[#050505] border-b border-white/10">
+            <section id="pricing" className="py-24 bg-[#050505] border-b border-white/10">
                 <div className="max-w-[1400px] mx-auto px-6">
                     <div className="flex flex-col items-center text-center mb-20">
                         <h2 className="text-6xl lg:text-8xl font-black text-white italic tracking-tighter leading-[0.8] mb-6">
