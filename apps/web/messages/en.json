@@ -1,0 +1,149 @@
+{
+    "HomePage": {
+        "tagline": "Running Club",
+        "description": "Weekly runs through Dublin's streets.\nFree to join. Always.",
+        "downloadApp": "Download the app",
+        "sections": {
+            "culture": {
+                "title": "HOW WE WORK",
+                "subtitles": "TRACK YOUR PROGRESS // EARN POINTS // JOIN THE RANKINGS",
+                "quote": "POWERED BY DATA. FUELED BY CULTURE.",
+                "events": {
+                    "event1": {
+                        "title": "Tempo Tuesdays",
+                        "location": "GRAND CANAL DOCK",
+                        "day": "TUE",
+                        "month": "WKLY",
+                        "weekday": "19:00"
+                    },
+                    "event2": {
+                        "title": "Speed Work",
+                        "location": "UCD TRACK",
+                        "day": "THU",
+                        "month": "WKLY",
+                        "weekday": "19:00"
+                    },
+                    "event3": {
+                        "title": "Social Saturday",
+                        "location": "PHOENIX PARK",
+                        "day": "SAT",
+                        "month": "WKLY",
+                        "weekday": "09:30"
+                    },
+                    "event4": {
+                        "title": "Sunday Runday",
+                        "location": "DUN LAOGHAIRE",
+                        "day": "SUN",
+                        "month": "WKLY",
+                        "weekday": "10:00"
+                    }
+                },
+                "rapidResponse": "RAPID_RESPONSE",
+                "stats": {
+                    "distance": "128.5k",
+                    "labelDist": "CLUB DISTANCE",
+                    "pace": "5:12",
+                    "labelPace": "AVG PACE /KM",
+                    "points": "12,450",
+                    "labelPoints": "POINTS EARNED"
+                },
+                "extras": {
+                    "playlistTitle": "City Sounds Vol. 1",
+                    "playlistLabel": "RUNNING MIX",
+                    "weatherTitle": "Current Conditions",
+                    "temp": "12°C",
+                    "wind": "WIND 15KM/H"
+                }
+            },
+            "community": {
+                "title": "COMMUNITY // MOTION",
+                "location": "PHOENIX PARK [08:00 AM]",
+                "archived": "Archived.",
+                "archivedDesc": "VIEW PAST RUNS, ROUTES, AND HIGHLIGHTS FROM THE CORE TEAM.",
+                "route01": "Route 01",
+                "docklands": "DOCKLANDS",
+                "route02": "Route 02",
+                "canal": "CANAL"
+            },
+            "plans": {
+                "title": "MEMBERSHIP",
+                "subtitle": "SCALE YOUR GAME",
+                "tiers": {
+                    "free": {
+                        "name": "CORRE FREE",
+                        "description": "Entry level access to the community.",
+                        "price": "FREE",
+                        "features": {
+                            "economy": "Earn Points Only",
+                            "events": "Access to Open Events",
+                            "marketplace": "Marketplace (Standard Sales)",
+                            "coupons": "External Partner Coupons"
+                        }
+                    },
+                    "pro": {
+                        "name": "CORRE PRO",
+                        "description": "For the consistent runner seeking return.",
+                        "price": "€9.90 / MO",
+                        "features": {
+                            "discount": "5% or 10% Discount via XP",
+                            "economy": "Hybrid Marketplace (20% Points)",
+                            "sales": "1 Sales Highlight",
+                            "events": "Exclusive Events (No Guest)"
+                        }
+                    },
+                    "club": {
+                        "name": "CORRE CLUB",
+                        "description": "Full exclusive experience & social status.",
+                        "price": "€29.90 / MO",
+                        "features": {
+                            "welcome": "Welcome Kit (Shirt + Gel...)",
+                            "guest": "Monthly Guest Pass",
+                            "priority": "Max Priority Queue",
+                            "sales": "3 Sales Highlights",
+                            "profile": "Golden Profile"
+                        }
+                    }
+                },
+                "labels": {
+                    "select": "SELECT PLAN",
+                    "current": "CURRENT PLAN"
+                }
+            },
+            "essentials": {
+                "title": "Club //\nEssentials",
+                "viewAll": "VIEW ALL",
+                "filter": "FILTER +",
+                "category": "CATEGORY",
+                "apparel": "APPAREL",
+                "accessories": "ACCESSORIES",
+                "memberships": "MEMBERSHIPS",
+                "size": "SIZE",
+                "new": "NEW",
+                "itemRef": "REF"
+            }
+        },
+        "footer": {
+            "connect": "Connect",
+            "instagram": "Instagram",
+            "tiktok": "TikTok",
+            "strava": "Strava",
+            "contact": "Contact",
+            "email": "hello@corredublin.com",
+            "legal": "Legal",
+            "privacy": "Privacy Policy",
+            "terms": "Terms of Service",
+            "newsletter": "Newsletter",
+            "enterEmail": "ENTER EMAIL",
+            "copyright": "© 2026 CORRE DUBLIN LTD.",
+            "doNotCopy": "Do Not Copy.",
+            "designedBy": "DESIGNED BY ANTIGRAVITY",
+            "brandName": "CORRE"
+        }
+    },
+    "Navigation": {
+        "login": "Login",
+        "features": "Features",
+        "plans": "Plans",
+        "app": "App"
+    }
+}

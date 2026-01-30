@@ -1,0 +1,89 @@
+{
+    "HomePage": {
+        "tagline": "CLUBE DE CORRIDA",
+        "description": "Corridas semanais pelas ruas de Dublin.\nGratuito para participar. Sempre.",
+        "downloadApp": "Baixar o app",
+        "sections": {
+            "culture": {
+                "title": "A Cultura // Do\nCorre",
+                "subtitles": "ALTA PERFORMANCE — LÓGICA \"RÁPIDO OU ÚLTIMO\"\nGEOGRAFIA URBANA — DE DOCKLANDS AO PHOENIX\nMENTALIDADE DE MATILHA // CORRA COMO UM",
+                "quote": "CORRIDA É MAIS DO QUE COLOCAR UM TÊNIS E CORRER",
+                "events": {
+                    "event1": {
+                        "title": "Corrida Noturna",
+                        "location": "DOCKLANDS",
+                        "day": "24",
+                        "month": "JAN",
+                        "weekday": "QUA"
+                    },
+                    "event2": {
+                        "title": "Longão",
+                        "location": "PHOENIX PARK",
+                        "day": "28",
+                        "month": "JAN",
+                        "weekday": "DOM"
+                    }
+                },
+                "rapidResponse": "RESPOSTA_RÁPIDA",
+                "stats": {
+                    "distance": "128.5 KM",
+                    "labelDist": "DISTÂNCIA MENSAL",
+                    "pace": "05:12 /KM",
+                    "labelPace": "RITMO MÉDIO",
+                    "points": "12.450",
+                    "labelPoints": "PONTOS DA COMUNIDADE"
+                },
+                "extras": {
+                    "playlistTitle": "Sons da Cidade Vol. 1",
+                    "playlistLabel": "MIX DE CORRIDA",
+                    "weatherTitle": "Condições Atuais",
+                    "temp": "12°C",
+                    "wind": "VENTO 15KM/H"
+                }
+            },
+            "community": {
+                "title": "COMUNIDADE // MOVIMENTO",
+                "location": "PHOENIX PARK [08:00 AM]",
+                "archived": "Arquivado.",
+                "archivedDesc": "VER CORRIDAS PASSADAS, ROTAS E DESTAQUES DO TIME CORE.",
+                "route01": "Rota 01",
+                "docklands": "DOCKLANDS",
+                "route02": "Rota 02",
+                "canal": "CANAL"
+            },
+            "essentials": {
+                "title": "Clube //\nEssenciais",
+                "viewAll": "VER TUDO",
+                "filter": "FILTRAR +",
+                "category": "CATEGORIA",
+                "apparel": "VESTUÁRIO",
+                "accessories": "ACESSÓRIOS",
+                "memberships": "MEMBROS",
+                "size": "TAMANHO",
+                "new": "NOVO",
+                "itemRef": "REF"
+            }
+        },
+        "footer": {
+            "support": "Suporte",
+            "faq": "FAQ",
+            "shipping": "Envio",
+            "returns": "Devoluções",
+            "legal": "Legal",
+            "privacy": "Privacidade",
+            "terms": "Termos",
+            "newsletter": "Newsletter",
+            "enterEmail": "DIGITE SEU EMAIL",
+            "copyright": "© 2026 CORRE DUBLIN LTD.",
+            "doNotCopy": "Não Copie.",
+            "designedBy": "DESIGNED BY ANTIGRAVITY",
+            "brandName": "CORRE"
+        }
+    },
+    "Navigation": {
+        "login": "Entrar",
+        "features": "Funcionalidades",
+        "plans": "Planos",
+        "app": "App"
+    }
+}

@@ -1,1 +1,0 @@
-export { FeatureComparisonTable } from './FeatureComparisonTable';

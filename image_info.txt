@@ -1,0 +1,111 @@
+Image:
+  Filename: c:\Users\notto\Documents\GitHub\corre-app\apps\web\public\hero.png
+  Permissions: rw-rw-rw-
+  Format: PNG (Portable Network Graphics)
+  Mime type: image/png
+  Class: DirectClass
+  Geometry: 1536x2582+0+0
+  Resolution: 37.79x37.79
+  Print size: 40.6457x68.325
+  Units: PixelsPerCentimeter
+  Colorspace: sRGB
+  Type: TrueColorAlpha
+  Endianness: Undefined
+  Depth: 8-bit
+  Channels: 4.0
+  Channel depth:
+    Red: 8-bit
+    Green: 8-bit
+    Blue: 8-bit
+    Alpha: 1-bit
+  Channel statistics:
+    Pixels: 3965952
+    Red:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 87.8576 (0.34454)
+      median: 78 (0.305882)
+      standard deviation: 54.5147 (0.213783)
+      kurtosis: -0.765589
+      skewness: 0.388252
+      entropy: 0.952895
+    Green:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 88.2685 (0.346151)
+      median: 79 (0.309804)
+      standard deviation: 54.4087 (0.213367)
+      kurtosis: -0.760816
+      skewness: 0.392859
+      entropy: 0.953066
+    Blue:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 85.9625 (0.337108)
+      median: 76 (0.298039)
+      standard deviation: 53.9883 (0.211719)
+      kurtosis: -0.737114
+      skewness: 0.409212
+      entropy: 0.950293
+    Alpha:
+      min: 255  (1)
+      max: 255 (1)
+      mean: 255 (1)
+      median: 255 (1)
+      standard deviation: 0 (0)
+      kurtosis: 0
+      skewness: 0
+      entropy: 0.000160171
+  Image statistics:
+    Overall:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 129.272 (0.50695)
+      median: 122 (0.478431)
+      standard deviation: 40.7279 (0.159717)
+      kurtosis: -0.56588
+      skewness: 0.297581
+      entropy: 0.714103
+  Rendering intent: Perceptual
+  Gamma: 0.45455
+  Chromaticity:
+    red primary: (0.64,0.33,0.03)
+    green primary: (0.3,0.6,0.1)
+    blue primary: (0.15,0.06,0.79)
+    white point: (0.3127,0.329,0.3583)
+  Matte color: grey74
+  Background color: white
+  Border color: srgb(223,223,223)
+  Transparent color: black
+  Interlace: None
+  Intensity: Undefined
+  Compose: Over
+  Page geometry: 1536x2582+0+0
+  Dispose: Undefined
+  Iterations: 0
+  Compression: Zip
+  Orientation: Undefined
+  Properties:
+    date:create: 2026-01-29T18:32:58+00:00
+    date:modify: 2026-01-27T06:41:50+00:00
+    date:timestamp: 2026-01-29T19:36:27+00:00
+    png:gAMA: gamma=0.45455 (See Gamma, above)
+    png:IHDR.bit-depth-orig: 8
+    png:IHDR.bit_depth: 8
+    png:IHDR.color-type-orig: 6
+    png:IHDR.color_type: 6 (RGBA)
+    png:IHDR.interlace_method: 0 (Not interlaced)
+    png:IHDR.width,height: 1536, 2582
+    png:pHYs: x_res=3779, y_res=3779, units=1
+    png:sRGB: intent=0 (Perceptual Intent)
+    signature: b05a2eb49d4656693daf1f42bfd39e65b5087ecbf7946a9acfc4346a14adab29
+  Artifacts:
+    verbose: true
+  Tainted: False
+  Filesize: 7.14292MiB
+  Number pixels: 3.96595M
+  Pixel cache type: Memory
+  Pixels per second: 33.571MP
+  User time: 0.118u
+  Elapsed time: 0:01.118
+  Version: ImageMagick 7.1.2-13 Q16-HDRI x64 dd991e2:20260119 https://imagemagick.org

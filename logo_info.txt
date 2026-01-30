@@ -1,0 +1,347 @@
+Image:
+  Filename: c:\Users\notto\Documents\GitHub\corre-app\apps\web\public\logo_hero.png
+  Permissions: rw-rw-rw-
+  Format: PNG (Portable Network Graphics)
+  Mime type: image/png
+  Class: DirectClass
+  Geometry: 940x396+0+0
+  Resolution: 37.79x37.79
+  Print size: 24.8743x10.479
+  Units: PixelsPerCentimeter
+  Colorspace: Gray
+  Type: GrayscaleAlpha
+  Endianness: Undefined
+  Depth: 8-bit
+  Channels: 2.0
+  Channel depth:
+    Gray: 8-bit
+    Alpha: 1-bit
+  Channel statistics:
+    Pixels: 372240
+    Gray:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 106.077 (0.415988)
+      median: 0 (0)
+      standard deviation: 124.481 (0.488159)
+      kurtosis: -1.86714
+      skewness: 0.341013
+      entropy: 0.163087
+    Alpha:
+      min: 0  (0)
+      max: 255 (1)
+      mean: 108.929 (0.427173)
+      median: 0 (0)
+      standard deviation: 126.14 (0.494669)
+      kurtosis: -1.91331
+      skewness: 0.294446
+      entropy: 0.984642
+  Alpha: graya(0,0)   #00000000
+  Colors: 254
+  Histogram:
+        212497: (0,0,0,0) #00000000 graya(0,0)
+            69: (2,2,2,0) #02020200 graya(2,0)
+            42: (4,4,4,0) #04040400 graya(4,0)
+             1: (5,5,5,0) #05050500 graya(5,0)
+            38: (6,6,6,0) #06060600 graya(6,0)
+             2: (7,7,7,0) #07070700 graya(7,0)
+            43: (8,8,8,0) #08080800 graya(8,0)
+            33: (9,9,9,0) #09090900 graya(9,0)
+             8: (10,10,10,0) #0A0A0A00 graya(10,0)
+            47: (11,11,11,0) #0B0B0B00 graya(11,0)
+           195: (12,12,12,0) #0C0C0C00 graya(12,0)
+             5: (13,13,13,0) #0D0D0D00 graya(13,0)
+            27: (14,14,14,0) #0E0E0E00 graya(14,0)
+            38: (15,15,15,0) #0F0F0F00 graya(15,0)
+             8: (16,16,16,0) #10101000 graya(16,0)
+            32: (17,17,17,0) #11111100 graya(17,0)
+            28: (18,18,18,0) #12121200 graya(18,0)
+            35: (19,19,19,0) #13131300 graya(19,0)
+             5: (20,20,20,0) #14141400 graya(20,0)
+            21: (21,21,21,0) #15151500 graya(21,0)
+            17: (22,22,22,0) #16161600 graya(22,0)
+            13: (23,23,23,0) #17171700 graya(23,0)
+             6: (24,24,24,0) #18181800 graya(24,0)
+            19: (25,25,25,0) #19191900 graya(25,0)
+            23: (26,26,26,255) #1A1A1AFF graya(26,1)
+            22: (27,27,27,255) #1B1B1BFF graya(27,1)
+             6: (28,28,28,255) #1C1C1CFF graya(28,1)
+           183: (29,29,29,255) #1D1D1DFF graya(29,1)
+            14: (30,30,30,255) #1E1E1EFF graya(30,1)
+            17: (31,31,31,255) #1F1F1FFF graya(31,1)
+            24: (32,32,32,255) #202020FF graya(32,1)
+             1: (33,33,33,255) #212121FF graya(33,1)
+           124: (34,34,34,255) #222222FF graya(34,1)
+            21: (35,35,35,255) #232323FF graya(35,1)
+             8: (36,36,36,255) #242424FF graya(36,1)
+            22: (37,37,37,255) #252525FF graya(37,1)
+            21: (38,38,38,255) #262626FF graya(38,1)
+             8: (39,39,39,255) #272727FF graya(39,1)
+            15: (40,40,40,255) #282828FF graya(40,1)
+            14: (41,41,41,255) #292929FF graya(41,1)
+            19: (42,42,42,255) #2A2A2AFF graya(42,1)
+            20: (43,43,43,255) #2B2B2BFF graya(43,1)
+            14: (44,44,44,255) #2C2C2CFF graya(44,1)
+             3: (45,45,45,255) #2D2D2DFF graya(45,1)
+            12: (46,46,46,255) #2E2E2EFF graya(46,1)
+            11: (47,47,47,255) #2F2F2FFF graya(47,1)
+           116: (48,48,48,255) #303030FF graya(48,1)
+            12: (49,49,49,255) #313131FF graya(49,1)
+            17: (50,50,50,255) #323232FF graya(50,1)
+            20: (51,51,51,255) #333333FF graya(51,1)
+            93: (52,52,52,255) #343434FF graya(52,1)
+             2: (53,53,53,255) #353535FF graya(53,1)
+            14: (54,54,54,255) #363636FF graya(54,1)
+            13: (55,55,55,255) #373737FF graya(55,1)
+            17: (56,56,56,255) #383838FF graya(56,1)
+            13: (57,57,57,255) #393939FF graya(57,1)
+             5: (58,58,58,255) #3A3A3AFF graya(58,1)
+            16: (59,59,59,255) #3B3B3BFF graya(59,1)
+            17: (60,60,60,255) #3C3C3CFF graya(60,1)
+           103: (61,61,61,255) #3D3D3DFF graya(61,1)
+            15: (62,62,62,255) #3E3E3EFF graya(62,1)
+             6: (63,63,63,255) #3F3F3FFF graya(63,1)
+           709: (64,64,64,255) #404040FF graya(64,1)
+            19: (65,65,65,255) #414141FF graya(65,1)
+           285: (66,66,66,255) #424242FF graya(66,1)
+            14: (67,67,67,255) #434343FF graya(67,1)
+            11: (68,68,68,255) #444444FF graya(68,1)
+            10: (69,69,69,255) #454545FF graya(69,1)
+             7: (70,70,70,255) #464646FF graya(70,1)
+            15: (71,71,71,255) #474747FF graya(71,1)
+            16: (72,72,72,255) #484848FF graya(72,1)
+            25: (73,73,73,255) #494949FF graya(73,1)
+            84: (74,74,74,255) #4A4A4AFF graya(74,1)
+             9: (75,75,75,255) #4B4B4BFF graya(75,1)
+            11: (76,76,76,255) #4C4C4CFF graya(76,1)
+             2: (77,77,77,255) #4D4D4DFF graya(77,1)
+            18: (78,78,78,255) #4E4E4EFF graya(78,1)
+            18: (79,79,79,255) #4F4F4FFF graya(79,1)
+            11: (80,80,80,255) #505050FF graya(80,1)
+            15: (81,81,81,255) #515151FF graya(81,1)
+            15: (82,82,82,255) #525252FF graya(82,1)
+            18: (83,83,83,255) #535353FF graya(83,1)
+            13: (84,84,84,255) #545454FF graya(84,1)
+            21: (85,85,85,255) #555555FF graya(85,1)
+            13: (86,86,86,255) #565656FF graya(86,1)
+            80: (87,87,87,255) #575757FF graya(87,1)
+             9: (88,88,88,255) #585858FF graya(88,1)
+            12: (89,89,89,255) #595959FF graya(89,1)
+            10: (90,90,90,255) #5A5A5AFF graya(90,1)
+            44: (91,91,91,255) #5B5B5BFF graya(91,1)
+            17: (92,92,92,255) #5C5C5CFF graya(92,1)
+            13: (93,93,93,255) #5D5D5DFF graya(93,1)
+            12: (94,94,94,255) #5E5E5EFF graya(94,1)
+            42: (95,95,95,255) #5F5F5FFF graya(95,1)
+            16: (96,96,96,255) #606060FF graya(96,1)
+            16: (97,97,97,255) #616161FF graya(97,1)
+            23: (98,98,98,255) #626262FF graya(98,1)
+           223: (99,99,99,255) #636363FF graya(99,1)
+            12: (100,100,100,255) #646464FF graya(100,1)
+            11: (101,101,101,255) #656565FF graya(101,1)
+            17: (102,102,102,255) #666666FF graya(102,1)
+             9: (103,103,103,255) #676767FF graya(103,1)
+            10: (104,104,104,255) #686868FF graya(104,1)
+            16: (105,105,105,255) #696969FF graya(105,1)
+            14: (106,106,106,255) #6A6A6AFF graya(106,1)
+            10: (107,107,107,255) #6B6B6BFF graya(107,1)
+            10: (108,108,108,255) #6C6C6CFF graya(108,1)
+            10: (109,109,109,255) #6D6D6DFF graya(109,1)
+            12: (110,110,110,255) #6E6E6EFF graya(110,1)
+            15: (111,111,111,255) #6F6F6FFF graya(111,1)
+            17: (112,112,112,255) #707070FF graya(112,1)
+            15: (113,113,113,255) #717171FF graya(113,1)
+            16: (114,114,114,255) #727272FF graya(114,1)
+            14: (115,115,115,255) #737373FF graya(115,1)
+            16: (116,116,116,255) #747474FF graya(116,1)
+            12: (117,117,117,255) #757575FF graya(117,1)
+            17: (118,118,118,255) #767676FF graya(118,1)
+            26: (119,119,119,255) #777777FF graya(119,1)
+            23: (120,120,120,255) #787878FF graya(120,1)
+            14: (121,121,121,255) #797979FF graya(121,1)
+            13: (122,122,122,255) #7A7A7AFF graya(122,1)
+           480: (123,123,123,255) #7B7B7BFF graya(123,1)
+            15: (124,124,124,255) #7C7C7CFF graya(124,1)
+            12: (125,125,125,255) #7D7D7DFF graya(125,1)
+            14: (126,126,126,255) #7E7E7EFF graya(126,1)
+           179: (127,127,127,255) #7F7F7FFF graya(127,1)
+           445: (128,128,128,255) #808080FF graya(128,1)
+            10: (129,129,129,255) #818181FF graya(129,1)
+             9: (130,130,130,255) #828282FF graya(130,1)
+            12: (131,131,131,255) #838383FF graya(131,1)
+            11: (132,132,132,255) #848484FF graya(132,1)
+             6: (133,133,133,255) #858585FF graya(133,1)
+            13: (134,134,134,255) #868686FF graya(134,1)
+             7: (135,135,135,255) #878787FF graya(135,1)
+            18: (136,136,136,255) #888888FF graya(136,1)
+            13: (137,137,137,255) #898989FF graya(137,1)
+           119: (138,138,138,255) #8A8A8AFF graya(138,1)
+            16: (139,139,139,255) #8B8B8BFF graya(139,1)
+            17: (140,140,140,255) #8C8C8CFF graya(140,1)
+            11: (141,141,141,255) #8D8D8DFF graya(141,1)
+             9: (142,142,142,255) #8E8E8EFF graya(142,1)
+           185: (143,143,143,255) #8F8F8FFF graya(143,1)
+            15: (144,144,144,255) #909090FF graya(144,1)
+            12: (145,145,145,255) #919191FF graya(145,1)
+           106: (146,146,146,255) #929292FF graya(146,1)
+            12: (147,147,147,255) #939393FF graya(147,1)
+            13: (148,148,148,255) #949494FF graya(148,1)
+           374: (149,149,149,255) #959595FF graya(149,1)
+            16: (150,150,150,255) #969696FF graya(150,1)
+            12: (151,151,151,255) #979797FF graya(151,1)
+             9: (152,152,152,255) #989898FF graya(152,1)
+             8: (153,153,153,255) #999999FF graya(153,1)
+            11: (154,154,154,255) #9A9A9AFF graya(154,1)
+            10: (155,155,155,255) #9B9B9BFF graya(155,1)
+            15: (156,156,156,255) #9C9C9CFF graya(156,1)
+           155: (157,157,157,255) #9D9D9DFF graya(157,1)
+            16: (158,158,158,255) #9E9E9EFF graya(158,1)
+            32: (159,159,159,255) #9F9F9FFF graya(159,1)
+           501: (160,160,160,255) #A0A0A0FF graya(160,1)
+            16: (161,161,161,255) #A1A1A1FF graya(161,1)
+             9: (162,162,162,255) #A2A2A2FF graya(162,1)
+            12: (163,163,163,255) #A3A3A3FF graya(163,1)
+            12: (164,164,164,255) #A4A4A4FF graya(164,1)
+            18: (165,165,165,255) #A5A5A5FF graya(165,1)
+             6: (166,166,166,255) #A6A6A6FF graya(166,1)
+             9: (167,167,167,255) #A7A7A7FF graya(167,1)
+             8: (168,168,168,255) #A8A8A8FF graya(168,1)
+            24: (169,169,169,255) #A9A9A9FF graya(169,1)
+            12: (170,170,170,255) #AAAAAAFF graya(170,1)
+            12: (171,171,171,255) #ABABABFF graya(171,1)
+            14: (172,172,172,255) #ACACACFF graya(172,1)
+            10: (173,173,173,255) #ADADADFF graya(173,1)
+             7: (174,174,174,255) #AEAEAEFF graya(174,1)
+            68: (175,175,175,255) #AFAFAFFF graya(175,1)
+            11: (176,176,176,255) #B0B0B0FF graya(176,1)
+            18: (177,177,177,255) #B1B1B1FF graya(177,1)
+            16: (178,178,178,255) #B2B2B2FF graya(178,1)
+           398: (179,179,179,255) #B3B3B3FF graya(179,1)
+             9: (180,180,180,255) #B4B4B4FF graya(180,1)
+            12: (181,181,181,255) #B5B5B5FF graya(181,1)
+            10: (182,182,182,255) #B6B6B6FF graya(182,1)
+            11: (183,183,183,255) #B7B7B7FF graya(183,1)
+            12: (184,184,184,255) #B8B8B8FF graya(184,1)
+             8: (185,185,185,255) #B9B9B9FF graya(185,1)
+            18: (186,186,186,255) #BABABAFF graya(186,1)
+            23: (187,187,187,255) #BBBBBBFF graya(187,1)
+            29: (188,188,188,255) #BCBCBCFF graya(188,1)
+            16: (189,189,189,255) #BDBDBDFF graya(189,1)
+            11: (190,190,190,255) #BEBEBEFF graya(190,1)
+            14: (191,191,191,255) #BFBFBFFF graya(191,1)
+            13: (192,192,192,255) #C0C0C0FF graya(192,1)
+             8: (193,193,193,255) #C1C1C1FF graya(193,1)
+            23: (194,194,194,255) #C2C2C2FF graya(194,1)
+            14: (195,195,195,255) #C3C3C3FF graya(195,1)
+            30: (196,196,196,255) #C4C4C4FF graya(196,1)
+            16: (197,197,197,255) #C5C5C5FF graya(197,1)
+            19: (198,198,198,255) #C6C6C6FF graya(198,1)
+            16: (199,199,199,255) #C7C7C7FF graya(199,1)
+           139: (200,200,200,255) #C8C8C8FF graya(200,1)
+            11: (201,201,201,255) #C9C9C9FF graya(201,1)
+            13: (202,202,202,255) #CACACAFF graya(202,1)
+            26: (203,203,203,255) #CBCBCBFF graya(203,1)
+            14: (204,204,204,255) #CCCCCCFF graya(204,1)
+            11: (205,205,205,255) #CDCDCDFF graya(205,1)
+            13: (206,206,206,255) #CECECEFF graya(206,1)
+            10: (207,207,207,255) #CFCFCFFF graya(207,1)
+            12: (208,208,208,255) #D0D0D0FF graya(208,1)
+            14: (209,209,209,255) #D1D1D1FF graya(209,1)
+            28: (210,210,210,255) #D2D2D2FF graya(210,1)
+            18: (211,211,211,255) #D3D3D3FF graya(211,1)
+            15: (212,212,212,255) #D4D4D4FF graya(212,1)
+            21: (213,213,213,255) #D5D5D5FF graya(213,1)
+           122: (214,214,214,255) #D6D6D6FF graya(214,1)
+            17: (215,215,215,255) #D7D7D7FF graya(215,1)
+            21: (216,216,216,255) #D8D8D8FF graya(216,1)
+           137: (217,217,217,255) #D9D9D9FF graya(217,1)
+            16: (218,218,218,255) #DADADAFF graya(218,1)
+            18: (219,219,219,255) #DBDBDBFF graya(219,1)
+             9: (220,220,220,255) #DCDCDCFF graya(220,1)
+            14: (221,221,221,255) #DDDDDDFF graya(221,1)
+            15: (222,222,222,255) #DEDEDEFF graya(222,1)
+            40: (223,223,223,255) #DFDFDFFF graya(223,1)
+            24: (224,224,224,255) #E0E0E0FF graya(224,1)
+            15: (225,225,225,255) #E1E1E1FF graya(225,1)
+            12: (226,226,226,255) #E2E2E2FF graya(226,1)
+            18: (227,227,227,255) #E3E3E3FF graya(227,1)
+            11: (228,228,228,255) #E4E4E4FF graya(228,1)
+            41: (229,229,229,255) #E5E5E5FF graya(229,1)
+            23: (230,230,230,255) #E6E6E6FF graya(230,1)
+            16: (231,231,231,255) #E7E7E7FF graya(231,1)
+            15: (232,232,232,255) #E8E8E8FF graya(232,1)
+            20: (233,233,233,255) #E9E9E9FF graya(233,1)
+            22: (234,234,234,255) #EAEAEAFF graya(234,1)
+           164: (235,235,235,255) #EBEBEBFF graya(235,1)
+            29: (236,236,236,255) #ECECECFF graya(236,1)
+            20: (237,237,237,255) #EDEDEDFF graya(237,1)
+           122: (238,238,238,255) #EEEEEEFF graya(238,1)
+            22: (239,239,239,255) #EFEFEFFF graya(239,1)
+            29: (240,240,240,255) #F0F0F0FF graya(240,1)
+            39: (241,241,241,255) #F1F1F1FF graya(241,1)
+            27: (242,242,242,255) #F2F2F2FF graya(242,1)
+            30: (243,243,243,255) #F3F3F3FF graya(243,1)
+            22: (244,244,244,255) #F4F4F4FF graya(244,1)
+            20: (245,245,245,255) #F5F5F5FF graya(245,1)
+            32: (246,246,246,255) #F6F6F6FF graya(246,1)
+            49: (247,247,247,255) #F7F7F7FF graya(247,1)
+            18: (248,248,248,255) #F8F8F8FF graya(248,1)
+            35: (249,249,249,255) #F9F9F9FF graya(249,1)
+            30: (250,250,250,255) #FAFAFAFF graya(250,1)
+            20: (251,251,251,255) #FBFBFBFF graya(251,1)
+            81: (252,252,252,255) #FCFCFCFF graya(252,1)
+            30: (253,253,253,255) #FDFDFDFF graya(253,1)
+            56: (254,254,254,255) #FEFEFEFF graya(254,1)
+        149969: (255,255,255,255) #FFFFFFFF graya(255,1)
+  Rendering intent: Undefined
+  Gamma: 0.454545
+  Chromaticity:
+    red primary: (0.64,0.33,0)
+    green primary: (0.3,0.6,0)
+    blue primary: (0.15,0.06,0)
+    white point: (0.3127,0.329,0)
+  Matte color: grey74
+  Background color: white
+  Border color: srgb(223,223,223)
+  Transparent color: black
+  Interlace: None
+  Intensity: Undefined
+  Compose: Over
+  Page geometry: 1920x1080+489+342
+  Origin geometry: +489+342
+  Dispose: Undefined
+  Iterations: 0
+  Compression: Zip
+  Orientation: Undefined
+  Profiles:
+    Profile-xmp: 1212 bytes
+  Properties:
+    date:create: 2026-01-29T19:11:17+00:00
+    date:modify: 2026-01-29T19:22:08+00:00
+    date:timestamp: 2026-01-29T20:19:11+00:00
+    pdf:Author: Matheus Filipe Lorenzoni
+    png:bKGD: chunk was found (see Background color, above)
+    png:caNv: width=1920, height=1080, x_offset=489, y_offset=342
+    png:cHRM: chunk was found (see Chromaticity, above)
+    png:IHDR.bit-depth-orig: 8
+    png:IHDR.bit_depth: 8
+    png:IHDR.color-type-orig: 4
+    png:IHDR.color_type: 4 (GrayAlpha)
+    png:IHDR.interlace_method: 0 (Not interlaced)
+    png:IHDR.width,height: 940, 396
+    png:pHYs: x_res=3779, y_res=3779, units=1
+    png:text: 6 tEXt/zTXt/iTXt chunks were found
+    png:text-encoded profiles: 1 were found
+    png:tIME: 2026-01-29T19:22:08Z
+    signature: 5fd93f4e46744d02e889de03c14caffbc506e30ff7e4d55d013e44468782b57f
+    xmp:CreatorTool: Canva (Renderer) doc=DAGdlXnwaXg user=UADlRSQt5mc brand=Equipe Design Pro template=
+  Artifacts:
+    verbose: true
+  Tainted: False
+  Filesize: 19105B
+  Number pixels: 372240
+  Pixel cache type: Memory
+  Pixels per second: 67.7909MP
+  User time: 0.005u
+  Elapsed time: 0:01.005
+  Version: ImageMagick 7.1.2-13 Q16-HDRI x64 dd991e2:20260119 https://imagemagick.org
