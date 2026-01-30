@@ -5,33 +5,47 @@
         "downloadApp": "Baixar o app",
         "sections": {
             "culture": {
-                "title": "A Cultura // Do\nCorre",
-                "subtitles": "ALTA PERFORMANCE — LÓGICA \"RÁPIDO OU ÚLTIMO\"\nGEOGRAFIA URBANA — DE DOCKLANDS AO PHOENIX\nMENTALIDADE DE MATILHA // CORRA COMO UM",
-                "quote": "CORRIDA É MAIS DO QUE COLOCAR UM TÊNIS E CORRER",
+                "title": "COMO FUNCIONA",
+                "subtitles": "ACOMPANHE SEU PROGRESSO // GANHE PONTOS // ENTRE NO RANKING",
+                "quote": "MOVIDO A DADOS. ALIMENTADO PELA CULTURA.",
                 "events": {
                     "event1": {
-                        "title": "Corrida Noturna",
-                        "location": "DOCKLANDS",
-                        "day": "24",
-                        "month": "JAN",
-                        "weekday": "QUA"
+                        "title": "Terças de Ritmo",
+                        "location": "GRAND CANAL DOCK",
+                        "day": "TER",
+                        "month": "SEM",
+                        "weekday": "19:00"
                     },
                     "event2": {
-                        "title": "Longão",
+                        "title": "Treino de Velocidade",
+                        "location": "UCD TRACK",
+                        "day": "QUI",
+                        "month": "SEM",
+                        "weekday": "19:00"
+                    },
+                    "event3": {
+                        "title": "Sábado Social",
                         "location": "PHOENIX PARK",
-                        "day": "28",
-                        "month": "JAN",
-                        "weekday": "DOM"
+                        "day": "SÁB",
+                        "month": "SEM",
+                        "weekday": "09:30"
+                    },
+                    "event4": {
+                        "title": "Domingo de Corrida",
+                        "location": "DUN LAOGHAIRE",
+                        "day": "DOM",
+                        "month": "SEM",
+                        "weekday": "10:00"
                     }
                 },
                 "rapidResponse": "RESPOSTA_RÁPIDA",
                 "stats": {
-                    "distance": "128.5 KM",
-                    "labelDist": "DISTÂNCIA MENSAL",
-                    "pace": "05:12 /KM",
-                    "labelPace": "RITMO MÉDIO",
+                    "distance": "128.5k",
+                    "labelDist": "DISTÂNCIA DO CLUBE",
+                    "pace": "5:12",
+                    "labelPace": "RITMO MÉDIO /KM",
                     "points": "12.450",
-                    "labelPoints": "PONTOS DA COMUNIDADE"
+                    "labelPoints": "PONTOS GANHOS"
                 },
                 "extras": {
                     "playlistTitle": "Sons da Cidade Vol. 1",
@@ -51,6 +65,50 @@
                 "route02": "Rota 02",
                 "canal": "CANAL"
             },
+            "plans": {
+                "title": "ASSOCIAÇÃO",
+                "subtitle": "ELEVE SEU JOGO",
+                "tiers": {
+                    "free": {
+                        "name": "CORRE AMIGO",
+                        "description": "Acesso inicial à comunidade.",
+                        "price": "GRÁTIS",
+                        "features": {
+                            "economy": "Apenas Ganhar Pontos",
+                            "events": "Acesso a Eventos Abertos",
+                            "marketplace": "Marketplace (Vendas Padrão)",
+                            "coupons": "Cupons de Parceiros Externos"
+                        }
+                    },
+                    "pro": {
+                        "name": "CORRE PRO",
+                        "description": "Para o corredor consistente buscando retorno.",
+                        "price": "€9.90 / MÊS",
+                        "features": {
+                            "discount": "Desconto de 5% ou 10% via XP",
+                            "economy": "Marketplace Híbrido (20% Pontos)",
+                            "sales": "1 Destaque de Venda",
+                            "events": "Eventos Exclusivos (Sem Convidados)"
+                        }
+                    },
+                    "club": {
+                        "name": "CORRE CLUB",
+                        "description": "Experiência completa exclusiva e status social.",
+                        "price": "€29.90 / MÊS",
+                        "features": {
+                            "welcome": "Kit de Boas-vindas (Camiseta + Gel...)",
+                            "guest": "Passe de Convidado Mensal",
+                            "priority": "Fila de Prioridade Máxima",
+                            "sales": "3 Destaques de Venda",
+                            "profile": "Perfil Dourado"
+                        }
+                    }
+                },
+                "labels": {
+                    "select": "SELECIONAR PLANO",
+                    "current": "PLANO ATUAL"
+                }
+            },
             "essentials": {
                 "title": "Clube //\nEssenciais",
                 "viewAll": "VER TUDO",
@@ -65,13 +123,15 @@
             }
         },
         "footer": {
-            "support": "Suporte",
-            "faq": "FAQ",
-            "shipping": "Envio",
-            "returns": "Devoluções",
+            "connect": "Conectar",
+            "instagram": "Instagram",
+            "tiktok": "TikTok",
+            "strava": "Strava",
+            "contact": "Contato",
+            "email": "hello@corredublin.com",
             "legal": "Legal",
-            "privacy": "Privacidade",
-            "terms": "Termos",
+            "privacy": "Política de Privacidade",
+            "terms": "Termos de Serviço",
             "newsletter": "Newsletter",
             "enterEmail": "DIGITE SEU EMAIL",
             "copyright": "© 2026 CORRE DUBLIN LTD.",
