@@ -53,3 +53,18 @@ export async function togglePartnerStatus(partnerId: string, isActive: boolean):
  * but simplest is just checking if role is partner and maybe auto-creating if missing, 
  * or manual creation). For now assuming creation happens elsewhere or we just list them.
  */
+/**
+ * Update partner details
+ */
+export async function updatePartner(partnerId: string, updates: Partial<Partner>): Promise<Partner> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('partners')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', partnerId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}

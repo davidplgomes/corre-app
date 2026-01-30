@@ -1,57 +1,47 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
+import { GlassCard } from '@/components/ui/glass-card';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid } from 'recharts';
+import { ArrowUpRight, MapPin, Calendar, Tag, Activity, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { getPartnerPlaces } from '@/lib/services/places';
 import { getPartnerCoupons, getPartnerCouponStats } from '@/lib/services/coupons';
 import { getEventsByCreator } from '@/lib/services/events';
-import type { User, PartnerPlace, PartnerCoupon, Event } from '@/types';
-import {
-    Building2, MapPin, Tag, Calendar, BarChart3,
-    LogOut, Plus, ArrowRight, ArrowUpRight
-} from 'lucide-react';
+import type { PartnerPlace, PartnerCoupon, Event } from '@/types';
 
-export default function PartnerDashboard() {
-    const router = useRouter();
-    const [user, setUser] = useState<User | null>(null);
+export default function PartnerDashboardPage() {
+    const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({
+    const [data, setData] = useState({
         totalPlaces: 0,
         activeCoupons: 0,
         totalRedemptions: 0,
         upcomingEvents: 0,
+        places: [] as PartnerPlace[],
+        coupons: [] as PartnerCoupon[],
+        events: [] as Event[],
+        activityChart: [] as any[]
     });
-    const [places, setPlaces] = useState<PartnerPlace[]>([]);
-    const [coupons, setCoupons] = useState<PartnerCoupon[]>([]);
-    const [events, setEvents] = useState<Event[]>([]);
+
+    // Mock Activity Data for Chart (replace with real analytics if available)
+    const mockActivityData = [
+        { time: 'Mon', val: 12 }, { time: 'Tue', val: 18 }, { time: 'Wed', val: 45 },
+        { time: 'Thu', val: 28 }, { time: 'Fri', val: 55 }, { time: 'Sat', val: 42 },
+        { time: 'Sun', val: 60 },
+    ];
 
     useEffect(() => {
-        const checkAuth = async () => {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: userData } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-
-            if (userData?.role !== 'partner') {
-                router.push('/login');
-                return;
-            }
-
-            setUser(userData as User);
-
+        const fetchDashboardData = async () => {
             try {
+                const supabase = createClient();
+                const { data: { session } } = await supabase.auth.getSession();
+
+                if (!session) return;
+
                 const [placesData, couponsData, eventsData, couponStats] = await Promise.all([
                     getPartnerPlaces(session.user.id),
                     getPartnerCoupons(session.user.id),
@@ -59,272 +49,293 @@ export default function PartnerDashboard() {
                     getPartnerCouponStats(session.user.id),
                 ]);
 
-                setPlaces(placesData);
-                setCoupons(couponsData);
-                setEvents(eventsData);
-
                 const upcomingEvents = eventsData.filter(e => new Date(e.event_datetime) > new Date());
 
-                setStats({
+                setData({
                     totalPlaces: placesData.length,
                     activeCoupons: couponStats.activeCoupons,
                     totalRedemptions: couponStats.totalRedemptions,
                     upcomingEvents: upcomingEvents.length,
+                    places: placesData,
+                    coupons: couponsData,
+                    events: eventsData,
+                    activityChart: mockActivityData // Use real data when available
                 });
             } catch (error) {
-                console.error('Error fetching partner data:', error);
+                console.error("Dashboard Fetch Error:", error);
+                toast.error("Failed to load dashboard data");
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
 
-        checkAuth();
-    }, [router]);
-
-    const handleLogout = async () => {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-        router.push('/login');
-    };
+        fetchDashboardData();
+    }, [timeRange]);
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full border-2 border-white/10 border-t-[#FF5722] animate-spin" />
+            <div className="h-full w-full flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-[#FF5722] animate-spin" />
             </div>
         );
     }
 
-    const menuItems = [
-        { icon: MapPin, label: 'Places', href: '/partner/dashboard/places', count: stats.totalPlaces, desc: 'Your locations' },
-        { icon: Tag, label: 'Coupons', href: '/partner/dashboard/coupons', count: stats.activeCoupons, desc: 'Active discounts' },
-        { icon: Calendar, label: 'Events', href: '/partner/dashboard/events', count: stats.upcomingEvents, desc: 'Upcoming runs' },
-        { icon: BarChart3, label: 'Analytics', href: '/partner/dashboard/analytics', count: null, desc: 'Performance data' },
-    ];
-
-    const statsData = [
-        { label: 'REDEMPTIONS', value: stats.totalRedemptions },
-        { label: 'ACTIVE COUPONS', value: stats.activeCoupons },
-        { label: 'UPCOMING EVENTS', value: stats.upcomingEvents },
-        { label: 'PLACES', value: stats.totalPlaces },
-    ];
-
     return (
-        <div className="min-h-screen bg-black text-white selection:bg-[#FF5722] selection:text-white">
-            {/* Background Grid */}
-            <div className="fixed inset-0 grid-overlay opacity-10 pointer-events-none z-0" />
-
-            {/* Header */}
-            <header className="relative z-10 border-b border-white/10">
-                <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-                    <div className="flex justify-between items-center h-20">
-                        <div className="flex items-center gap-4">
-                            <Link href="/" className="flex items-center gap-4 group">
-                                <Image
-                                    src="/corre_logo.png"
-                                    alt="CORRE"
-                                    width={120}
-                                    height={40}
-                                    className="h-8 w-auto opacity-80 group-hover:opacity-100 transition-opacity"
-                                />
-                            </Link>
-                            <div className="h-6 w-px bg-white/20" />
-                            <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-[#FF5722]" />
-                                <span className="text-xs font-mono font-bold tracking-[0.2em] text-white/60">PARTNER</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                            <span className="text-sm text-white/40 hidden md:block">{user?.email}</span>
-                            <button
-                                onClick={handleLogout}
-                                className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors group"
-                            >
-                                <span className="hidden sm:inline">Logout</span>
-                                <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <main className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 py-12">
-                {/* Hero */}
-                <div className="mb-16">
-                    <p className="text-sm tracking-[0.3em] text-white/40 uppercase mb-4">
-                        Welcome back, {user?.full_name?.split(' ')[0] || 'Partner'}
-                    </p>
-                    <h1 className="text-5xl lg:text-7xl font-black text-white italic tracking-tighter leading-[0.85]">
-                        Partner Dashboard
+        <div className="space-y-6">
+            {/* Header: Clean & Functional */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-8">
+                <div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight uppercase mb-2">
+                        Overview
                     </h1>
-                    <div className="w-24 h-2 bg-[#FF5722] mt-6" />
-                    <p className="text-lg text-gray-400 mt-6 max-w-xl">
-                        Manage your places, coupons, and events to engage with the running community.
-                    </p>
-                </div>
-
-                {/* Stats Row */}
-                <div className="mb-16">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="h-px bg-white/20 flex-1" />
-                        <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em]">YOUR STATS</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {statsData.map((stat, i) => (
-                            <div key={i} className="p-6 rounded-2xl border border-white/10 bg-[#0A0A0A] hover:border-white/20 transition-all duration-500">
-                                <p className="text-xs font-mono font-bold text-white/40 tracking-[0.15em] mb-2">{stat.label}</p>
-                                <p className="text-4xl font-black text-white tracking-tighter">{stat.value.toLocaleString()}</p>
-                            </div>
-                        ))}
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-white/40">{new Date().toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' })} • Partner Portal</span>
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="mb-16 p-8 rounded-2xl border border-[#FF5722]/30 bg-gradient-to-r from-[#FF5722]/10 to-transparent">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex flex-wrap gap-2 md:gap-4 w-full lg:w-auto">
+                    <button
+                        onClick={() => {
+                            const newRange = timeRange === '7d' ? '30d' : '7d';
+                            setTimeRange(newRange);
+                            toast.info(`Switched to Last ${newRange === '7d' ? '7' : '30'} Days view`);
+                        }}
+                        className="h-10 flex-1 lg:flex-none px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors flex items-center justify-center gap-2 active:scale-95 duration-100"
+                    >
+                        <Calendar className="w-4 h-4 text-white/60" />
+                        <span>Last {timeRange === '7d' ? '7' : '30'} Days</span>
+                    </button>
+                    <Link href="/partner/dashboard/coupons/new" className="flex-1 lg:flex-none">
+                        <button
+                            className="h-10 w-full px-4 bg-[#FF5722] hover:bg-[#F4511E] rounded-lg text-sm font-bold text-white transition-all shadow-lg shadow-orange-500/20 active:scale-95 transform duration-100"
+                        >
+                            Create Coupon
+                        </button>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Top Row: Key Metrics */}
+            <div className="flex flex-col md:grid md:grid-cols-2 lg:grid lg:grid-cols-4 gap-4 md:gap-6">
+                <Link href="/partner/dashboard/coupons" className="contents">
+                    <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full relative overflow-hidden group cursor-pointer hover:border-[#FF5722]/30 transition-all">
+                        <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
                         <div>
-                            <h3 className="text-2xl font-black italic text-white mb-2">Quick Actions</h3>
-                            <p className="text-gray-400">Create new content to engage with runners</p>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Total Redemptions</p>
+                                <Tag className="w-4 h-4 text-white/20" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">
+                                {data.totalRedemptions}
+                            </h3>
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                            <Link
-                                href="/partner/dashboard/coupons/new"
-                                className="group inline-flex items-center gap-3 px-5 py-3 bg-[#FF5722] hover:bg-[#E64A19] rounded-xl text-white font-medium transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                New Coupon
-                                <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                            </Link>
-                            <Link
-                                href="/partner/dashboard/events/new"
-                                className="group inline-flex items-center gap-3 px-5 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-white font-medium border border-white/10 transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                New Event
-                            </Link>
-                            <Link
-                                href="/partner/dashboard/places/new"
-                                className="group inline-flex items-center gap-3 px-5 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-white font-medium border border-white/10 transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Place
-                            </Link>
+                        <div>
+                            <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
+                                <ArrowUpRight className="w-3 h-3" />
+                                <span>Views</span>
+                                <span className="text-white/20 font-medium">Analytics</span>
+                            </div>
+                            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full w-[70%] bg-[#FF5722] rounded-full" />
+                            </div>
+                        </div>
+                    </GlassCard>
+                </Link>
+
+                <Link href="/partner/dashboard/coupons" className="contents">
+                    <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Active Coupons</p>
+                                <Activity className="w-4 h-4 text-white/20" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{data.activeCoupons}</h3>
+                        </div>
+                        <div className="h-10 flex items-end gap-1">
+                            {[40, 65, 50, 80, 60, 90, 70].map((h, i) => (
+                                <div key={i} className="flex-1 bg-white/20 rounded-t-sm hover:bg-[#FF5722] transition-colors" style={{ height: `${h}%` }} />
+                            ))}
+                        </div>
+                    </GlassCard>
+                </Link>
+
+                <Link href="/partner/dashboard/events" className="contents">
+                    <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Upcoming Events</p>
+                                <Calendar className="w-4 h-4 text-white/20" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{data.upcomingEvents}</h3>
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
+                                <ArrowUpRight className="w-3 h-3" />
+                                <span>Upcoming</span>
+                            </div>
+
+                        </div>
+                    </GlassCard>
+                </Link>
+
+                <Link href="/partner/dashboard/places" className="contents">
+                    <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Total Places</p>
+                                <MapPin className="w-4 h-4 text-white/20" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{data.totalPlaces}</h3>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+                                <div className="flex-1 bg-[#FF5722] rounded-full" />
+                                <div className="flex-1 bg-[#FF5722] rounded-full" />
+                                <div className="w-2 bg-white/20 rounded-full" />
+                            </div>
+                        </div>
+                        <p className="text-xs text-white/30 mt-1">Manage locations</p>
+                    </GlassCard>
+                </Link>
+            </div>
+
+            {/* Middle Row: Activity & Top Items */}
+            <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6 lg:h-[400px]">
+
+                {/* Main Activity Chart - 70% Width on Desktop */}
+                <GlassCard className="w-full lg:col-span-8 p-6 flex flex-col h-[300px] lg:h-full">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 className="text-lg font-bold text-white uppercase tracking-tight">Engagement</h3>
+                            <p className="text-xs text-white/40 font-medium mt-1">Interactions with your coupons and events.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-1 rounded bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-bold uppercase tracking-wider">Redemptions</span>
                         </div>
                     </div>
-                </div>
 
-                {/* Menu Grid */}
-                <div className="mb-16">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="h-px bg-white/20 flex-1" />
-                        <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em]">MANAGE</h3>
+                    <div className="flex-1 w-full min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={data.activityChart}>
+                                <defs>
+                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
+                                        <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#FF5722' }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="val"
+                                    stroke="#FF5722"
+                                    strokeWidth={3}
+                                    fill="url(#chartGradient)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
+                </GlassCard>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {menuItems.map((item, i) => (
-                            <Link
-                                key={i}
-                                href={item.href}
-                                className="group p-6 rounded-2xl border border-white/10 bg-[#0A0A0A] hover:border-[#FF5722]/50 transition-all duration-500"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-[#FF5722]/10 transition-colors">
-                                            <item.icon className="w-7 h-7 text-white/60 group-hover:text-[#FF5722] transition-colors" />
+                {/* Top Coupons/Places List */}
+                <div className="w-full lg:col-span-4 h-full min-h-[400px] flex flex-col gap-6">
+                    <GlassCard className="flex-1 p-6 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-bold text-white uppercase">Your Places</h3>
+                            <Link href="/partner/dashboard/places" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View All</Link>
+                        </div>
+                        <div className="space-y-3 overflow-y-auto pr-2">
+                            {data.places.slice(0, 3).map((place) => (
+                                <div key={place.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-[#FF5722]">
+                                            <MapPin className="w-4 h-4" />
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-black italic text-white">{item.label}</h3>
-                                            <p className="text-sm text-gray-500">{item.desc}</p>
+                                            <p className="text-xs font-bold text-white truncate w-24">{place.name}</p>
+                                            <p className="text-[10px] text-white/40 truncate w-24">{place.address}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        {item.count !== null && (
-                                            <span className="text-2xl font-black text-white/20 group-hover:text-[#FF5722] transition-colors">{item.count}</span>
-                                        )}
-                                        <ArrowRight className="w-5 h-5 text-white/20 group-hover:text-[#FF5722] group-hover:translate-x-1 transition-all" />
+                                    <div className={`w-2 h-2 rounded-full ${place.is_active ? 'bg-[#22c55e]' : 'bg-white/20'}`} />
+                                </div>
+                            ))}
+                            {data.places.length === 0 && <p className="text-xs text-white/40 text-center py-4">No places added yet.</p>}
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard className="flex-1 p-6 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-bold text-white uppercase">Active Coupons</h3>
+                            <Link href="/partner/dashboard/coupons" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View All</Link>
+                        </div>
+                        <div className="space-y-3 overflow-y-auto pr-2">
+                            {data.coupons.slice(0, 3).map((coupon) => (
+                                <div key={coupon.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-[#FF5722]">
+                                            <Tag className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-white truncate w-24">{coupon.code}</p>
+                                            <p className="text-[10px] text-white/40">{coupon.discount_percent}% Off</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs text-white/60 font-mono">{coupon.current_uses} uses</span>
+                                </div>
+                            ))}
+                            {data.coupons.length === 0 && <p className="text-xs text-white/40 text-center py-4">No active coupons.</p>}
+                        </div>
+                    </GlassCard>
+                </div>
+            </div>
+
+            {/* Bottom Row: Recent Events */}
+            <div className="grid grid-cols-1 gap-6">
+                <GlassCard className="p-0 flex flex-col">
+                    <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                        <h3 className="text-sm font-bold text-white uppercase">Upcoming Events</h3>
+                        <Link href="/partner/dashboard/events">
+                            <button className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View Schedule</button>
+                        </Link>
+                    </div>
+                    <div className="flex-1 p-2">
+                        {data.events.length > 0 ? data.events.slice(0, 3).map((event, i) => (
+                            <Link key={i} href="/partner/dashboard/events" className="flex items-center justify-between p-3 hover:bg-white/5 rounded-lg group transition-colors cursor-pointer">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center font-bold text-white/40 group-hover:text-white group-hover:bg-[#FF5722] transition-all">
+                                        {new Date(event.event_datetime).getDate()}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white group-hover:text-[#FF5722] transition-colors">{event.title}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <p className="text-xs text-white/40 flex items-center gap-1">
+                                                <Calendar className="w-3 h-3" />
+                                                {new Date(event.event_datetime).toLocaleDateString('en-IE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location_name || 'TBA'}</p>
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="text-right">
+                                    <span className={`block px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider mb-1 w-fit ml-auto ${event.event_type === 'run' ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-white/5 text-white/40'
+                                        }`}>
+                                        {event.event_type}
+                                    </span>
+                                </div>
                             </Link>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Recent Items */}
-                <div>
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="h-px bg-white/20 flex-1" />
-                        <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em]">RECENT</h3>
-                    </div>
-
-                    {places.length === 0 && coupons.length === 0 ? (
-                        <div className="p-12 rounded-2xl border border-white/10 bg-[#0A0A0A] text-center">
-                            <div className="w-16 h-16 mx-auto rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                                <Tag className="w-8 h-8 text-white/20" />
+                        )) : (
+                            <div className="p-8 text-center text-white/40 text-xs text-center border-t border-white/5">
+                                No scheduled events found.
                             </div>
-                            <p className="text-xl font-black italic text-white mb-2">No items yet</p>
-                            <p className="text-gray-500 mb-6">Start by adding a place or creating a coupon</p>
-                            <Link
-                                href="/partner/dashboard/places/new"
-                                className="inline-flex items-center gap-2 text-[#FF5722] hover:underline"
-                            >
-                                Get started <ArrowRight className="w-4 h-4" />
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="grid lg:grid-cols-2 gap-4">
-                            {/* Places */}
-                            {places.length > 0 && (
-                                <div className="p-6 rounded-2xl border border-white/10 bg-[#0A0A0A]">
-                                    <h4 className="text-sm font-mono font-bold text-white/40 tracking-[0.1em] mb-4">YOUR PLACES</h4>
-                                    <div className="space-y-3">
-                                        {places.slice(0, 3).map((place) => (
-                                            <div key={place.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                                                <div className="flex items-center gap-3">
-                                                    <MapPin className="w-4 h-4 text-[#FF5722]" />
-                                                    <div>
-                                                        <p className="text-sm text-white">{place.name}</p>
-                                                        <p className="text-xs text-white/40">{place.address || 'No address'}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${place.is_active ? 'bg-[#22c55e] shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-white/20'}`} />
-                                                    <span className="text-xs text-white/40">{place.is_active ? 'Active' : 'Inactive'}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Coupons */}
-                            {coupons.length > 0 && (
-                                <div className="p-6 rounded-2xl border border-white/10 bg-[#0A0A0A]">
-                                    <h4 className="text-sm font-mono font-bold text-white/40 tracking-[0.1em] mb-4">YOUR COUPONS</h4>
-                                    <div className="space-y-3">
-                                        {coupons.slice(0, 3).map((coupon) => (
-                                            <div key={coupon.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                                                <div className="flex items-center gap-3">
-                                                    <Tag className="w-4 h-4 text-[#FF5722]" />
-                                                    <div>
-                                                        <p className="text-sm text-white font-mono">{coupon.code}</p>
-                                                        <p className="text-xs text-white/40">{coupon.discount_percent}% off • {coupon.current_uses} uses</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${coupon.is_active ? 'bg-[#22c55e] shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-white/20'}`} />
-                                                    <span className="text-xs text-white/40">{coupon.is_active ? 'Active' : 'Inactive'}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </main>
+                        )}
+                    </div>
+                </GlassCard>
+            </div>
         </div>
     );
 }

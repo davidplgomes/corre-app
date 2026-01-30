@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Navigation } from '@/components/Navigation';
 import DisplayCards from '@/components/ui/display-cards';
+import { UpcomingEventsDeck } from '@/components/upcoming-events-deck';
 import { useTranslations } from 'next-intl';
 
 export default function Home() {
@@ -44,7 +45,7 @@ export default function Home() {
             <Navigation />
 
             {/* HERO */}
-            <section className="relative h-screen min-h-[700px] max-h-[1000px] overflow-hidden">
+            <section className="relative h-screen min-h-[600px] md:min-h-[700px] max-h-[1000px] overflow-hidden">
                 {/* Background with blur */}
                 <div className="absolute inset-0">
                     <div className="absolute inset-0 bg-black" /> {/* Fallback black background */}
@@ -67,22 +68,22 @@ export default function Home() {
 
                 {/* Content with scroll fade */}
                 <div
-                    className="relative h-full flex flex-col justify-between px-6 md:px-16 lg:px-24 py-32 transition-opacity duration-100"
+                    className="relative h-full flex flex-col justify-between px-6 md:px-16 lg:px-24 py-24 md:py-32 transition-opacity duration-100"
                     style={{ opacity: scrollOpacity }}
                 >
                     {/* Top: Tagline */}
-                    <p className="text-sm tracking-[0.3em] text-white/60 uppercase">
+                    <p className="text-xs md:text-sm tracking-[0.3em] text-white/60 uppercase">
                         {t('tagline')}
                     </p>
 
                     {/* Middle: Logo with drop-shadow glow effect */}
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center md:justify-start">
                         <Image
                             src="/corre_logo.png"
                             alt="CORRE DUBLIN"
                             width={800}
                             height={300}
-                            className="w-full h-auto max-w-[500px] md:max-w-[650px] drop-shadow-[0_0_60px_rgba(255,255,255,0.3)] filter bg-transparent"
+                            className="w-full h-auto max-w-[320px] md:max-w-[650px] drop-shadow-[0_0_60px_rgba(255,255,255,0.3)] filter bg-transparent"
                             priority
                             unoptimized
                         />
@@ -92,7 +93,7 @@ export default function Home() {
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                         <a
                             href="#download"
-                            className="group inline-flex items-center gap-4 text-white"
+                            className="group inline-flex items-center gap-4 text-white justify-center md:justify-start"
                         >
                             <span className="text-sm tracking-[0.2em] uppercase">{t('downloadApp')}</span>
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
@@ -109,8 +110,7 @@ export default function Home() {
             <section id="features" className="bg-[#050505] relative w-full border-b border-white/10">
                 <div className="flex flex-col lg:flex-row">
                     {/* LEFT PANE: Sticky Visuals */}
-                    {/* LEFT PANE: Sticky Visuals */}
-                    <div className="lg:w-1/2 h-[50vh] lg:h-screen lg:sticky lg:top-0 relative overflow-hidden border-r border-white/10 group">
+                    <div className="w-full lg:w-1/2 h-[50vh] lg:h-screen lg:sticky lg:top-0 relative overflow-hidden border-r border-white/10 group">
                         <Image
                             src="/culture_community.png"
                             alt="Culture"
@@ -120,22 +120,22 @@ export default function Home() {
                     </div>
 
                     {/* RIGHT PANE: Scrolling Content */}
-                    <div className="lg:w-1/2 flex flex-col min-h-screen">
+                    <div className="w-full lg:w-1/2 flex flex-col min-h-screen">
                         {/* Header Block: The Manifesto */}
                         <div className="p-8 lg:p-24 pb-0 flex flex-col items-start gap-8">
-                            <h2 className="text-5xl lg:text-7xl font-black text-white italic tracking-tighter leading-[0.8] mix-blend-difference">
+                            <h2 className="text-4xl md:text-5xl lg:text-7xl font-black text-white italic tracking-tighter leading-[0.9] mix-blend-difference break-words w-full">
                                 {t('sections.culture.title')}
                             </h2>
                             <div className="w-24 h-2 bg-[#FF5722]" />
 
                             {/* Subtitles: The 3 Pillars */}
                             <div className="flex flex-col gap-2">
-                                <p className="text-xl md:text-2xl font-black text-[#FF5722] leading-tight uppercase tracking-tight">
+                                <p className="text-lg md:text-2xl font-black text-[#FF5722] leading-tight uppercase tracking-tight">
                                     {t('sections.culture.subtitles')}
                                 </p>
                             </div>
 
-                            <p className="text-lg text-gray-400 max-w-xl leading-relaxed mt-4">
+                            <p className="text-base md:text-lg text-gray-400 max-w-xl leading-relaxed mt-4">
                                 {t.rich('sections.culture.manifesto', {
                                     span_bold: (chunks) => <span className="text-white font-bold">{chunks}</span>
                                 })}
@@ -148,63 +148,14 @@ export default function Home() {
 
 
                             {/* Weekly Schedule - Visual Deck */}
-                            <div className="flex flex-col gap-6">
+                            <div className="flex flex-col gap-6 mt-12 lg:mt-0">
                                 <div className="flex items-center gap-4">
                                     <div className="h-px bg-white/20 flex-1" />
                                     <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em] uppercase">{t('sections.culture.events.header')}</h3>
                                 </div>
 
-                                <div className="py-2">
-                                    <DisplayCards cards={[
-                                        {
-                                            title: t('sections.culture.events.event1.title'),
-                                            location: t('sections.culture.events.event1.location'),
-                                            date: "14",
-                                            month: "OCT",
-                                            weekday: "TUE",
-                                            time: "19:00",
-                                            points: "10PTS",
-                                            temperature: "12°C",
-                                            isNext: true,
-                                            className: "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration:700 hover:grayscale-0 before:left-0 before:top-0 bg-[#0A0A0A] border-[#FF5722]/30"
-                                        },
-                                        {
-                                            title: t('sections.culture.events.event2.title'),
-                                            location: t('sections.culture.events.event2.location'),
-                                            date: "16",
-                                            month: "OCT",
-                                            weekday: "THU",
-                                            time: "19:00",
-                                            points: "5PTS",
-                                            temperature: "10°C",
-                                            isNext: false,
-                                            className: "[grid-area:stack] translate-x-12 translate-y-8 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration:700 hover:grayscale-0 before:left-0 before:top-0 bg-[#121212]"
-                                        },
-                                        {
-                                            title: t('sections.culture.events.event3.title'),
-                                            location: t('sections.culture.events.event3.location'),
-                                            date: "18",
-                                            month: "OCT",
-                                            weekday: "SAT",
-                                            time: "09:30",
-                                            points: "15PTS",
-                                            temperature: "14°C",
-                                            isNext: false,
-                                            className: "[grid-area:stack] translate-x-24 translate-y-16 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration:700 hover:grayscale-0 before:left-0 before:top-0 bg-[#121212]"
-                                        },
-                                        {
-                                            title: t('sections.culture.events.event4.title'),
-                                            location: t('sections.culture.events.event4.location'),
-                                            date: "19",
-                                            month: "OCT",
-                                            weekday: "SUN",
-                                            time: "10:00",
-                                            points: "10PTS",
-                                            temperature: "11°C",
-                                            isNext: false,
-                                            className: "[grid-area:stack] translate-x-36 translate-y-24 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration:700 hover:grayscale-0 before:left-0 before:top-0 bg-[#0A0A0A] border-[#FF5722]/30"
-                                        }
-                                    ]} />
+                                <div className="py-2 w-full overflow-hidden">
+                                    <UpcomingEventsDeck />
                                 </div>
                             </div>
 
@@ -219,7 +170,7 @@ export default function Home() {
             <section id="pricing" className="py-24 bg-[#050505] border-b border-white/10">
                 <div className="max-w-[1400px] mx-auto px-6">
                     <div className="flex flex-col items-center text-center mb-20">
-                        <h2 className="text-6xl lg:text-8xl font-black text-white italic tracking-tighter leading-[0.8] mb-6">
+                        <h2 className="text-4xl md:text-6xl lg:text-8xl font-black text-white italic tracking-tighter leading-[0.8] mb-6">
                             {t('sections.plans.title')}
                         </h2>
                         <div className="flex items-center gap-4">
@@ -335,9 +286,9 @@ export default function Home() {
 
 
             {/* 6. Footer */}
-            <footer className="bg-black pt-32 pb-4 overflow-hidden relative">
+            <footer className="bg-black pt-16 md:pt-32 pb-4 overflow-hidden relative">
                 <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-xs font-bold tracking-widest uppercase mb-32">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 text-lg md:text-xs font-bold tracking-widest uppercase mb-16 md:mb-32">
                         <ul className="space-y-4">
                             <li className="text-gray-500 mb-4">{t('footer.connect')}</li>
                             <li><a href="#" className="hover:text-[#FF5722]">{t('footer.instagram')}</a></li>
@@ -365,7 +316,7 @@ export default function Home() {
                 </div>
 
                 <div className="w-full text-center leading-[0.7] select-none pointer-events-none mix-blend-difference overflow-hidden">
-                    <div className="text-ultra-massive font-black tracking-tighter whitespace-nowrap px-4">
+                    <div className="text-[24vw] md:text-[15vw] font-black tracking-tighter whitespace-nowrap px-4">
                         {t('footer.brandName')}
                     </div>
                 </div>

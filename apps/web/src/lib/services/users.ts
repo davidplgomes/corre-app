@@ -47,6 +47,38 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<Us
 }
 
 /**
+ * Update user profile details (admin only)
+ */
+export async function updateUserProfile(userId: string, updates: Partial<User>): Promise<User> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('users')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * Delete user (admin only)
+ * Note: This deletes from the public.users table. 
+ * For full deletion including auth, edge functions are usually required, 
+ * but this handles the application data layer.
+ */
+export async function deleteUser(userId: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+    if (error) throw error;
+}
+
+/**
  * Get users by role
  */
 export async function getUsersByRole(role: UserRole): Promise<User[]> {

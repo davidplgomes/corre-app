@@ -1,125 +1,50 @@
 @import "tailwindcss";
 
 :root {
-    /* Brand Colors - B&W + Orange Accent */
-    --bg-color: #000000;
-    --text-color: #ffffff;
-    --accent: #FF5722;
-    /* Official App Primary */
-    --accent-dim: #E64A19;
-    /* Primary 700 */
-
-    /* Technical Palette */
-    --grid-line: #1a1a1a;
-    --surface: #0a0a0a;
-    --surface-hover: #141414;
-    --border: #333333;
-}
-
-@theme inline {
-    --color-background: var(--bg-color);
-    --color-foreground: var(--text-color);
-    --font-sans: var(--font-geist-sans);
-    --font-mono: var(--font-geist-mono);
-
-    --color-accent: var(--accent);
-    --color-surface: var(--surface);
-
-    --animate-marquee: marquee 20s linear infinite;
-    --animate-spin-slow: spin 10s linear infinite;
+    --background: #000000;
+    --foreground: #ffffff;
 }
 
 body {
-    background: var(--bg-color);
-    color: var(--text-color);
-    font-family: var(--font-geist-sans);
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Typography Utilities */
-.font-stretch-condensed {
-    font-stretch: condensed;
+/* 
+  Apple-Style Material System 
+  Ref: visionOS / macOS Sonoma
+*/
+
+/* The Base Material - Thick, Frosted, Saturated */
+.apple-glass {
+    background: rgba(30, 30, 30, 0.4);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 4px 24px -1px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 
-.text-massive {
-    font-size: clamp(4rem, 18vw, 20rem);
-    line-height: 0.75;
-    letter-spacing: -0.06em;
+/* Lighter Material for Hover/Active */
+.apple-glass-hover:hover {
+    background: rgba(40, 40, 40, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-.text-ultra-massive {
-    font-size: clamp(6rem, 25vw, 30rem);
-    line-height: 0.7;
-    letter-spacing: -0.08em;
-    text-transform: uppercase;
+/* Subtle Gradient Text - Metallic feel */
+.text-metallic {
+    background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-/* Layout Utilities */
-.tech-border-t {
-    position: relative;
-    border-top: 1px solid var(--border);
-}
-
-.tech-border-t::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: 0;
-    width: 10px;
-    height: 3px;
-    background: var(--text-color);
-}
-
-.tech-border-l {
-    position: relative;
-    border-left: 1px solid var(--border);
-}
-
-.grid-overlay {
-    background-size: 100px 100px;
-    background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-}
-
-/* Animations & Interactions */
-@keyframes marquee {
-    0% {
-        transform: translateX(0);
-    }
-
-    100% {
-        transform: translateX(-50%);
-    }
-}
-
-.hover-invert {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hover-invert:hover {
-    background-color: var(--text-color);
-    color: var(--bg-color);
-}
-
-.clip-path-slant {
-    clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
-}
-
-/* Reference Style Blocks */
-.tech-block {
-    font-family: var(--font-geist-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: #666;
-}
-
-/* Custom Scrollbar for "Everyday Selection" */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* Clean Scrollbar */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
 }

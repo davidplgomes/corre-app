@@ -113,6 +113,7 @@ export interface ShopItem {
     points_price: number;
     image_url: string | null;
     stock: number;
+    is_active: boolean;
     created_at: string;
 }
 
@@ -164,4 +165,24 @@ export interface CouponRedemption {
     redeemed_at: string;
     users?: Partial<User>;
     partner_coupons?: Partial<PartnerCoupon>;
+}
+
+export interface Plan {
+    id: string;
+    name: string;
+    price: number;
+    description: string | null;
+    features: any;
+    created_at: string;
+}
+
+export interface Subscription {
+    id: string;
+    user_id: string;
+    plan_id: string;
+    status: 'active' | 'past_due' | 'cancelled';
+    current_period_end: string | null;
+    created_at: string;
+    users?: Partial<User>;
+    plans?: Partial<Plan>;
 }
