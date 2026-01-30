@@ -113,7 +113,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-4">
                             <Link href="/" className="flex items-center gap-4 group">
                                 <Image
-                                    src="/corre_logo.png"
+                                    src="/logo.png"
                                     alt="CORRE"
                                     width={120}
                                     height={40}
