@@ -7,8 +7,10 @@
             "culture": {
                 "title": "CÓMO FUNCIONA",
                 "subtitles": "SIGUE TU PROGRESO // GANA PUNTOS // ÚNETE AL RANKING",
+                "manifesto": "Descubre la experiencia completa de Corre. La app no es solo un rastreador; es tu <span_bold>pasaporte</span_bold> a la comunidad de corredores más exclusiva de la ciudad. Gana puntos por cada kilómetro, canjea artículos en la tienda, únete al ranking. Tu mejor carrera te espera dentro.",
                 "quote": "IMPULSADO POR DATOS. ALIMENTADO POR LA CULTURA.",
                 "events": {
+                    "header": "PARTICIPAR",
                     "event1": {
                         "title": "Martes de Ritmo",
                         "location": "GRAND CANAL DOCK",
@@ -56,7 +58,7 @@
                 }
             },
             "community": {
-                "title": "COMUNIDAD // MOVIMIENTO",
+                "title": "COMUNIDAD // MOVIMENTO",
                 "location": "PHOENIX PARK [08:00 AM]",
                 "archived": "Archivado.",
                 "archivedDesc": "VER CARRERAS PASADAS, RUTAS Y DESTACADOS DEL EQUIPO CORE.",
@@ -93,7 +95,7 @@
                     },
                     "club": {
                         "name": "CORRE CLUB",
-                        "description": "Experiencia completa exclusiva y estatus social.",
+                        "description": "Experiencia completa exclusiva.",
                         "price": "€29.90 / MES",
                         "features": {
                             "welcome": "Kit de Bienvenida (Camiseta + Gel...)",

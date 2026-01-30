@@ -7,8 +7,10 @@
             "culture": {
                 "title": "HOW WE WORK",
                 "subtitles": "TRACK YOUR PROGRESS // EARN POINTS // JOIN THE RANKINGS",
+                "manifesto": "Unlock the full Corre experience. The app isn't just a tracker; it's your <span_bold>passport</span_bold> to the city's most exclusive running community. Earn points for every kilometer, redeem items in the shop, join the rankings. Your best run is waiting inside.",
                 "quote": "POWERED BY DATA. FUELED BY CULTURE.",
                 "events": {
+                    "header": "JOIN EVENTS",
                     "event1": {
                         "title": "Tempo Tuesdays",
                         "location": "GRAND CANAL DOCK",
@@ -93,7 +95,7 @@
                     },
                     "club": {
                         "name": "CORRE CLUB",
-                        "description": "Full exclusive experience & social status.",
+                        "description": "Full exclusive experience.",
                         "price": "€29.90 / MO",
                         "features": {
                             "welcome": "Welcome Kit (Shirt + Gel...)",

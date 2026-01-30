@@ -7,8 +7,10 @@
             "culture": {
                 "title": "COMO FUNCIONA",
                 "subtitles": "ACOMPANHE SEU PROGRESSO // GANHE PONTOS // ENTRE NO RANKING",
+                "manifesto": "Desbloqueie a experiência completa do Corre. O app não é apenas um rastreador; é o seu <span_bold>passaporte</span_bold> para a comunidade de corrida mais exclusiva da cidade. Ganhe pontos a cada quilômetro, resgate itens na loja, suba no ranking. Sua melhor corrida está esperando por você.",
                 "quote": "MOVIDO A DADOS. ALIMENTADO PELA CULTURA.",
                 "events": {
+                    "header": "PARTICIPE",
                     "event1": {
                         "title": "Terças de Ritmo",
                         "location": "GRAND CANAL DOCK",
@@ -66,7 +68,7 @@
                 "canal": "CANAL"
             },
             "plans": {
-                "title": "ASSOCIAÇÃO",
+                "title": "PLANOS",
                 "subtitle": "ELEVE SEU JOGO",
                 "tiers": {
                     "free": {
@@ -93,7 +95,7 @@
                     },
                     "club": {
                         "name": "CORRE CLUB",
-                        "description": "Experiência completa exclusiva e status social.",
+                        "description": "Experiência completa exclusiva.",
                         "price": "€29.90 / MÊS",
                         "features": {
                             "welcome": "Kit de Boas-vindas (Camiseta + Gel...)",
