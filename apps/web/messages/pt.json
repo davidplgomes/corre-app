@@ -85,10 +85,10 @@
                     "pro": {
                         "name": "CORRE PRO",
                         "description": "Para o corredor consistente buscando retorno.",
-                        "price": "€9.90 / MÊS",
+                        "price": "€14.90 / MÊS",
                         "features": {
-                            "discount": "Desconto de 5% ou 10% via XP",
-                            "economy": "Marketplace Híbrido (20% Pontos)",
+                            "discount": "Desconto de até 10% via XP",
+                            "economy": "Use seus pontos como desconto (Até 20%)",
                             "sales": "1 Destaque de Venda",
                             "events": "Eventos Exclusivos (Sem Convidados)"
                         }

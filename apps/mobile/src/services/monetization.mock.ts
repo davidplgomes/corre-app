@@ -57,12 +57,12 @@ const MOCK_PLANS: Plan[] = [
         id: 'plan_pro',
         name: 'pro',
         displayName: 'Pro',
-        price: 29.90,
-        priceFormatted: 'R$ 29,90',
+        price: 14.90,
+        priceFormatted: '€ 14.90',
         description: 'Intermediário',
         features: [
-            'Desconto 5% ou 10% por XP',
-            'Marketplace Híbrido (20% Pontos)',
+            'Desconto de até 10% via XP',
+            'Use seus pontos como desconto (Até 20%)',
             '1 Destaque de Venda',
             'Eventos Exclusivos (Sem Guest)'
         ],
