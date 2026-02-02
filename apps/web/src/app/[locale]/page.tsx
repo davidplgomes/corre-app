@@ -154,7 +154,7 @@ export default function Home() {
                                     <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em] uppercase">{t('sections.culture.events.header')}</h3>
                                 </div>
 
-                                <div className="pt-32 pb-32 w-full overflow-hidden">
+                                <div className="pt-10 pb-32 w-full overflow-hidden">
                                     <UpcomingEventsDeck />
                                 </div>
                             </div>
