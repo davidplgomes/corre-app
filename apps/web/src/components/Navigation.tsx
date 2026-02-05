@@ -48,7 +48,7 @@ export function Navigation() {
                 {/* Logo - pushed to left edge */}
                 <Link href="/" className="relative w-28 md:w-32 h-8 block transition-transform hover:scale-105">
                     <Image
-                        src="/logo_transparent.png"
+                        src="/logo_hero.png"
                         alt="CORRE Logo"
                         fill
                         className="object-contain object-left"
@@ -149,14 +149,14 @@ function MobileMenu({ t, locale, onClose, onSelectChange }: { t: any, locale: st
 
             {/* Menu Logo */}
             <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                initial={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute top-8 left-8"
             >
                 <div className="relative w-32 h-8">
                     <Image
-                        src="/logo_transparent.png"
+                        src="/logo_hero.png"
                         alt="CORRE Logo"
                         fill
                         className="object-contain object-left"
@@ -164,7 +164,7 @@ function MobileMenu({ t, locale, onClose, onSelectChange }: { t: any, locale: st
                 </div>
             </motion.div>
 
-            <div className="flex flex-col gap-8 items-center text-center">
+            <div className="flex flex-col gap-6 items-center text-center">
                 {[
                     { href: "#features", label: t('features') },
                     { href: "#pricing", label: t('plans') },
@@ -172,12 +172,12 @@ function MobileMenu({ t, locale, onClose, onSelectChange }: { t: any, locale: st
                 ].map((item, i) => (
                     <motion.a
                         key={item.href}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 + (i * 0.1), duration: 0.3 }}
+                        initial={{ y: 40, opacity: 0, filter: 'blur(10px)' }}
+                        animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                        transition={{ delay: 0.1 + (i * 0.1), duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                         href={item.href}
                         onClick={onClose}
-                        className="text-3xl font-bold uppercase tracking-widest text-white hover:text-[#FF5722] transition-colors"
+                        className="text-4xl md:text-5xl font-black uppercase tracking-tight text-white hover:text-[#FF5722] hover:scale-105 transition-all duration-300"
                     >
                         {item.label}
                     </motion.a>
@@ -186,19 +186,19 @@ function MobileMenu({ t, locale, onClose, onSelectChange }: { t: any, locale: st
                 <motion.div
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: 0.4, duration: 0.4 }}
-                    className="h-px w-16 bg-white/20 my-2"
+                    transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="h-px w-24 bg-gradient-to-r from-transparent via-white/20 to-transparent my-6"
                 />
 
                 <motion.a
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.3 }}
+                    transition={{ delay: 0.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     href="/login"
                     onClick={onClose}
-                    className="text-xl font-bold uppercase tracking-widest text-[#FF5722] border border-[#FF5722]/50 px-8 py-3 rounded-full hover:bg-[#FF5722] hover:text-white transition-all"
+                    className="group relative px-10 py-4 overflow-hidden rounded-full bg-white text-black hover:bg-[#FF5722] hover:text-white transition-all shadow-xl shadow-white/5"
                 >
-                    {t('login')}
+                    <span className="relative z-10 text-xl font-black uppercase tracking-widest transition-colors">{t('login')}</span>
                 </motion.a>
             </div>
 
