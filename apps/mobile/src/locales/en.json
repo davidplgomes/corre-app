@@ -267,7 +267,10 @@
     "enterBio": "Tell us about yourself",
     "instagram": "Instagram",
     "enterInstagram": "Your Instagram handle",
-    "tapToChange": "Tap to change photo"
+    "tapToChange": "Tap to change photo",
+    "wallet": "Wallet",
+    "notifications": "Notifications",
+    "guestPass": "Guest Pass"
   },
   "friends": {
     "title": "Friends",

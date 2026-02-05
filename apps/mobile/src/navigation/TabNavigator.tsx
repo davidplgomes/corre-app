@@ -8,7 +8,7 @@ import { EventList } from '../screens/events/EventList';
 import { EventDetail } from '../screens/events/EventDetail';
 import { CheckIn } from '../screens/events/CheckIn';
 import { CreateEvent } from '../screens/events/CreateEvent';
-import { EventParticipants } from '../screens/events/EventParticipants'; // New Import
+import { EventParticipants } from '../screens/events/EventParticipants';
 import { FeedScreen } from '../screens/feed/FeedScreen';
 import { PostDetails } from '../screens/feed/PostDetails';
 import { Leaderboard } from '../screens/leaderboard/Leaderboard';
@@ -18,20 +18,24 @@ import { Coupons } from '../screens/loyalty/Coupons';
 import { Profile } from '../screens/profile/Profile';
 import { Settings } from '../screens/profile/Settings';
 import { EditProfile } from '../screens/profile/EditProfile';
-import { ChangePassword } from '../screens/profile/ChangePassword'; // New Import
+import { ChangePassword } from '../screens/profile/ChangePassword';
 import { SubscriptionScreen } from '../screens/profile/SubscriptionScreen';
 import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
 import { RunMap } from '../screens/profile/RunMap';
 import { Friends } from '../screens/profile/Friends';
 import { UserProfile } from '../screens/profile/UserProfile';
+import { GuestPassScreen } from '../screens/profile/GuestPassScreen';
 import { RunTracker } from '../screens/runs/RunTracker';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
 import { CreateListing } from '../screens/marketplace/CreateListing';
 import { SellerOnboarding } from '../screens/marketplace/SellerOnboarding';
-import { HomeScreen } from '../screens/home/HomeScreen'; // Import HomeScreen
-import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons'; // Import HomeIcon
+import { HomeScreen } from '../screens/home/HomeScreen';
+import { WalletScreen } from '../screens/wallet/WalletScreen';
+import { CartScreen, CheckoutScreen, OrderHistoryScreen } from '../screens/shop';
+import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
+import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../constants/theme';
 
@@ -63,6 +67,9 @@ export type MarketplaceStackParamList = {
     ProductDetail: { product: any; type: 'shop' | 'community' };
     CreateListing: undefined;
     SellerOnboarding: undefined;
+    Cart: undefined;
+    Checkout: { cartItems: any[]; subtotal: number; pointsToUse: number; total: number };
+    OrderHistory: undefined;
 };
 
 export type ProfileStackParamList = {
@@ -77,6 +84,9 @@ export type ProfileStackParamList = {
     Friends: undefined;
     UserProfile: { userId: string };
     SubscriptionScreen: undefined;
+    Wallet: undefined;
+    Notifications: undefined;
+    GuestPass: undefined;
 };
 
 export type MainTabParamList = {
@@ -134,6 +144,9 @@ const MarketplaceStackNavigator: React.FC = () => (
         <MarketplaceStack.Screen name="ProductDetail" component={ProductDetail} />
         <MarketplaceStack.Screen name="CreateListing" component={CreateListing} />
         <MarketplaceStack.Screen name="SellerOnboarding" component={SellerOnboarding} />
+        <MarketplaceStack.Screen name="Cart" component={CartScreen} />
+        <MarketplaceStack.Screen name="Checkout" component={CheckoutScreen} />
+        <MarketplaceStack.Screen name="OrderHistory" component={OrderHistoryScreen} />
     </MarketplaceStack.Navigator>
 );
 
@@ -151,6 +164,9 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="Friends" component={Friends} />
         <ProfileStack.Screen name="UserProfile" component={UserProfile} />
         <ProfileStack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />
+        <ProfileStack.Screen name="Wallet" component={WalletScreen} />
+        <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />
+        <ProfileStack.Screen name="GuestPass" component={GuestPassScreen} />
     </ProfileStack.Navigator>
 );
 

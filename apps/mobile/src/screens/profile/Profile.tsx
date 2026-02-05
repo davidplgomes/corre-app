@@ -57,6 +57,25 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
     const menuItems = [
         {
+            id: 'wallet',
+            label: t('profile.wallet'),
+            icon: <CardIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Wallet');
+            },
+            badge: stats.currentPoints,
+        },
+        {
+            id: 'notifications',
+            label: t('profile.notifications'),
+            icon: <SettingsIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Notifications');
+            },
+        },
+        {
             id: 'history',
             label: t('profile.runHistory'),
             icon: <ClockIcon size={20} color="#FFF" />,
@@ -95,6 +114,16 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             },
         },
         {
+            id: 'guestPass',
+            label: t('profile.guestPass'),
+            icon: <MedalIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('GuestPass');
+            },
+            highlight: tier === 'baixa_pace', // Only highlight for Club members
+        },
+        {
             id: 'subscription',
             label: t('settings.subscription'),
             icon: <CardIcon size={20} color="#FFF" />,
@@ -103,7 +132,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 navigation.navigate('SubscriptionScreen', { from: 'Profile' });
             },
             badge: null,
-            highlight: true, // Optional: make it stand out
+            highlight: true,
         },
         {
             id: 'settings',
