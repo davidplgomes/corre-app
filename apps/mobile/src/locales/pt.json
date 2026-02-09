@@ -409,5 +409,33 @@
     "slide3Desc": "Encontre parceiros de corrida, participe de eventos e troque equipamentos no Marketplace.",
     "getStarted": "Começar Agora",
     "skip": "Pular"
+  },
+  "referral": {
+    "title": "Indique Amigos",
+    "heroTitle": "Indique e Ganhe",
+    "heroSubtitle": "Convide amigos e ganhem 1 mês grátis de Pro quando eles assinarem!",
+    "yourCode": "Seu Código de Indicação",
+    "shareLink": "Compartilhar Link",
+    "yourReferrals": "Suas Indicações",
+    "invites": "Convites",
+    "successful": "Sucesso",
+    "freeMonths": "Meses Ganhos",
+    "howItWorks": "Como Funciona",
+    "step1Title": "Compartilhe seu código",
+    "step1Desc": "Envie seu código exclusivo para amigos",
+    "step2Title": "Amigo se cadastra",
+    "step2Desc": "Ele usa seu código ao criar a conta",
+    "step3Title": "Amigo assina Pro",
+    "step3Desc": "Vocês dois ganham 1 mês grátis!",
+    "friendsInvited": "Amigos Indicados",
+    "noReferrals": "Nenhuma indicação ainda",
+    "noReferralsDesc": "Compartilhe seu código e comece a ganhar meses grátis!",
+    "status": {
+      "pending": "Aguardando assinatura",
+      "subscribed": "+1 mês grátis",
+      "rewarded": "Recompensado ✓"
+    },
+    "joinedOn": "Entrou em",
+    "friend": "Amigo"
   }
 }

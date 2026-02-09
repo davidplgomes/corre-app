@@ -1,6 +1,20 @@
-require('dotenv').config();
+const path = require('path');
+const dotenv = require('dotenv');
 
-console.log('Loading env vars - SUPABASE_URL:', process.env.SUPABASE_URL ? 'Found' : 'Missing');
+// Explicitly load from root .env
+const rootEnvPath = path.resolve(__dirname, '../../.env');
+const result = dotenv.config({ path: rootEnvPath });
+
+if (result.error) {
+  console.log('Failed to load .env from:', rootEnvPath);
+  // Fallback to default loading (current dir)
+  dotenv.config();
+} else {
+  console.log('Successfully loaded .env from:', rootEnvPath);
+}
+
+console.log('Environment Debug - SUPABASE_URL:', process.env.SUPABASE_URL ? 'FOUND' : 'MISSING');
+
 
 module.exports = {
   expo: {

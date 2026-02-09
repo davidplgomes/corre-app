@@ -407,5 +407,33 @@
     "slide3Desc": "Find running partners, join events, and trade gear in the Marketplace.",
     "getStarted": "Get Started",
     "skip": "Skip"
+  },
+  "referral": {
+    "title": "Invite Friends",
+    "heroTitle": "Invite & Earn",
+    "heroSubtitle": "Invite friends and you both get 1 free month of Pro when they subscribe!",
+    "yourCode": "Your Referral Code",
+    "shareLink": "Share Link",
+    "yourReferrals": "Your Referrals",
+    "invites": "Invites",
+    "successful": "Successful",
+    "freeMonths": "Free Months",
+    "howItWorks": "How It Works",
+    "step1Title": "Share your code",
+    "step1Desc": "Send your unique code to friends",
+    "step2Title": "Friend signs up",
+    "step2Desc": "They use your code when creating account",
+    "step3Title": "Friend subscribes to Pro",
+    "step3Desc": "You both get 1 free month!",
+    "friendsInvited": "Friends Invited",
+    "noReferrals": "No referrals yet",
+    "noReferralsDesc": "Share your code and start earning free months!",
+    "status": {
+      "pending": "Awaiting subscription",
+      "subscribed": "+1 free month",
+      "rewarded": "Rewarded ✓"
+    },
+    "joinedOn": "Joined on",
+    "friend": "Friend"
   }
 }

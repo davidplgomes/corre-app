@@ -1,7 +1,7 @@
 {
   "name": "@corre/mobile",
   "version": "1.0.5",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "scripts": {
     "dev": "expo start",
     "start": "expo start",

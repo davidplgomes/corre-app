@@ -26,6 +26,7 @@ import { RunMap } from '../screens/profile/RunMap';
 import { Friends } from '../screens/profile/Friends';
 import { UserProfile } from '../screens/profile/UserProfile';
 import { GuestPassScreen } from '../screens/profile/GuestPassScreen';
+import { WelcomeKitScreen } from '../screens/profile/WelcomeKitScreen';
 import { RunTracker } from '../screens/runs/RunTracker';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
@@ -33,8 +34,11 @@ import { CreateListing } from '../screens/marketplace/CreateListing';
 import { SellerOnboarding } from '../screens/marketplace/SellerOnboarding';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { WalletScreen } from '../screens/wallet/WalletScreen';
-import { CartScreen, CheckoutScreen, OrderHistoryScreen } from '../screens/shop';
+import { CartScreen, CheckoutScreen, OrderHistoryScreen, OrderDetailScreen } from '../screens/shop';
 import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
+import { EventWaitlistScreen } from '../screens/events/EventWaitlistScreen';
+import { PartnerCouponScreen } from '../screens/loyalty/PartnerCouponScreen';
+import { ReferralScreen } from '../screens/referral/ReferralScreen';
 import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../constants/theme';
@@ -47,6 +51,7 @@ export type EventsStackParamList = {
     CreateEvent: undefined;
     EventParticipants: { eventId: string; eventTitle: string };
     UserProfile: { userId: string };
+    EventWaitlist: undefined;
 };
 
 export type FeedStackParamList = {
@@ -60,6 +65,7 @@ export type LoyaltyStackParamList = {
     LoyaltyCard: undefined;
     MerchantScanner: undefined;
     Coupons: undefined;
+    PartnerCoupons: { partnerId?: string };
 };
 
 export type MarketplaceStackParamList = {
@@ -70,6 +76,7 @@ export type MarketplaceStackParamList = {
     Cart: undefined;
     Checkout: { cartItems: any[]; subtotal: number; pointsToUse: number; total: number };
     OrderHistory: undefined;
+    OrderDetail: { orderId: string };
 };
 
 export type ProfileStackParamList = {
@@ -87,6 +94,8 @@ export type ProfileStackParamList = {
     Wallet: undefined;
     Notifications: undefined;
     GuestPass: undefined;
+    WelcomeKit: undefined;
+    Referral: undefined;
 };
 
 export type MainTabParamList = {
@@ -115,6 +124,7 @@ const EventsStackNavigator: React.FC = () => (
         <EventsStack.Screen name="CreateEvent" component={CreateEvent} />
         <EventsStack.Screen name="EventParticipants" component={EventParticipants} />
         <EventsStack.Screen name="UserProfile" component={UserProfile} />
+        <EventsStack.Screen name="EventWaitlist" component={EventWaitlistScreen} />
     </EventsStack.Navigator>
 );
 
@@ -134,6 +144,7 @@ const LoyaltyStackNavigator: React.FC = () => (
         <LoyaltyStack.Screen name="LoyaltyCard" component={LoyaltyCard} />
         <LoyaltyStack.Screen name="MerchantScanner" component={MerchantScanner} />
         <LoyaltyStack.Screen name="Coupons" component={Coupons} />
+        <LoyaltyStack.Screen name="PartnerCoupons" component={PartnerCouponScreen} />
     </LoyaltyStack.Navigator>
 );
 
@@ -147,6 +158,7 @@ const MarketplaceStackNavigator: React.FC = () => (
         <MarketplaceStack.Screen name="Cart" component={CartScreen} />
         <MarketplaceStack.Screen name="Checkout" component={CheckoutScreen} />
         <MarketplaceStack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+        <MarketplaceStack.Screen name="OrderDetail" component={OrderDetailScreen} />
     </MarketplaceStack.Navigator>
 );
 
@@ -167,6 +179,8 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="Wallet" component={WalletScreen} />
         <ProfileStack.Screen name="Notifications" component={NotificationsScreen} />
         <ProfileStack.Screen name="GuestPass" component={GuestPassScreen} />
+        <ProfileStack.Screen name="WelcomeKit" component={WelcomeKitScreen} />
+        <ProfileStack.Screen name="Referral" component={ReferralScreen} />
     </ProfileStack.Navigator>
 );
 
