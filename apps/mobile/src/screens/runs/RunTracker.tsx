@@ -18,7 +18,8 @@ import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { createRun, RoutePoint, formatDuration, formatPace, calculateRunPointsPreview } from '../../services/supabase/runs';
 import { RUN_POINTS } from '../../constants/points';
-import { ChevronRightIcon, RunIcon } from '../../components/common/TabIcons';
+import { RunIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
 
 type RunTrackerProps = {
     navigation: any;
@@ -254,7 +255,7 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity
+                    <BackButton
                         style={styles.backButton}
                         onPress={() => {
                             if (runState === 'running' || runState === 'paused') {
@@ -270,11 +271,7 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                                 navigation.goBack();
                             }
                         }}
-                    >
-                        <View style={styles.backIcon}>
-                            <ChevronRightIcon size={20} color="#FFF" />
-                        </View>
-                    </TouchableOpacity>
+                    />
                     <View>
                         <Text style={styles.headerLabel}>CORRIDA</Text>
                         <Text style={styles.headerTitle}>RASTREAR</Text>
@@ -389,17 +386,6 @@ const styles = StyleSheet.create({
     },
     backButton: {
         marginRight: 16,
-    },
-    backIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
         fontSize: 10,

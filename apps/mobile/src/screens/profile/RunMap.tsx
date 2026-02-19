@@ -14,7 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
+import * as Haptics from 'expo-haptics';
 
 type RunMapProps = {
     navigation: any;
@@ -98,12 +99,10 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
             {/* Header Overlay */}
             <SafeAreaView style={styles.headerOverlay} edges={['top']}>
                 <View style={styles.headerRow}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <ChevronRightIcon size={24} color="#FFF" />
-                    </TouchableOpacity>
+                    <BackButton onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.goBack();
+                    }} color="#FFF" size={24} />
                     <View style={styles.headerTitleContainer}>
                         <Text style={styles.headerTitle}>RUN SUMMARY</Text>
                         <Text style={styles.headerDate}>{selectedRun.date}</Text>
@@ -176,17 +175,6 @@ const styles = StyleSheet.create({
         marginTop: 10,
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }]
     },
     headerTitleContainer: {
         marginLeft: 16,

@@ -15,10 +15,9 @@ import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input } from '../../components/common';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../services/supabase/client';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { UsersApi } from '../../api/endpoints/users.api';
+import { Header } from '../../components/common/Header';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadAvatar, updateUserAvatarUrl } from '../../services/supabase/storage';
 import * as Haptics from 'expo-haptics';
 
 type EditProfileProps = {
@@ -69,11 +68,13 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
             let newAvatarUrl = profile?.avatarUrl;
 
             // Upload avatar if changed (local URI starts with file://)
-            if (avatarUri && avatarUri.startsWith('file://') && profile?.id) {
+            if (avatarUri && avatarUri.startsWith('file://')) {
                 setUploadingAvatar(true);
                 try {
-                    newAvatarUrl = await uploadAvatar(profile.id, avatarUri);
-                    await updateUserAvatarUrl(profile.id, newAvatarUrl);
+                    const uploadResponse = await UsersApi.uploadAvatar(avatarUri);
+                    if (uploadResponse.data) {
+                        newAvatarUrl = uploadResponse.data.publicUrl;
+                    }
                 } catch (avatarError) {
                     console.error('Avatar upload failed:', avatarError);
                     // Continue with other updates even if avatar fails
@@ -82,26 +83,27 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                 }
             }
 
-            const { error } = await supabase
-                .from('users')
-                .update({
-                    full_name: fullName,
-                    neighborhood: neighborhood,
-                    city: city,
-                    bio: bio,
-                    instagram_handle: instagramHandle,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', profile?.id);
+            if (!profile?.id) throw new Error(t('errors.userNotFound'));
 
-            if (error) throw error;
+            const response = await UsersApi.updateProfile(profile.id, {
+                fullName: fullName,
+                neighborhood: neighborhood,
+                city: city,
+                bio: bio,
+                instagramHandle: instagramHandle,
+                avatarUrl: newAvatarUrl, // Update avatar URL in profile if changed
+            });
+
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
 
             await refreshProfile();
             Alert.alert(t('common.success'), t('success.profileUpdated'));
             navigation.goBack();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating profile:', error);
-            Alert.alert(t('common.error'), t('errors.updateProfile'));
+            Alert.alert(t('common.error'), error.message || t('errors.updateProfile'));
         } finally {
             setLoading(false);
         }
@@ -111,18 +113,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#000" />
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backText}>← {t('common.back')}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{t('profile.editProfile')}</Text>
-                    {/* Placeholder for right side to balance header */}
-                    <View style={{ width: 60 }} />
-                </View>
+                <Header title={t('profile.editProfile')} onBack={() => navigation.goBack()} />
 
                 <ScrollView style={styles.content}>
                     <View style={styles.formContainer}>
@@ -153,27 +144,24 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                             onChangeText={setFullName}
                             placeholder={t('auth.fullNamePlaceholder')}
                             autoCapitalize="words"
+                            containerStyle={styles.inputSpacing}
                         />
-
-                        <View style={styles.spacer} />
 
                         <Input
                             label={t('auth.neighborhood')}
                             value={neighborhood}
                             onChangeText={setNeighborhood}
                             placeholder={t('auth.selectNeighborhood')}
+                            containerStyle={styles.inputSpacing}
                         />
-
-                        <View style={styles.spacer} />
 
                         <Input
                             label={t('profile.city')}
                             value={city}
                             onChangeText={setCity}
                             placeholder={t('profile.enterCity')}
+                            containerStyle={styles.inputSpacing}
                         />
-
-                        <View style={styles.spacer} />
 
                         <Input
                             label={t('profile.bio')}
@@ -183,12 +171,10 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                             multiline
                             numberOfLines={4}
                             maxLength={500}
-                            // Custom style for multiline input if needed, usually Input supports it or we pass style
                             style={{ minHeight: 100, textAlignVertical: 'top' }}
+                            containerStyle={styles.inputSpacing}
                         />
                         <Text style={styles.charCount}>{bio.length}/500</Text>
-
-                        <View style={styles.spacer} />
 
                         <Input
                             label={t('profile.instagram')}
@@ -198,9 +184,28 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                             autoCapitalize="none"
                             autoCorrect={false}
                             leftIcon={<Text style={{ color: '#FFF', fontWeight: 'bold' }}>@</Text>}
+                            containerStyle={styles.inputSpacing}
                         />
 
-                        {/* Future: Avatar Upload could go here */}
+                        <View style={styles.divider} />
+
+                        <Text style={styles.sectionTitle}>{t('auth.security') || "Security"}</Text>
+
+                        <TouchableOpacity
+                            style={styles.securityButton}
+                            onPress={() => navigation.navigate('ChangePassword')}
+                        >
+                            <Text style={styles.securityButtonText}>{t('auth.changePassword') || "Change Password"}</Text>
+                            <Text style={styles.chevron}>→</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.securityButton}
+                            onPress={() => navigation.navigate('ChangeEmail')}
+                        >
+                            <Text style={styles.securityButtonText}>{t('auth.changeEmail') || "Change Email"}</Text>
+                            <Text style={styles.chevron}>→</Text>
+                        </TouchableOpacity>
 
                         <View style={styles.spacerLarge} />
 
@@ -208,6 +213,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ navigation }) => {
                             title={t('common.save')}
                             onPress={handleSave}
                             loading={loading}
+                            variant="primary"
                         />
                     </View>
                 </ScrollView>
@@ -224,36 +230,15 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingVertical: theme.spacing[4],
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border.default,
-    },
-    backButton: {
-        paddingVertical: theme.spacing[2],
-    },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
-    },
-    headerTitle: {
-        fontSize: theme.typography.size.h4,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
-    },
     content: {
         flex: 1,
     },
     formContainer: {
         padding: theme.spacing[6],
-        paddingBottom: 120, // Extra padding for save button accessibility
+        paddingBottom: 120,
     },
-    spacer: {
-        height: theme.spacing[4],
+    inputSpacing: {
+        marginBottom: theme.spacing[4],
     },
     spacerLarge: {
         height: theme.spacing[8],
@@ -263,8 +248,8 @@ const styles = StyleSheet.create({
         color: theme.colors.text.tertiary,
         textAlign: 'right',
         marginTop: 4,
+        marginBottom: theme.spacing[4],
     },
-    // Avatar Styles
     avatarSection: {
         alignItems: 'center',
         marginBottom: theme.spacing[6],
@@ -292,7 +277,7 @@ const styles = StyleSheet.create({
     },
     avatarInitial: {
         fontSize: 40,
-        fontWeight: '900' as any,
+        fontWeight: '900',
         color: theme.colors.brand.primary,
     },
     avatarLoading: {
@@ -304,6 +289,33 @@ const styles = StyleSheet.create({
     avatarHint: {
         marginTop: theme.spacing[2],
         fontSize: theme.typography.size.bodySM,
+        color: theme.colors.text.tertiary,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: theme.colors.border.default,
+        marginVertical: theme.spacing[6],
+    },
+    sectionTitle: {
+        fontSize: theme.typography.size.h5,
+        fontWeight: 'bold',
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing[4],
+    },
+    securityButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: theme.spacing[4],
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border.default,
+    },
+    securityButtonText: {
+        fontSize: theme.typography.size.bodyMD,
+        color: theme.colors.text.primary,
+    },
+    chevron: {
+        fontSize: theme.typography.size.bodyMD,
         color: theme.colors.text.tertiary,
     },
 });

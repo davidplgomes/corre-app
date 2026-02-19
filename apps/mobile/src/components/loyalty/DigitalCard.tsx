@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - theme.spacing[12]; // standard margin
@@ -28,6 +29,7 @@ type DigitalCardProps = {
 };
 
 export const DigitalCard: React.FC<DigitalCardProps> = ({ member, qrData }) => {
+    const { t } = useTranslation();
     const rotate = useSharedValue(0);
 
     const handleFlip = () => {
@@ -111,11 +113,11 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member, qrData }) => {
 
                             <View style={styles.cardFooter}>
                                 <View>
-                                    <Text style={styles.label}>NOME</Text>
+                                    <Text style={styles.label}>{t('loyalty.name')}</Text>
                                     <Text style={styles.value}>{member.name.toUpperCase()}</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={styles.label}>ID DO MEMBRO</Text>
+                                    <Text style={styles.label}>{t('loyalty.memberId')}</Text>
                                     <Text style={styles.valueMono}>{member.id}</Text>
                                 </View>
                             </View>
@@ -130,7 +132,7 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member, qrData }) => {
                         style={styles.cardGradient}
                     >
                         <View style={styles.cardContentBack}>
-                            <Text style={styles.scanText}>ESCANEIE PARA PONTUAR</Text>
+                            <Text style={styles.scanText}>{t('loyalty.scanToEarn')}</Text>
 
                             <View style={styles.qrContainer}>
                                 <QRCode
@@ -141,7 +143,7 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({ member, qrData }) => {
                                 />
                             </View>
 
-                            <Text style={styles.helperText}>Toque para virar</Text>
+                            <Text style={styles.helperText}>{t('loyalty.tapToFlip')}</Text>
                         </View>
                     </LinearGradient>
                 </Animated.View>

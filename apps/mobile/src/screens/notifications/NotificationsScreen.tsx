@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, BackButton } from '../../components/common';
 import {
     getNotifications,
     markNotificationRead,
@@ -189,10 +189,11 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <BackButton onPress={() => navigation.goBack()} />
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.headerLabel}>YOUR</Text>
+                    <Text style={styles.headerTitle}>NOTIFICATIONS</Text>
+                </View>
                 {unreadCount > 0 && (
                     <TouchableOpacity onPress={handleMarkAllRead} style={styles.markReadButton}>
                         <Text style={styles.markReadText}>Mark all read</Text>
@@ -248,21 +249,24 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 20,
     },
-    backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
+    headerLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 28,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: '#FFF',
     },
+
     markReadButton: {
         paddingHorizontal: 12,
         paddingVertical: 6,

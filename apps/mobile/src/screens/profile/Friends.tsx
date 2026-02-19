@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
-import { AnimatedListItem } from '../../components/common';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { AnimatedListItem, BackButton } from '../../components/common';
+import { Skeleton, SkeletonAvatar } from '../../components/common/Skeleton';
 import { MEMBERSHIP_TIERS, TierKey } from '../../constants/tiers';
 import {
     searchUsers,
@@ -27,6 +27,7 @@ import {
     rejectFriendRequest,
     getFriends,
     removeFriend,
+    cancelFriendRequest,
     getSuggestedFriends,
     UserSearchResult,
     Friendship,
@@ -85,7 +86,7 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setProcessingIds(prev => new Set(prev).add(userId));
 
-        const success = await sendFriendRequest(userId);
+        const result = await sendFriendRequest(userId);
 
         setProcessingIds(prev => {
             const next = new Set(prev);
@@ -93,13 +94,21 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
             return next;
         });
 
-        if (success) {
-            Alert.alert(t('common.success'), t('friends.requestSent'));
-            const updateStatus = (list: UserSearchResult[]) =>
-                list.map(u => u.id === userId ? { ...u, friendship_status: 'pending' } as const : u);
-
-            setSearchResults(prev => updateStatus(prev));
-            setSuggestedFriends(prev => updateStatus(prev));
+        if (result.success) {
+            if (result.autoAccepted) {
+                Alert.alert(t('common.success'), t('friends.nowFriends'));
+                const updateStatus = (list: UserSearchResult[]) =>
+                    list.map(u => u.id === userId ? { ...u, friendship_status: 'accepted' } as const : u);
+                setSearchResults(prev => updateStatus(prev));
+                setSuggestedFriends(prev => updateStatus(prev));
+                loadData(); // Refresh to show in friends list
+            } else {
+                Alert.alert(t('common.success'), t('friends.requestSent'));
+                const updateStatus = (list: UserSearchResult[]) =>
+                    list.map(u => u.id === userId ? { ...u, friendship_status: 'pending' } as const : u);
+                setSearchResults(prev => updateStatus(prev));
+                setSuggestedFriends(prev => updateStatus(prev));
+            }
         } else {
             Alert.alert(t('common.error'), t('errors.unknownError'));
         }
@@ -141,6 +150,18 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
         );
     };
 
+    const handleCancelRequest = async (userId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const success = await cancelFriendRequest(userId);
+        if (success) {
+            const resetStatus = (list: UserSearchResult[]) =>
+                list.map(u => u.id === userId ? { ...u, friendship_status: 'none' as const } : u);
+            setSearchResults(prev => resetStatus(prev));
+            setSuggestedFriends(prev => resetStatus(prev));
+            loadData();
+        }
+    };
+
     const renderUserItem = ({ item, index }: { item: UserSearchResult; index: number }) => {
         const tierColor = MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.color || theme.colors.border.default;
 
@@ -151,59 +172,70 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
 
         return (
             <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={50}>
-            <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.8}>
-                <BlurView intensity={15} tint="dark" style={styles.userCard}>
-                    <View style={styles.userInfo}>
-                        <View style={[styles.avatar, { borderColor: tierColor }]}>
-                            {item.avatar_url ? (
-                                <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
-                            ) : (
-                                <Text style={[styles.avatarText, { color: tierColor }]}>
-                                    {item.full_name?.charAt(0).toUpperCase() || '?'}
+                <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.8}>
+                    <View style={styles.userCard}>
+                        <View style={styles.userInfo}>
+                            <View style={[styles.avatar, { borderColor: tierColor }]}>
+                                {item.avatar_url ? (
+                                    <Image source={{ uri: item.avatar_url }} style={styles.avatarImage} />
+                                ) : (
+                                    <Text style={[styles.avatarText, { color: tierColor }]}>
+                                        {item.full_name?.charAt(0).toUpperCase() || '?'}
+                                    </Text>
+                                )}
+                            </View>
+                            <View style={styles.userDetails}>
+                                <Text style={styles.userName}>{item.full_name?.toUpperCase()}</Text>
+                                <Text style={[styles.userTier, { color: tierColor }]}>
+                                    {(MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.name || 'Member').toUpperCase()}
                                 </Text>
-                            )}
+                            </View>
                         </View>
-                        <View style={styles.userDetails}>
-                            <Text style={styles.userName}>{item.full_name}</Text>
-                            <Text style={styles.userTier}>
-                                {MEMBERSHIP_TIERS[item.membership_tier as TierKey]?.name || 'Member'}
-                            </Text>
-                        </View>
+                        {item.friendship_status === 'none' && (
+                            <TouchableOpacity
+                                style={[styles.addButton, processingIds.has(item.id) && { opacity: 0.7 }]}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    if (!processingIds.has(item.id)) {
+                                        handleSendRequest(item.id);
+                                    }
+                                }}
+                                disabled={processingIds.has(item.id)}
+                            >
+                                <Text style={styles.addButtonText}>
+                                    {processingIds.has(item.id) ? '...' : '+'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                        {item.friendship_status === 'pending' && (
+                            <View style={styles.pendingRow}>
+                                <View style={styles.pendingBadge}>
+                                    <Text style={styles.pendingText}>{t('friends.pending').toUpperCase()}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelRequest(item.id);
+                                    }}
+                                >
+                                    <Text style={styles.cancelButtonText}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        {item.friendship_status === 'accepted' && (
+                            <TouchableOpacity
+                                style={styles.removeButton}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveFriend(item.id);
+                                }}
+                            >
+                                <Text style={styles.removeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
-                    {item.friendship_status === 'none' && (
-                        <TouchableOpacity
-                            style={[styles.addButton, processingIds.has(item.id) && { opacity: 0.7 }]}
-                            onPress={(e) => {
-                                e.stopPropagation();
-                                if (!processingIds.has(item.id)) {
-                                    handleSendRequest(item.id);
-                                }
-                            }}
-                            disabled={processingIds.has(item.id)}
-                        >
-                            <Text style={styles.addButtonText}>
-                                {processingIds.has(item.id) ? '...' : t('friends.addFriend')}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                    {item.friendship_status === 'pending' && (
-                        <View style={styles.pendingBadge}>
-                            <Text style={styles.pendingText}>{t('friends.pending')}</Text>
-                        </View>
-                    )}
-                    {item.friendship_status === 'accepted' && (
-                        <TouchableOpacity
-                            style={styles.removeButton}
-                            onPress={(e) => {
-                                e.stopPropagation();
-                                handleRemoveFriend(item.id);
-                            }}
-                        >
-                            <Text style={styles.removeButtonText}>✕</Text>
-                        </TouchableOpacity>
-                    )}
-                </BlurView>
-            </TouchableOpacity>
+                </TouchableOpacity>
             </AnimatedListItem>
         );
     };
@@ -264,14 +296,13 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <View style={styles.backIcon}>
-                            <ChevronRightIcon size={20} color="#FFF" />
-                        </View>
-                    </TouchableOpacity>
+                    <BackButton onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.goBack();
+                    }} />
                     <View>
-                        <Text style={styles.headerLabel}>{t('profile.title')}</Text>
-                        <Text style={styles.headerTitle}>{t('friends.title')}</Text>
+                        <Text style={styles.headerLabel}>{t('profile.title').toUpperCase()}</Text>
+                        <Text style={styles.headerTitle}>{t('friends.title').toUpperCase()}</Text>
                     </View>
                 </View>
 
@@ -297,6 +328,25 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                             keyExtractor={(item) => item.id}
                             scrollEnabled={false}
                         />
+                    </View>
+                )}
+
+                {/* Suggested Friends Skeleton */}
+                {searchResults.length === 0 && loading && suggestedFriends.length === 0 && (
+                    <View style={styles.section}>
+                        <Skeleton width={140} height={14} style={{ marginBottom: 14 }} />
+                        {[0, 1, 2].map((i) => (
+                            <View key={i} style={[styles.userCard, { marginBottom: 10 }]}>
+                                <View style={styles.userInfo}>
+                                    <SkeletonAvatar size={44} style={{ marginRight: 14 }} />
+                                    <View style={{ flex: 1 }}>
+                                        <Skeleton width={110} height={13} style={{ marginBottom: 6 }} />
+                                        <Skeleton width={60} height={9} />
+                                    </View>
+                                </View>
+                                <Skeleton width={36} height={36} borderRadius={18} />
+                            </View>
+                        ))}
                     </View>
                 )}
 
@@ -353,9 +403,26 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                                     />
                                 }
                                 ListEmptyComponent={
-                                    <View style={styles.emptyContainer}>
-                                        <Text style={styles.emptyText}>{t('friends.noFriends')}</Text>
-                                    </View>
+                                    loading ? (
+                                        <View style={styles.listContent}>
+                                            {[0, 1, 2, 3].map((i) => (
+                                                <View key={i} style={[styles.userCard, { marginBottom: 10 }]}>
+                                                    <View style={styles.userInfo}>
+                                                        <SkeletonAvatar size={44} style={{ marginRight: 14 }} />
+                                                        <View style={{ flex: 1 }}>
+                                                            <Skeleton width={120} height={13} style={{ marginBottom: 6 }} />
+                                                            <Skeleton width={65} height={9} />
+                                                        </View>
+                                                    </View>
+                                                    <Skeleton width={36} height={36} borderRadius={18} />
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ) : (
+                                        <View style={styles.emptyContainer}>
+                                            <Text style={styles.emptyText}>{t('friends.noFriends')}</Text>
+                                        </View>
+                                    )
                                 }
                             />
                         ) : (
@@ -375,9 +442,29 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                                     />
                                 }
                                 ListEmptyComponent={
-                                    <View style={styles.emptyContainer}>
-                                        <Text style={styles.emptyText}>{t('friends.noRequests')}</Text>
-                                    </View>
+                                    loading ? (
+                                        <View style={styles.listContent}>
+                                            {[0, 1, 2].map((i) => (
+                                                <View key={i} style={[styles.userCard, { marginBottom: 10 }]}>
+                                                    <View style={styles.userInfo}>
+                                                        <SkeletonAvatar size={44} style={{ marginRight: 14 }} />
+                                                        <View style={{ flex: 1 }}>
+                                                            <Skeleton width={100} height={13} style={{ marginBottom: 6 }} />
+                                                            <Skeleton width={55} height={9} />
+                                                        </View>
+                                                    </View>
+                                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                        <Skeleton width={70} height={32} borderRadius={16} />
+                                                        <Skeleton width={70} height={32} borderRadius={16} />
+                                                    </View>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ) : (
+                                        <View style={styles.emptyContainer}>
+                                            <Text style={styles.emptyText}>{t('friends.noRequests')}</Text>
+                                        </View>
+                                    )
                                 }
                             />
                         )}
@@ -401,20 +488,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 16,
-    },
-    backButton: {
-        marginRight: 16,
-    },
-    backIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
         fontSize: 10,
@@ -485,11 +558,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
+        paddingLeft: 12,
         borderRadius: 16,
-        marginBottom: 12,
+        marginBottom: 10,
+        backgroundColor: 'rgba(255,255,255,0.04)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        overflow: 'hidden',
+        borderColor: 'rgba(255,255,255,0.08)',
     },
     userInfo: {
         flexDirection: 'row',
@@ -497,70 +571,100 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#111',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        marginRight: 12,
+        marginRight: 14,
     },
     avatarText: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '900',
     },
     avatarImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 24,
+        borderRadius: 22,
     },
     userDetails: {
         flex: 1,
     },
     userName: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 14,
+        fontWeight: '700',
         color: '#FFF',
-        marginBottom: 2,
+        marginBottom: 3,
+        letterSpacing: 0.5,
     },
     userTier: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.5)',
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
     addButton: {
-        backgroundColor: theme.colors.brand.primary,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    addButtonText: {
-        color: '#000',
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    pendingBadge: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-    },
-    pendingText: {
-        color: 'rgba(255,255,255,0.5)',
-        fontSize: 12,
-    },
-    removeButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255,100,100,0.2)',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    addButtonText: {
+        color: theme.colors.brand.primary,
+        fontWeight: '900',
+        fontSize: 24,
+    },
+    pendingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    pendingBadge: {
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    pendingText: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    cancelButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,80,80,0.12)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,80,80,0.2)',
+    },
+    cancelButtonText: {
+        color: '#FF6464',
+        fontSize: 12,
+        fontWeight: '900',
+    },
+    removeButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,80,80,0.12)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,80,80,0.2)',
     },
     removeButtonText: {
         color: '#FF6464',
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '900',
     },
     requestActions: {
         flexDirection: 'row',

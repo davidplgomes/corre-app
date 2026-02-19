@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { theme, tierColors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, BackButton } from '../../components/common';
 import {
     getOrCreateReferralCode,
     getReferralStats,
@@ -175,9 +175,7 @@ export const ReferralScreen: React.FC<ReferralScreenProps> = ({ navigation }) =>
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
+                <BackButton style={styles.backButton} />
                 <Text style={styles.headerTitle}>{t('referral.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -333,10 +331,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,

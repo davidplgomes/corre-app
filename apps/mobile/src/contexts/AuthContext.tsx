@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, Session, User } from '@services/supabase/client';
 import { UserProfile } from '../types/user.types';
+import * as Crypto from 'expo-crypto';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, neighborhood: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, neighborhood: string, languagePreference?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -87,8 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, neighborhood: string) => {
+  const signUp = async (email: string, password: string, fullName: string, neighborhood: string, languagePreference: string = 'en') => {
     try {
+      // Generate unique QR secret for user
+      const randomBytes = await Crypto.getRandomBytesAsync(16);
+      const qrCodeSecret = Array.from(randomBytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -96,6 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             full_name: fullName,
             neighborhood,
+            language_preference: languagePreference,
+            qr_code_secret: qrCodeSecret,
           },
         },
       });
@@ -103,8 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (data.user) {
-        // Create user profile in users table
-        // This will be handled by Supabase trigger or auth service
         await loadUserProfile(data.user.id);
       }
     } catch (error) {

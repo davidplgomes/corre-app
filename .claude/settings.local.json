@@ -3,7 +3,38 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(npx create-expo-app:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(test:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx expo-cli:*)",
+      "Bash(npx expo-doctor:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm start)",
+      "Bash(npx react-native:*)",
+      "Bash(eas secret:list:*)",
+      "Bash(eas env:list:*)",
+      "Bash(npx expo:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(eas env:update:*)",
+      "Bash(eas build:*)",
+      "Bash(npx supabase secrets list:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(npm test:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "WebFetch(domain:developers.strava.com)",
+      "WebFetch(domain:www.strava.com)",
+      "Bash(node -e:*)",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''pt.json''\\)\\); console.log\\(''pt.json: valid''\\)\")",
+      "Bash(git add:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "context7",
+    "supabase"
+  ]
 }

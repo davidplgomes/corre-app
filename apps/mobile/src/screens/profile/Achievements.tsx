@@ -12,9 +12,11 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
-import { ChevronRightIcon, TrophyIcon, RunIcon, SunriseIcon, MedalIcon, PartyIcon, CompassIcon } from '../../components/common/TabIcons';
+import { TrophyIcon, RunIcon, SunriseIcon, MedalIcon, PartyIcon, CompassIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
 import { getAllAchievements, getUserAchievements, Achievement as AchievementType } from '../../services/supabase/achievements';
 import { useAuth } from '../../contexts/AuthContext';
+import * as Haptics from 'expo-haptics';
 
 type AchievementsProps = {
     navigation: any;
@@ -118,11 +120,10 @@ export const Achievements: React.FC<AchievementsProps> = ({ navigation }) => {
                 >
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                            <View style={styles.backIcon}>
-                                <ChevronRightIcon size={20} color="#FFF" />
-                            </View>
-                        </TouchableOpacity>
+                        <BackButton onPress={() => {
+                            Haptics.selectionAsync();
+                            navigation.goBack();
+                        }} />
                         <View>
                             <Text style={styles.headerLabel}>{t('profile.your').toUpperCase()}</Text>
                             <Text style={styles.headerTitle}>{t('profile.achievements').toUpperCase()}</Text>
@@ -188,20 +189,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 10,
         paddingBottom: 24,
-    },
-    backButton: {
-        marginRight: 16,
-    },
-    backIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
         fontSize: 10,

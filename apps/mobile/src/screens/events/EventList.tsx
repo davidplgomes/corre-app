@@ -23,42 +23,7 @@ type EventListProps = {
     navigation: any;
 };
 
-// Helper to create future date strings
-const futureDate = (daysFromNow: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + daysFromNow);
-    return d.toISOString();
-};
-
-// Mock events for demo (matching the design) - always in the future
-const MOCK_EVENTS: any[] = [
-    {
-        id: '1',
-        title: 'Corrida Urbana Noturna',
-        description: 'Corrida noturna pelas ruas do centro',
-        event_type: 'race',
-        event_datetime: futureDate(7), // 1 week from now
-        location_name: '10km • Parque Central',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 150,
-    },
-    {
-        id: '2',
-        title: 'Maratona de São Paulo',
-        description: 'A maior maratona da cidade',
-        event_type: 'race',
-        event_datetime: futureDate(30), // 1 month from now
-        location_name: '42km • Ibirapuera',
-        location_lat: -23.5505,
-        location_lng: -46.6333,
-        check_in_radius_meters: 300,
-        creator_id: '1',
-        points_value: 300,
-    },
-];
+// Mock events removed - using real database events only
 
 export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     const { t } = useTranslation();
@@ -87,14 +52,10 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                 data = await getAllEvents();
             }
 
-            if (data && data.length > 0) {
-                setEvents(data);
-            } else {
-                setEvents(MOCK_EVENTS);
-            }
+            setEvents(data || []);
         } catch (error) {
             console.error('Error loading events:', error);
-            setEvents(MOCK_EVENTS);
+            setEvents([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -210,6 +171,16 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                             />
                         </AnimatedListItem>
                     )}
+                    ListEmptyComponent={
+                        !loading && (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyStateTitle}>{t('events.noEvents') || 'No Events'}</Text>
+                                <Text style={styles.emptyStateSubtitle}>
+                                    {t('events.noEventsDescription') || 'Check back later for upcoming events'}
+                                </Text>
+                            </View>
+                        )
+                    }
                     contentContainerStyle={styles.listContent}
                     refreshControl={
                         <RefreshControl
@@ -356,5 +327,26 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: 20,
         paddingBottom: 120,
+    },
+
+    // Empty State
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 40,
+    },
+    emptyStateTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    emptyStateSubtitle: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
+        textAlign: 'center',
+        lineHeight: 20,
     },
 });

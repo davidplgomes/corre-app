@@ -20,8 +20,7 @@ import { supabase } from '../../services/supabase/client';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatar, updateUserAvatarUrl } from '../../services/supabase/storage';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
+import { useOnboarding } from '../../navigation/RootNavigator';
 
 type ProfileSetupProps = {
     navigation: any;
@@ -30,6 +29,7 @@ type ProfileSetupProps = {
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const { profile, refreshProfile } = useAuth();
+    const { completeOnboarding } = useOnboarding();
     const [bio, setBio] = useState('');
     const [city, setCity] = useState('');
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -90,29 +90,9 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
 
             await refreshProfile();
 
-            // 3. Mark Onboarding as Complete
-            await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-
-            // 4. Navigate to Home
-            // Note: Since we are in a stack that might be reset, we rely on RootNavigator to re-render 
-            // but calling replace logic or resetting navigation might be needed depending on implementation.
-            // For now, we assume this screen is part of a flow that leads back to Root.
-            // Best approach: Force a re-render of RootNavigator or navigate to an Authorized state if possible.
-            // However, since RootNavigator watches `hasSeenOnboarding`, adjusting it should trigger re-render if state is lifted or context is used.
-            // But `hasSeenOnboarding` is local state in RootNavigator. We might need a Context or a restart.
-            // Simpler approach for this step: Just navigate to a known route if possible, or reload.
-            // Actually, since RootNavigator is parent, and we changed AsyncStorage, we need to let it know? 
-            // Valid strategy: navigation.replace('TabNavigator') if it was a valid route, but it's conditioned.
-            // We will address the RootNavigator state update in the next step.
-
-            // Temporary: Just try to navigate to "Main" or reset.
-            // In the new flow, we will likely expose a method or context to update onboarding status.
-
-            // For now, just set storage and let's assume we implement a re-check mechanism or Context.
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }], // Placeholder, will fix in RootNavigator
-            });
+            // Mark onboarding complete — this updates RootNavigator state,
+            // which swaps OnboardingNavigator → TabNavigator immediately.
+            await completeOnboarding();
 
         } catch (error) {
             console.error('Error updating profile:', error);

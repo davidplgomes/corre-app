@@ -11,13 +11,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
-import { LoadingSpinner } from '../../components/common';
+import { LoadingSpinner, BackButton } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { getUserByQRSecret, MerchantUserInfo } from '../../services/supabase/users';
 import { parseQRData } from '../../services/qrcode';
 import { TIERS, TierKey } from '../../constants/tiers';
 import { theme } from '../../constants/theme';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
 
 type MerchantScannerProps = {
     navigation: any;
@@ -99,11 +98,7 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
                 <SafeAreaView style={styles.safeArea} edges={['top']}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                            <View style={styles.backIcon}>
-                                <ChevronRightIcon size={20} color="#FFF" />
-                            </View>
-                        </TouchableOpacity>
+                        <BackButton style={styles.backButton} />
                         <View>
                             <Text style={styles.headerLabel}>SCANNER</Text>
                             <Text style={styles.headerTitle}>QR CODE</Text>
@@ -135,11 +130,7 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
                 <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                            <View style={styles.backIcon}>
-                                <ChevronRightIcon size={20} color="#FFF" />
-                            </View>
-                        </TouchableOpacity>
+                        <BackButton style={styles.backButton} />
                         <View>
                             <Text style={styles.headerLabel}>SCANNER</Text>
                             <Text style={styles.headerTitle}>QR CODE</Text>
@@ -197,11 +188,7 @@ export const MerchantScanner: React.FC<MerchantScannerProps> = ({ navigation }) 
                     {/* Header */}
                     <SafeAreaView edges={['top']}>
                         <View style={styles.cameraHeader}>
-                            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                                <View style={styles.backIcon}>
-                                    <ChevronRightIcon size={20} color="#FFF" />
-                                </View>
-                            </TouchableOpacity>
+                            <BackButton />
                             <View>
                                 <Text style={styles.headerLabel}>SCANNER</Text>
                                 <Text style={styles.headerTitle}>QR CODE</Text>
@@ -259,17 +246,6 @@ const styles = StyleSheet.create({
     },
     backButton: {
         marginRight: 16,
-    },
-    backIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }],
     },
     headerLabel: {
         fontSize: 10,

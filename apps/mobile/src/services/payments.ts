@@ -37,11 +37,10 @@ export interface PaymentIntent {
  */
 export async function initializeStripe(): Promise<boolean> {
     try {
-        // Note: In a real implementation, you would use:
+        // Note: The actual initStripe call happens in App.tsx or a provider
         // import { initStripe } from '@stripe/stripe-react-native';
         // await initStripe({ publishableKey: STRIPE_PUBLISHABLE_KEY });
-
-        console.log('Stripe initialized (stub)');
+        console.log('Stripe initialized via Provider');
         return true;
     } catch (error) {
         console.error('Failed to initialize Stripe:', error);
@@ -54,14 +53,23 @@ export async function initializeStripe(): Promise<boolean> {
  */
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
     try {
-        // In production, this would call a Supabase Edge Function that checks Stripe
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('membership_tier, xp_level')
-            .eq('id', userId)
-            .single();
+        const { data: subscription, error } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', userId)
+            .in('status', ['active', 'trialing'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
         if (error) throw error;
+
+        // Also get user level for discount
+        const { data: user } = await supabase
+            .from('users')
+            .select('xp_level')
+            .eq('id', userId)
+            .single();
 
         // Calculate renewal discount based on XP level
         const discountMap: Record<string, number> = {
@@ -69,15 +77,18 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
             pacer: 5,
             elite: 10,
         };
-
-        const tier = user?.membership_tier || 'free';
         const level = user?.xp_level || 'starter';
 
+        // Map plan_id to internal key
+        let plan: SubscriptionPlanKey = 'free';
+        if (subscription?.plan_id === SUBSCRIPTION_PLANS.pro) plan = 'pro';
+        if (subscription?.plan_id === SUBSCRIPTION_PLANS.club) plan = 'club';
+
         return {
-            isActive: tier !== 'free',
-            plan: tier === 'basico' ? 'pro' : tier === 'baixa_pace' ? 'club' : 'free',
-            currentPeriodEnd: null, // Would come from Stripe in production
-            cancelAtPeriodEnd: false,
+            isActive: !!subscription && (subscription.status === 'active' || subscription.status === 'trialing'),
+            plan,
+            currentPeriodEnd: subscription?.current_period_end || null,
+            cancelAtPeriodEnd: subscription?.cancel_at_period_end || false,
             renewalDiscount: discountMap[level] || 0,
         };
     } catch (error) {
@@ -99,38 +110,25 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 export async function createSubscriptionCheckout(
     userId: string,
     planKey: 'pro' | 'club'
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; subscriptionId?: string; clientSecret?: string; error?: string }> {
     try {
-        // In production, this calls a Supabase Edge Function:
-        // const { data, error } = await supabase.functions.invoke('create-subscription', {
-        //   body: { userId, priceId: SUBSCRIPTION_PLANS[planKey] }
-        // });
-
-        // For now, simulate the subscription process
         console.log(`Creating subscription checkout for plan: ${planKey}`);
 
-        // Update user's membership tier (in production, this happens via webhook)
-        const tierMap = { pro: 'basico', club: 'baixa_pace' };
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ membership_tier: tierMap[planKey] })
-            .eq('id', userId);
+        const priceId = SUBSCRIPTION_PLANS[planKey];
+        if (!priceId) throw new Error('Invalid plan selected');
 
-        if (updateError) throw updateError;
+        const { data, error } = await supabase.functions.invoke('transactions/stripe/create-subscription', {
+            body: { priceId }
+        });
 
-        // In production with real Stripe:
-        // 1. Create Stripe Customer if not exists
-        // 2. Create Subscription with the price ID
-        // 3. Return client secret for payment confirmation
-        // 4. Handle payment in the app using @stripe/stripe-react-native
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-        Alert.alert(
-            'Subscription Updated',
-            `You are now subscribed to Corre ${planKey.toUpperCase()}!`,
-            [{ text: 'OK' }]
-        );
-
-        return { success: true };
+        return {
+            success: true,
+            subscriptionId: data.subscriptionId,
+            clientSecret: data.clientSecret
+        };
     } catch (error: any) {
         console.error('Subscription checkout error:', error);
         return {
@@ -143,20 +141,14 @@ export async function createSubscriptionCheckout(
 /**
  * Cancel subscription
  */
-export async function cancelSubscription(userId: string): Promise<{ success: boolean; error?: string }> {
+export async function cancelSubscription(userId: string, subscriptionId: string): Promise<{ success: boolean; error?: string }> {
     try {
-        // In production, this calls a Supabase Edge Function:
-        // const { data, error } = await supabase.functions.invoke('cancel-subscription', {
-        //   body: { userId }
-        // });
+        const { data, error } = await supabase.functions.invoke('transactions/stripe/create-subscription', {
+            body: { action: 'cancel', subscriptionId }
+        });
 
-        // For now, update tier to free
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ membership_tier: 'free' })
-            .eq('id', userId);
-
-        if (updateError) throw updateError;
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
         return { success: true };
     } catch (error: any) {
@@ -177,19 +169,36 @@ export async function createPaymentIntent(
     pointsToUse: number = 0
 ): Promise<PaymentIntent | null> {
     try {
-        // In production, this calls a Supabase Edge Function:
-        // const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-        //   body: { userId, amount, pointsToUse }
-        // });
+        const finalAmount = Math.max(50, amount - pointsToUse); // Minimum Stripe charge is usually 50 cents
 
-        // For now, return mock payment intent
-        console.log(`Creating payment intent: €${amount / 100}, using ${pointsToUse} points`);
+        console.log(`Creating payment intent for user ${userId}: €${finalAmount / 100} (Points used: ${pointsToUse})`);
+
+        const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+            body: {
+                amount: finalAmount,
+                currency: 'eur',
+                metadata: {
+                    user_id: userId,
+                    type: 'shop_order',
+                    points_used: pointsToUse
+                }
+            }
+        });
+
+        if (error) {
+            console.error('Edge function error:', error);
+            throw error;
+        }
+
+        if (data?.error) {
+            throw new Error(data.error);
+        }
 
         return {
-            id: `pi_mock_${Date.now()}`,
-            clientSecret: `pi_mock_${Date.now()}_secret_mock`,
-            amount: amount - pointsToUse, // Points reduce the cash amount
-            currency: 'eur',
+            id: data.id,
+            clientSecret: data.clientSecret,
+            amount: data.amount,
+            currency: data.currency,
         };
     } catch (error) {
         console.error('Create payment intent error:', error);
@@ -199,22 +208,22 @@ export async function createPaymentIntent(
 
 /**
  * Confirm payment (for marketplace/shop purchases)
+ *
+ * IMPORTANT: This function DOES NOT mark the order as paid.
+ * It only stores the payment intent ID. The Stripe webhook will
+ * update the order status to 'paid' after payment succeeds.
  */
 export async function confirmPayment(
     paymentIntentId: string,
-    userId: string,
     orderId: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        // In production, use @stripe/stripe-react-native:
-        // const { error } = await confirmPayment(clientSecret, { paymentMethodType: 'Card' });
-
-        // Update order status
+        // Store payment intent ID only - webhook will update status
         const { error: updateError } = await supabase
             .from('orders')
             .update({
-                status: 'paid',
                 stripe_payment_intent_id: paymentIntentId
+                // DO NOT set status here - webhook handles it
             })
             .eq('id', orderId);
 

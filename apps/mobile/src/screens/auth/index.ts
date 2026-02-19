@@ -3,3 +3,6 @@ export { SignUp } from './SignUp';
 export { ForgotPassword } from './ForgotPassword';
 export { Onboarding } from './Onboarding';
 export { ProfileSetup } from './ProfileSetup';
+export { ChangePasswordScreen } from './ChangePasswordScreen';
+export { ChangeEmailScreen } from './ChangeEmailScreen';
+export { ResetPasswordScreen } from './ResetPasswordScreen';

@@ -99,7 +99,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 
                     <ShakeView ref={emailShakeRef}>
                         <Input
-                            label="Email"
+                            label={t('auth.email')}
                             placeholder="your@email.com"
                             value={email}
                             onChangeText={setEmail}
@@ -114,7 +114,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 
                     <ShakeView ref={passwordShakeRef}>
                         <Input
-                            label="Password"
+                            label={t('auth.password')}
                             placeholder="••••••••"
                             value={password}
                             onChangeText={setPassword}

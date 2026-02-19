@@ -20,8 +20,8 @@ import { FeedPost, PostComment } from '../../types';
 import { getFeedPosts, getComments, addComment, getPostLikesCount } from '../../services/supabase/feed';
 import { useAuth } from '../../contexts/AuthContext';
 import { FeedPostItem } from '../../components/feed/FeedPostItem';
-import { ChevronRightIcon, ChatBubbleIcon } from '../../components/common/TabIcons';
-import { LoadingSpinner } from '../../components/common';
+import { ChatBubbleIcon } from '../../components/common/TabIcons';
+import { LoadingSpinner, BackButton } from '../../components/common';
 
 export const PostDetails: React.FC = () => {
     const route = useRoute();
@@ -105,14 +105,7 @@ export const PostDetails: React.FC = () => {
     const renderHeader = () => (
         <View>
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <View style={{ transform: [{ rotate: '180deg' }] }}>
-                        <ChevronRightIcon size={24} color="#FFF" />
-                    </View>
-                </TouchableOpacity>
+                <BackButton style={styles.backButton} />
                 <Text style={styles.headerTitle}>{t('feed.postDetails').toUpperCase()}</Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -225,7 +218,6 @@ const styles = StyleSheet.create({
         borderBottomColor: theme.colors.border.subtle,
     },
     backButton: {
-        padding: 5,
     },
     headerTitle: {
         color: '#FFF',

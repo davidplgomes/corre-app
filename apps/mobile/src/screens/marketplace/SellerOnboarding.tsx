@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
-import { ChevronRightIcon, VerifiedIcon } from '../../components/common/TabIcons';
+import { VerifiedIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 
 type SellerOnboardingProps = {
@@ -95,9 +96,7 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
         <View style={styles.container}>
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ChevronRightIcon size={24} color="#FFF" style={{ transform: [{ rotate: '180deg' }] }} />
-                    </TouchableOpacity>
+                    <BackButton style={styles.backButton} />
                     <Text style={styles.headerTitle}>CONFIGURAR PAGAMENTOS</Text>
                     <View style={{ width: 24 }} />
                 </View>

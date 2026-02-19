@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "00e82961-4e6f-4df3-9cdb-03d9f226ca15"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.davidplgomes.corre",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

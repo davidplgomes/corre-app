@@ -124,11 +124,11 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
         </View>
     );
 
-    const handleCommentPress = (postId: string) => {
+    const handleCommentPress = useCallback((postId: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const post = posts.find(p => p.id === postId);
         navigation.navigate('PostDetails', { postId, post });
-    };
+    }, [posts, navigation]);
 
     const renderPost = useCallback(({ item, index }: { item: FeedPost; index: number }) => (
         <AnimatedListItem index={index} animationType="fadeUp" staggerDelay={60}>
@@ -137,7 +137,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
                 onCommentPress={handleCommentPress}
             />
         </AnimatedListItem>
-    ), [t]);
+    ), [handleCommentPress]);
 
     if (loading && !refreshing) {
         return <LoadingSpinner />;

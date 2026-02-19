@@ -18,7 +18,7 @@ import { Coupons } from '../screens/loyalty/Coupons';
 import { Profile } from '../screens/profile/Profile';
 import { Settings } from '../screens/profile/Settings';
 import { EditProfile } from '../screens/profile/EditProfile';
-import { ChangePassword } from '../screens/profile/ChangePassword';
+import { ChangePasswordScreen, ChangeEmailScreen } from '../screens/auth';
 import { SubscriptionScreen } from '../screens/profile/SubscriptionScreen';
 import { RunHistory } from '../screens/profile/RunHistory';
 import { Achievements } from '../screens/profile/Achievements';
@@ -84,6 +84,7 @@ export type ProfileStackParamList = {
     Settings: undefined;
     EditProfile: undefined;
     ChangePassword: undefined;
+    ChangeEmail: undefined;
     RunHistory: undefined;
     RunTracker: undefined;
     Achievements: undefined;
@@ -168,7 +169,8 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="ProfileMain" component={Profile} />
         <ProfileStack.Screen name="Settings" component={Settings} />
         <ProfileStack.Screen name="EditProfile" component={EditProfile} />
-        <ProfileStack.Screen name="ChangePassword" component={ChangePassword} />
+        <ProfileStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <ProfileStack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
         <ProfileStack.Screen name="RunHistory" component={RunHistory} />
         <ProfileStack.Screen name="RunTracker" component={RunTracker} />
         <ProfileStack.Screen name="Achievements" component={Achievements} />

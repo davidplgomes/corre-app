@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner, Button } from '../../components/common';
+import { LoadingSpinner, Button, BackButton } from '../../components/common';
 import { getCartItems, removeFromCart, updateCartQuantity, clearCart } from '../../services/supabase/wallet';
 import { getAvailablePoints } from '../../services/supabase/wallet';
 import { calculateMaxPointsDiscount } from '../../services/payments';
@@ -57,20 +57,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                 getAvailablePoints(user.id),
             ]);
 
-            // TODO: Join with actual item details - for now using mock data
-            const itemsWithDetails = items.map(item => ({
-                ...item,
-                item: {
-                    title: `Item ${item.item_id.slice(0, 8)}`,
-                    price: 29.99,
-                    image_url: null,
-                },
-            }));
+            // Filter out items where product details couldn't be loaded
+            const validItems = items.filter(item => item.item !== null);
 
-            setCartItems(itemsWithDetails);
+            setCartItems(validItems);
             setAvailablePoints(points);
         } catch (error) {
             console.error('Error loading cart:', error);
+            Alert.alert('Error', 'Failed to load cart items');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -161,9 +155,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
+                <BackButton style={styles.backButton} />
                 <Text style={styles.headerTitle}>Cart</Text>
                 {cartItems.length > 0 && (
                     <TouchableOpacity onPress={handleClearCart} style={styles.clearButton}>
@@ -342,10 +334,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,

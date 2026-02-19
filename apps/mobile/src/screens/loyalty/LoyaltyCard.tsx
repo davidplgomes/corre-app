@@ -144,7 +144,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                         <DigitalCard member={memberData} qrData={qrValue || 'loading'} />
                         <View style={styles.timerContainer}>
                             <ClockIcon size={12} color="rgba(255,255,255,0.5)" />
-                            <Text style={styles.timerText}>Atualiza em {timer}s</Text>
+                            <Text style={styles.timerText}>{t('loyalty.updatesIn')} {timer}s</Text>
                         </View>
                     </View>
 
@@ -152,18 +152,18 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                     <View style={styles.statsRow}>
                         <View style={styles.statBoxSeparate}>
                             <Text style={styles.statValueLarge}>{stats.points.toLocaleString()}</Text>
-                            <Text style={styles.statLabelSmall}>PONTOS (R$)</Text>
+                            <Text style={styles.statLabelSmall}>{t('loyalty.points')} (R$)</Text>
                         </View>
                         <View style={[styles.statBoxSeparate, styles.statBoxAccent, { borderColor: levelConfig.primary }]}>
                             <Text style={[styles.statValueLarge, { color: levelConfig.primary }]}>{stats.xp.toLocaleString()}</Text>
-                            <Text style={styles.statLabelSmall}>XP (NÍVEL)</Text>
+                            <Text style={styles.statLabelSmall}>{t('loyalty.xpLevel')}</Text>
                         </View>
                     </View>
 
                     {/* Progress Section */}
                     <View style={styles.progressSection}>
                         <View style={styles.progressHeader}>
-                            <Text style={styles.progressLabelLeft}>NEXT LEVEL</Text>
+                            <Text style={styles.progressLabelLeft}>{t('loyalty.nextLevel')}</Text>
                             <Text style={styles.progressLabelRight}>{stats.nextLevelName}</Text>
                         </View>
                         <View style={styles.progressBarBg}>
@@ -176,7 +176,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                         </View>
                         <View style={styles.progressFooter}>
                             <Text style={styles.progressCurrent}>{t('loyalty.current')}: {stats.currentLevelName}</Text>
-                            <Text style={styles.progressRemaining}>{xpToNext} XP para {stats.nextLevelName}</Text>
+                            <Text style={styles.progressRemaining}>{xpToNext} {t('loyalty.xpTo')} {stats.nextLevelName}</Text>
                         </View>
                     </View>
 

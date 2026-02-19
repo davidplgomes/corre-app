@@ -188,14 +188,14 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation, route }) =
                     {/* Location Coordinates (simplified) */}
                     <View style={styles.coordsRow}>
                         <Input
-                            label="Latitude"
+                            label={t('events.latitude')}
                             value={locationLat}
                             onChangeText={setLocationLat}
                             keyboardType="numeric"
                             containerStyle={styles.coordInput}
                         />
                         <Input
-                            label="Longitude"
+                            label={t('events.longitude')}
                             value={locationLng}
                             onChangeText={setLocationLng}
                             keyboardType="numeric"

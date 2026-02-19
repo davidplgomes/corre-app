@@ -16,8 +16,9 @@ import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
 import { formatDate } from '../../utils/date';
 import { LoadingSpinner } from '../../components/common';
-import { ChevronRightIcon, VerifiedIcon } from '../../components/common/TabIcons';
+import { VerifiedIcon, CloseIcon } from '../../components/common/TabIcons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -28,39 +29,13 @@ type ListingDetailsProps = {
 
 export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigation }) => {
     const { id } = route.params;
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { t } = useTranslation();
 
     const [listing, setListing] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [buying, setBuying] = useState(false);
-
-    useEffect(() => {
-        const fetchListing = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('marketplace_listings')
-                    .select(`
-                        *,
-                        seller:seller_id (id, full_name, avatar_url, membership_tier),
-                        seller_account:seller_accounts!inner(charges_enabled)
-                    `)
-                    .eq('id', id)
-                    .single();
-
-                if (error) throw error;
-                setListing(data);
-            } catch (error) {
-                console.error('Error fetching listing details:', error);
-                Alert.alert('Error', 'Could not load listing details');
-                navigation.goBack();
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchListing();
-    }, [id]);
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const handleBuy = async () => {
         if (!user) return;
@@ -77,23 +52,40 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
             });
 
             if (error) throw error;
+            if (data?.error) throw new Error(data.error);
 
-            if (data?.error) {
-                throw new Error(data.error);
+            // 2. Initialize Payment Sheet
+            const { error: initError } = await initPaymentSheet({
+                merchantDisplayName: 'Corre Marketplace',
+                paymentIntentClientSecret: data.clientSecret,
+                defaultBillingDetails: {
+                    name: profile?.fullName || user.user_metadata?.full_name || '',
+                },
+                appearance: {
+                    colors: {
+                        primary: theme.colors.brand.primary,
+                        background: '#1A1A1A',
+                        componentBackground: '#2A2A2A',
+                        primaryText: '#FFFFFF',
+                        secondaryText: '#AAAAAA',
+                        placeholderText: '#666666',
+                    },
+                    shapes: { borderRadius: 12 },
+                }
+            });
+
+            if (initError) throw initError;
+
+            // 3. Present Payment Sheet
+            const { error: stripeError } = await presentPaymentSheet();
+
+            if (stripeError) {
+                if (stripeError.code === 'Canceled') return; // User cancelled
+                throw stripeError;
             }
 
-            // 2. Here we would integrate Stripe Payment Sheet
-            // Since we don't have stripe-react-native configured in this environment, 
-            // we will simulate a success for demonstration.
-
-            Alert.alert(
-                'Pagamento Iniciado',
-                'Em um app real, o Stripe PaymentSheet abriria aqui com o clientSecret: ' + data.clientSecret?.substring(0, 10) + '...',
-                [
-                    { text: 'Simular Sucesso', onPress: () => handleSuccess() },
-                    { text: 'Cancelar', style: 'cancel' }
-                ]
-            );
+            // 4. Success handling
+            await handleSuccess();
 
         } catch (error: any) {
             console.error('Buy error:', error);
@@ -104,8 +96,7 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
     };
 
     const handleSuccess = async () => {
-        // Optimistic update (in real app, webhook handles this)
-        Alert.alert('Sucesso!', 'Compra realizada com sucesso.');
+        Alert.alert('Sucesso!', 'Compra realizada com sucesso!');
         navigation.goBack();
     };
 
@@ -131,10 +122,12 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
                             <Text style={styles.placeholderText}>No Image</Text>
                         </View>
                     )}
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <View style={styles.backIcon}>
-                            <ChevronRightIcon size={20} color="#FFF" />
-                        </View>
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <CloseIcon size={20} color="#FFF" />
                     </TouchableOpacity>
                 </View>
 
@@ -185,7 +178,7 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
                         disabled={buying}
                     >
                         <Text style={styles.buyButtonText}>
-                            {buying ? 'PROCESSANDO...' : 'COMPRAR AGORA'}
+                            {buying ? t('marketplace.processing') : t('marketplace.buyNow')}
                         </Text>
                     </TouchableOpacity>
                 </SafeAreaView>
@@ -224,18 +217,14 @@ const styles = StyleSheet.create({
     backButton: {
         position: 'absolute',
         top: 50,
-        left: 20,
-    },
-    backIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        alignItems: 'center',
+        right: 20,
+        zIndex: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }],
+        alignItems: 'center',
     },
     contentContainer: {
         padding: 24,

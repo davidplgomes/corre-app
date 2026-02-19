@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -20,7 +20,7 @@ import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { redeemPartnerCoupon } from '../../services/supabase/coupons';
+import { getPartnerCoupons, redeemPartnerCouponWithPoints, PartnerCoupon } from '../../services/supabase/coupons';
 
 const { width } = Dimensions.get('window');
 
@@ -28,75 +28,11 @@ type CouponsProps = {
     navigation: any;
 };
 
-// Mock coupons data
-const mockCoupons = [
-    {
-        id: '1',
-        title: '10% OFF',
-        description: 'Em qualquer compra na Nike Store',
-        partner: 'Nike',
-        expiresAt: '31 Jan 2026',
-        code: 'CORRE10NIKE',
-        pointsRequired: 500,
-        isAvailable: true,
-        category: 'fashion',
-    },
-    {
-        id: '2',
-        title: '15% OFF',
-        description: 'Suplementos e vitaminas',
-        partner: 'Growth Supplements',
-        expiresAt: '28 Feb 2026',
-        code: 'CORREGROW15',
-        pointsRequired: 750,
-        isAvailable: true,
-        category: 'health',
-    },
-    {
-        id: '3',
-        title: 'Frete Grátis',
-        description: 'Em pedidos acima de R$100',
-        partner: 'Netshoes',
-        expiresAt: '15 Feb 2026',
-        code: 'CORREFREE',
-        pointsRequired: 300,
-        isAvailable: true,
-        category: 'fashion',
-    },
-    {
-        id: '4',
-        title: '20% OFF',
-        description: 'Em tênis de corrida selecionados',
-        partner: 'Centauro',
-        expiresAt: '10 Feb 2026',
-        code: 'CORRERUN20',
-        pointsRequired: 1000,
-        isAvailable: false, // Not enough points
-        category: 'sports',
-    },
-    {
-        id: '5',
-        title: 'R$30 OFF',
-        description: 'Na primeira assinatura mensal',
-        partner: 'Strava Premium',
-        expiresAt: '20 Mar 2026',
-        code: 'CORRESTRAVA',
-        pointsRequired: 800,
-        isAvailable: true,
-        category: 'apps',
-    },
-    {
-        id: '6',
-        title: '2x1',
-        description: 'Leve 2 e pague 1 em bebidas isotônicas',
-        partner: 'Gatorade',
-        expiresAt: '05 Feb 2026',
-        code: 'CORRE2X1G',
-        pointsRequired: 400,
-        isAvailable: true,
-        category: 'drinks',
-    },
-];
+// Helper function to format expiry date
+const formatExpiryDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 const categoryColors: Record<string, string> = {
     fashion: '#FF6B6B',
@@ -111,36 +47,50 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const userPoints = profile?.currentMonthPoints || 0;
 
-    const [selectedCoupon, setSelectedCoupon] = useState<typeof mockCoupons[0] | null>(null);
+    const [coupons, setCoupons] = useState<PartnerCoupon[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedCoupon, setSelectedCoupon] = useState<PartnerCoupon & { isAvailable?: boolean; expiresAt?: string } | null>(null);
     const [filter, setFilter] = useState<string>('all');
     const [isRedeeming, setIsRedeeming] = useState(false);
 
+    // Fetch coupons from database
+    useEffect(() => {
+        const fetchCoupons = async () => {
+            setLoading(true);
+            const data = await getPartnerCoupons();
+            setCoupons(data);
+            setLoading(false);
+        };
+        fetchCoupons();
+    }, []);
+
     const filteredCoupons = (filter === 'all'
-        ? mockCoupons
-        : mockCoupons.filter(c => c.category === filter)).map(c => ({
+        ? coupons
+        : coupons.filter(c => c.category === filter)).map(c => ({
             ...c,
-            isAvailable: userPoints >= c.pointsRequired
+            expiresAt: formatExpiryDate(c.expires_at),
+            isAvailable: userPoints >= c.points_required
         }));
 
-    const handleCouponPress = (coupon: typeof mockCoupons[0]) => {
+    const handleCouponPress = (coupon: PartnerCoupon & { expiresAt?: string; isAvailable?: boolean }) => {
         // Allow viewing details even if locked, but disable "Use" button
         setSelectedCoupon({
             ...coupon,
-            isAvailable: userPoints >= coupon.pointsRequired
+            isAvailable: userPoints >= coupon.points_required
         });
     };
 
     const handleUseCoupon = async () => {
         if (!selectedCoupon || !profile?.id) return;
 
-        if (userPoints < selectedCoupon.pointsRequired) {
-            Alert.alert("Saldo Insuficiente", `Você precisa de ${selectedCoupon.pointsRequired} pontos para este cupom.`);
+        if (userPoints < selectedCoupon.points_required) {
+            Alert.alert("Saldo Insuficiente", `Você precisa de ${selectedCoupon.points_required} pontos para este cupom.`);
             return;
         }
 
         Alert.alert(
             "Resgatar Cupom",
-            `Deseja usar ${selectedCoupon.pointsRequired} pontos para resgatar este cupom?`,
+            `Deseja usar ${selectedCoupon.points_required} pontos para resgatar este cupom?`,
             [
                 { text: "Cancelar", style: "cancel" },
                 {
@@ -148,25 +98,30 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                     onPress: async () => {
                         setIsRedeeming(true);
                         try {
-                            const result = await redeemPartnerCoupon(
+                            const result = await redeemPartnerCouponWithPoints(
                                 profile.id,
-                                selectedCoupon.pointsRequired,
-                                selectedCoupon.code
+                                selectedCoupon.id
                             );
 
                             if (result.success) {
                                 // Haptic feedback for success
                                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                                // Copy code to clipboard
-                                await Clipboard.setStringAsync(selectedCoupon.code);
+                                // Copy unique code to clipboard
+                                if (result.code) {
+                                    await Clipboard.setStringAsync(result.code);
+                                }
 
                                 // Refresh user profile to update points display
                                 await refreshProfile();
 
+                                // Fetch updated coupons to reflect redeemed_count
+                                const updatedCoupons = await getPartnerCoupons();
+                                setCoupons(updatedCoupons);
+
                                 Alert.alert(
                                     "Sucesso! 🎉",
-                                    `Cupom resgatado com sucesso!\n\nCódigo: ${selectedCoupon.code}\n\n(Código copiado para a área de transferência)\n\nNovo saldo: ${result.newPointsBalance} pontos`,
+                                    `Cupom resgatado com sucesso!\n\nCódigo: ${result.code || selectedCoupon.code}\n\n(Código copiado para a área de transferência)`,
                                     [{ text: "OK", onPress: () => setSelectedCoupon(null) }]
                                 );
                             } else {
@@ -241,7 +196,18 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    {filteredCoupons.map((coupon) => (
+                    {loading ? (
+                        <View style={{ alignItems: 'center', paddingTop: 40 }}>
+                            <ActivityIndicator size="large" color={theme.colors.brand.primary} />
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', marginTop: 16 }}>Carregando cupons...</Text>
+                        </View>
+                    ) : filteredCoupons.length === 0 ? (
+                        <View style={{ alignItems: 'center', paddingTop: 40 }}>
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>
+                                {filter === 'all' ? 'Nenhum cupom disponível' : 'Nenhum cupom nesta categoria'}
+                            </Text>
+                        </View>
+                    ) : filteredCoupons.map((coupon) => (
                         <TouchableOpacity
                             key={coupon.id}
                             style={[
@@ -264,7 +230,7 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                             <View style={styles.couponRight}>
                                 <View style={styles.couponDivider} />
                                 <View style={styles.couponPoints}>
-                                    <Text style={styles.couponPointsValue}>{coupon.pointsRequired}</Text>
+                                    <Text style={styles.couponPointsValue}>{coupon.points_required}</Text>
                                     <Text style={styles.couponPointsLabel}>pts</Text>
                                 </View>
                                 {!coupon.isAvailable && (
@@ -276,7 +242,7 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                         </TouchableOpacity>
                     ))}
 
-                    <View style={{ height: 100 }} />
+                    {!loading && <View style={{ height: 100 }} />}
                 </ScrollView>
 
                 {/* Coupon Detail Modal */}
@@ -319,7 +285,7 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
 
                                     <View style={styles.modalPointsRow}>
                                         <Text style={styles.modalPointsLabel}>{t('coupons.cost')}:</Text>
-                                        <Text style={styles.modalPointsValue}>{selectedCoupon.pointsRequired} pts</Text>
+                                        <Text style={styles.modalPointsValue}>{selectedCoupon.points_required} pts</Text>
                                     </View>
 
                                     <View style={styles.modalActions}>

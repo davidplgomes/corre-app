@@ -13,9 +13,10 @@ import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { getEventParticipants } from '../../services/supabase/events';
 import { EventParticipant } from '../../types';
-import { LoadingSpinner, Card } from '../../components/common';
+import { LoadingSpinner, Card, BackButton } from '../../components/common';
 import { TierBadge } from '../../components/profile';
 import { TierKey } from '../../constants/tiers';
+import * as Haptics from 'expo-haptics';
 
 type EventParticipantsProps = {
     route: { params: { eventId: string; eventTitle: string } };
@@ -84,12 +85,10 @@ export const EventParticipants: React.FC<EventParticipantsProps> = ({ route, nav
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backText}>← {t('common.back')}</Text>
-                    </TouchableOpacity>
+                    <BackButton onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.goBack();
+                    }} />
                     <View style={styles.headerContent}>
                         <Text style={styles.headerTitle}>{t('events.participants')}</Text>
                         <Text style={styles.subtitle} numberOfLines={1}>{eventTitle}</Text>
@@ -130,14 +129,6 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing[4],
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border.default,
-    },
-    backButton: {
-        paddingVertical: theme.spacing[2],
-        width: 60,
-    },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
     },
     headerContent: {
         alignItems: 'center',

@@ -26,12 +26,13 @@ import {
     MedalIcon,
     SunriseIcon,
     PartyIcon,
-    MapIcon
+    MapIcon,
+    PencilIcon
 } from '../../components/common/TabIcons';
 import { LoadingSpinner } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
-import { getPublicProfile, PublicProfile } from '../../services/supabase/users';
-import { sendFriendRequest, removeFriend, getFriendshipStatus } from '../../services/supabase/friendships';
+import { getPublicProfile, getProfile, PublicProfile } from '../../services/supabase/users';
+import { sendFriendRequest, removeFriend, cancelFriendRequest, getFriendshipStatus } from '../../services/supabase/friendships';
 import { getUserAchievements } from '../../services/supabase/achievements';
 import { getUserRuns } from '../../services/supabase/feed';
 import { FeedPostItem } from '../../components/feed/FeedPostItem';
@@ -44,8 +45,9 @@ type UserProfileProps = {
 
 export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) => {
     const { t } = useTranslation();
-    const { profile: currentUser } = useAuth();
+    const { profile: currentUser, user } = useAuth();
     const { userId } = route.params;
+    const isOwnProfile = user?.id === userId;
 
     const [profile, setProfile] = useState<PublicProfile | null>(null);
     const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'pending' | 'accepted'>('none');
@@ -62,21 +64,51 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
     const loadProfile = async () => {
         try {
             setLoading(true);
-            const [profileData, status] = await Promise.all([
-                getPublicProfile(userId, currentUser?.id),
-                currentUser?.id ? getFriendshipStatus(userId) : Promise.resolve('none' as const),
-            ]);
-            setProfile(profileData);
-            setFriendshipStatus(status);
 
-            // Fetch extra data if allowed
-            if (profileData && profileData.current_month_points !== undefined) {
+            if (isOwnProfile) {
+                // Own profile: fetch full data, no privacy restrictions
+                const fullProfile = await getProfile(userId);
+                if (fullProfile) {
+                    setProfile({
+                        id: fullProfile.id,
+                        full_name: fullProfile.full_name,
+                        membership_tier: fullProfile.membership_tier,
+                        privacy_visibility: (fullProfile as any).privacy_visibility || 'anyone',
+                        avatar_url: (fullProfile as any).avatar_url || undefined,
+                        current_month_points: fullProfile.current_month_points,
+                        total_lifetime_points: fullProfile.total_lifetime_points,
+                        neighborhood: fullProfile.neighborhood || undefined,
+                        city: (fullProfile as any).city || undefined,
+                        bio: (fullProfile as any).bio || undefined,
+                        instagram_handle: (fullProfile as any).instagram_handle || undefined,
+                        created_at: fullProfile.created_at || undefined,
+                    });
+                }
+                // No friendship status needed for own profile
                 const [runs, badges] = await Promise.all([
                     getUserRuns(userId),
                     getUserAchievements(userId)
                 ]);
-                setRecentRuns(runs.slice(0, 3)); // Limit to 3
+                setRecentRuns(runs.slice(0, 3));
                 setAchievements(badges);
+            } else {
+                // Other user: respect privacy settings
+                const [profileData, status] = await Promise.all([
+                    getPublicProfile(userId, currentUser?.id),
+                    currentUser?.id ? getFriendshipStatus(userId) : Promise.resolve('none' as const),
+                ]);
+                setProfile(profileData);
+                setFriendshipStatus(status);
+
+                // Fetch extra data if allowed
+                if (profileData && profileData.current_month_points !== undefined) {
+                    const [runs, badges] = await Promise.all([
+                        getUserRuns(userId),
+                        getUserAchievements(userId)
+                    ]);
+                    setRecentRuns(runs.slice(0, 3));
+                    setAchievements(badges);
+                }
             }
         } catch (error) {
             console.error('Error loading profile:', error);
@@ -90,10 +122,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setActionLoading(true);
         try {
-            const success = await sendFriendRequest(userId);
-            if (success) {
-                setFriendshipStatus('pending');
-                Alert.alert(t('common.success'), t('friends.requestSent'));
+            const result = await sendFriendRequest(userId);
+            if (result.success) {
+                if (result.autoAccepted) {
+                    setFriendshipStatus('accepted');
+                    Alert.alert(t('common.success'), t('friends.nowFriends'));
+                } else {
+                    setFriendshipStatus('pending');
+                    Alert.alert(t('common.success'), t('friends.requestSent'));
+                }
             }
         } catch (error) {
             Alert.alert(t('common.error'), t('errors.unknownError'));
@@ -167,7 +204,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
     const tier = (profile.membership_tier || 'basico') as keyof typeof tierColors;
     const tierConfig = tierColors[tier];
     const userInitial = profile.full_name?.charAt(0).toUpperCase() || '?';
-    const hasFullAccess = profile.current_month_points !== undefined;
+    const hasFullAccess = isOwnProfile || profile.current_month_points !== undefined;
 
     return (
         <View style={styles.container}>
@@ -286,25 +323,44 @@ export const UserProfile: React.FC<UserProfileProps> = ({ route, navigation }) =
                                 </View>
                             )}
 
-                            {/* Action Buttons */}
-                            <View style={styles.actionSection}>
-                                {friendshipStatus === 'none' && (
-                                    <TouchableOpacity style={styles.actionButton} onPress={handleAddFriend} disabled={actionLoading}>
-                                        <Text style={styles.actionButtonText}>{t('friends.addFriend').toUpperCase()}</Text>
-                                        <View style={styles.arrowContainer}><Text style={styles.arrowText}>+</Text></View>
-                                    </TouchableOpacity>
-                                )}
-                                {friendshipStatus === 'pending' && (
-                                    <View style={[styles.actionButton, { opacity: 0.7 }]}>
-                                        <Text style={styles.actionButtonText}>{t('friends.pending').toUpperCase()}</Text>
-                                    </View>
-                                )}
-                                {friendshipStatus === 'accepted' && (
-                                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: 'rgba(255,100,100,0.1)', borderWidth: 1, borderColor: '#FF4444' }]} onPress={handleRemoveFriend} disabled={actionLoading}>
-                                        <Text style={[styles.actionButtonText, { color: '#FF4444' }]}>{t('friends.removeFriend').toUpperCase()}</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
+                            {/* Action Buttons - hidden for own profile */}
+                            {!isOwnProfile && (
+                                <View style={styles.actionSection}>
+                                    {friendshipStatus === 'none' && (
+                                        <TouchableOpacity style={styles.actionButton} onPress={handleAddFriend} disabled={actionLoading}>
+                                            <Text style={styles.actionButtonText}>{t('friends.addFriend').toUpperCase()}</Text>
+                                            <View style={styles.arrowContainer}><Text style={styles.arrowText}>+</Text></View>
+                                        </TouchableOpacity>
+                                    )}
+                                    {friendshipStatus === 'pending' && (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                            <View style={[styles.actionButton, { opacity: 0.7, flex: 1 }]}>
+                                                <Text style={styles.actionButtonText}>{t('friends.pending').toUpperCase()}</Text>
+                                            </View>
+                                            <TouchableOpacity
+                                                style={{
+                                                    width: 40, height: 40, borderRadius: 20,
+                                                    backgroundColor: 'rgba(255,80,80,0.12)',
+                                                    borderWidth: 1, borderColor: 'rgba(255,80,80,0.25)',
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                }}
+                                                onPress={async () => {
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                    const success = await cancelFriendRequest(userId);
+                                                    if (success) setFriendshipStatus('none');
+                                                }}
+                                            >
+                                                <Text style={{ color: '#FF6464', fontSize: 16, fontWeight: '900' }}>✕</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                    {friendshipStatus === 'accepted' && (
+                                        <TouchableOpacity style={[styles.actionButton, { backgroundColor: 'rgba(255,100,100,0.1)', borderWidth: 1, borderColor: '#FF4444' }]} onPress={handleRemoveFriend} disabled={actionLoading}>
+                                            <Text style={[styles.actionButtonText, { color: '#FF4444' }]}>{t('friends.removeFriend').toUpperCase()}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
 
                         </View>
                     </BlurView>

@@ -24,7 +24,11 @@
     "comment": "Comentar",
     "viewAll": "Ver tudo",
     "refresh": "Atualizar",
-    "permissionRequired": "Permissão Necessária"
+    "permissionRequired": "Permissão Necessária",
+    "checkInbox": "Verifique sua caixa de entrada",
+    "sendConfirmation": "Enviar Confirmação",
+    "new": "Novo",
+    "and": "e"
   },
   "auth": {
     "login": "Entrar",
@@ -54,7 +58,25 @@
     "confirmPassword": "Confirmar Senha",
     "enterNewPasswordBelow": "Digite sua nova senha abaixo.",
     "minSixCharacters": "Mínimo 6 caracteres",
-    "repeatNewPassword": "Repita a nova senha"
+    "repeatNewPassword": "Repita a nova senha",
+    "security": "Segurança",
+    "changePassword": "Alterar Senha",
+    "changeEmail": "Alterar E-mail",
+    "joinCorre": "Junte-se ao Corre",
+    "startJourney": "Comece sua jornada de corrida hoje",
+    "creatingAccount": "Criando Conta...",
+    "createAccount": "Criar Conta",
+    "bySigningUp": "Ao se cadastrar, você concorda com nossos",
+    "signIn": "Entrar",
+    "passwordMismatch": "As senhas não coincidem",
+    "passwordResetSuccess": "Sua senha foi redefinida com sucesso.",
+    "resetPasswordSubtitle": "Digite sua nova senha abaixo.",
+    "setNewPassword": "Definir Nova Senha",
+    "changeEmailInfo": "Você receberá um e-mail de confirmação no seu novo endereço.",
+    "emailUpdateConfirmation": "Um link de confirmação foi enviado para seu novo endereço de e-mail.",
+    "currentPassword": "Senha Atual",
+    "newEmail": "Novo E-mail",
+    "passwordUpdated": "Senha atualizada com sucesso!"
   },
   "navigation": {
     "home": "Início",
@@ -80,6 +102,8 @@
     "time": "Hora",
     "location": "Localização",
     "selectLocation": "Selecionar Localização no Mapa",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
     "participants": "Participantes",
     "joinEvent": "Participar do Evento",
     "leaveEvent": "Sair do Evento",
@@ -96,6 +120,7 @@
     "updateEventSuccess": "Evento atualizado com sucesso!",
     "deleteEventSuccess": "Evento excluído com sucesso!",
     "noEvents": "Nenhum evento encontrado",
+    "noEventsDescription": "Volte mais tarde para ver os próximos eventos",
     "eventTypes": {
       "routine": "Corrida de Rotina",
       "special": "Evento Especial",
@@ -127,10 +152,11 @@
     "streetRun": "Corrida de Rua",
     "morningRun": "Corrida Matinal",
     "meetingPoint": "Ponto de Encontro",
-    "upcoming": "Próximos"
+    "upcoming": "Próximos",
+    "checkedIn": "Check-in Realizado"
   },
   "leaderboard": {
-    "title": "Classificação",
+    "title": "Ranking",
     "monthly": "Este Mês",
     "allTime": "Todos os Tempos",
     "rank": "Posição",
@@ -178,7 +204,17 @@
     "discountPartners": "10% OFF em parceiros",
     "vipAccess": "Acesso VIP a eventos",
     "priorityQueue": "Prioridade na fila",
-    "recentActivity": "Últimas Atividades"
+    "recentActivity": "Últimas Atividades",
+    "scanner": "SCANNER",
+    "name": "NOME",
+    "memberId": "ID DO MEMBRO",
+    "scanToEarn": "ESCANEIE PARA PONTUAR",
+    "tapToFlip": "Toque para virar",
+    "updatesIn": "Atualiza em",
+    "points": "PONTOS",
+    "xpLevel": "XP (NÍVEL)",
+    "nextLevel": "PRÓXIMO NÍVEL",
+    "xpTo": "XP para"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -190,11 +226,6 @@
     "contact": "Contato",
     "imageLink": "Link da Imagem",
     "category": "Categoria",
-    "categories": {
-      "eletronicos": "Eletrônicos",
-      "roupas": "Roupas",
-      "outros": "Outros"
-    },
     "interested": "Tenho interesse",
     "contactSeller": "Entrar em contato",
     "details": "Detalhes",
@@ -212,6 +243,7 @@
     "titlePlaceholder": "Ex: Tênis Nike 42",
     "noShopItems": "Nenhum item na loja no momento.",
     "noCommunityItems": "Nenhum item anunciado.",
+    "emptyCart": "Seu carrinho está vazio",
     "sellItem": "Vender Item",
     "addPhoto": "Adicionar Foto",
     "condition": "Condição",
@@ -228,7 +260,9 @@
       "accessories": "Acessórios",
       "electronics": "Eletrônicos",
       "other": "Outros"
-    }
+    },
+    "processing": "PROCESSANDO...",
+    "buyNow": "COMPRAR AGORA"
   },
   "profile": {
     "title": "Perfil",
@@ -272,7 +306,17 @@
     "enterBio": "Conte um pouco sobre você",
     "instagram": "Instagram",
     "enterInstagram": "Seu usuário do Instagram",
-    "tapToChange": "Toque para trocar a foto"
+    "tapToChange": "Toque para trocar a foto",
+    "changeEmail": "Alterar E-mail",
+    "wallet": "Carteira",
+    "notifications": "Notificações",
+    "guestPass": "Passe de Convidado",
+    "welcomeKit": "Kit de Boas-vindas",
+    "neighborhood": "Bairro",
+    "monthPoints": "Pontos do Mês",
+    "lifetimePoints": "Pontos Totais",
+    "guestCanAttend": "Seu convidado pode participar do evento com você!",
+    "welcomeKitPreparing": "Seu kit de boas-vindas está sendo preparado! Você receberá uma notificação quando for enviado."
   },
   "friends": {
     "title": "Amigos",
@@ -288,7 +332,8 @@
     "noRequests": "Nenhuma solicitação pendente",
     "removeFriend": "Remover Amigo",
     "confirmRemove": "Tem certeza que deseja remover este amigo?",
-    "suggested": "Sugestões de Amizade"
+    "suggested": "Sugestões de Amizade",
+    "nowFriends": "Vocês agora são amigos!"
   },
   "achievements": {
     "firstRun": "Primeira Corrida",
@@ -323,6 +368,12 @@
     "permissionDenied": "Permissão negada",
     "locationPermissionDenied": "Permissão de localização é necessária para check-ins",
     "cameraPermissionDenied": "Permissão de câmera é necessária para escanear códigos QR",
+    "permissionNeeded": "Permissão Necessária",
+    "allowCamera": "PERMITIR CÂMERA",
+    "applicableDiscount": "DESCONTO APLICÁVEL",
+    "setupRequired": "Configuração Necessária",
+    "sellerSetupNeeded": "Você precisa configurar sua conta de recebimento antes de vender.",
+    "setupNow": "Configurar Agora",
     "fillAllFields": "Por favor, preencha todos os campos.",
     "updateProfile": "Não foi possível atualizar o perfil.",
     "passwordsDoNotMatch": "As senhas não coincidem.",
@@ -330,7 +381,12 @@
     "updatePassword": "Não foi possível atualizar a senha.",
     "createAd": "Não foi possível criar o anúncio.",
     "loadFeed": "Não foi possível carregar o feed.",
-    "permissionRequired": "Permissão necessária para continuar."
+    "permissionRequired": "Permissão necessária para continuar.",
+    "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+    "required": "Obrigatório",
+    "loadPost": "Não foi possível carregar a publicação.",
+    "passwordMismatch": "As senhas não coincidem.",
+    "userNotFound": "Usuário não encontrado."
   },
   "validation": {
     "required": "Este campo é obrigatório",
@@ -342,7 +398,10 @@
     "profileUpdated": "Perfil atualizado com sucesso!",
     "passwordUpdated": "Senha atualizada com sucesso!",
     "redeemRequestSent": "Solicitação de resgate enviada!",
-    "itemAnnounced": "Seu item foi anunciado!"
+    "ItemAnnounced": "Seu item foi anunciado!",
+    "itemAnnounced": "Seu item foi anunciado!",
+    "listingPublished": "Seu anúncio foi publicado!",
+    "sellerActivated": "Sua conta de vendedor foi ativada."
   },
   "settings": {
     "title": "Configurações",
@@ -384,7 +443,11 @@
     "noRecentActivity": "Nenhuma atividade recente.",
     "friends": "Amigos",
     "community": "Comunidade",
-    "activities": "Atividades"
+    "activities": "Atividades",
+    "postDetails": "Detalhes da Publicação",
+    "comments": "Comentários",
+    "noComments": "Nenhum comentário ainda. Seja o primeiro a comentar!",
+    "writeComment": "Escreva um comentário..."
   },
   "runHistory": {
     "title": "Histórico de Corridas",
@@ -398,7 +461,11 @@
     "available": "Disponível",
     "used": "Usado",
     "your": "Seus",
-    "validUntil": "Válido até"
+    "validUntil": "Válido até",
+    "useCoupon": "USAR CUPOM",
+    "insufficientBalance": "SALDO INSUFICIENTE",
+    "noCouponsAvailable": "Nenhum cupom disponível",
+    "noCouponsInCategory": "Nenhum cupom nesta categoria"
   },
   "onboarding": {
     "slide1Title": "Bem-vindo ao Corre",
@@ -437,5 +504,52 @@
     },
     "joinedOn": "Entrou em",
     "friend": "Amigo"
+  },
+  "subscription": {
+    "plans": "PLANOS",
+    "title": "ASSINATURA",
+    "mostPopular": "MAIS POPULAR",
+    "premium": "PREMIUM",
+    "perMonth": "/mês",
+    "subscribe": "Assinar",
+    "viewPlans": "📊 Ver Planos",
+    "compareFeatures": "📋 Comparar Recursos",
+    "processing": "Processando...",
+    "noPlansAvailable": "Nenhum plano disponível no momento.",
+    "failedToLoad": "Falha ao carregar planos de assinatura. Tente novamente mais tarde.",
+    "success": "Sucesso! 🎉",
+    "successMessage": "Você agora está inscrito em {{plan}}!\n\nSua assinatura está ativa.",
+    "failedToProcess": "Falha ao processar assinatura"
+  },
+  "runTracker": {
+    "run": "CORRIDA",
+    "track": "RASTREAR",
+    "cancelRun": "Deseja cancelar a corrida?",
+    "points": "PONTOS",
+    "start": "INICIAR",
+    "pause": "PAUSAR",
+    "finish": "FINALIZAR",
+    "resume": "CONTINUAR",
+    "newRun": "NOVA CORRIDA",
+    "pointsByDistance": "PONTOS POR DISTÂNCIA"
+  },
+  "shop": {
+    "orderHistory": "Histórico de Pedidos",
+    "noOrdersYet": "Seu histórico de pedidos aparecerá aqui após sua primeira compra.",
+    "paymentProcessing": "Seu pagamento está sendo processado. Verifique seu histórico de pedidos para atualizações.",
+    "securePayment": "Suas informações de cartão são processadas com segurança pelo Stripe",
+    "noOrders": "Nenhum pedido ainda",
+    "viewOrders": "Ver Pedidos",
+    "paymentProcessingTitle": "Processando Pagamento"
+  },
+  "partnerCoupons": {
+    "yourDiscountLevel": "Seu nível de desconto:",
+    "title": "Cupons de Parceiros"
+  },
+  "welcomeKit": {
+    "kitBeingPrepared": "Kit em Preparação"
+  },
+  "guestPass": {
+    "inviteGuest": "Convidar um Amigo"
   }
 }

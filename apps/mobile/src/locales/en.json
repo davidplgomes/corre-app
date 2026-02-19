@@ -24,7 +24,11 @@
     "comment": "Comment",
     "viewAll": "View all",
     "refresh": "Refresh",
-    "permissionRequired": "Permission Required"
+    "permissionRequired": "Permission Required",
+    "checkInbox": "Check your inbox",
+    "sendConfirmation": "Send Confirmation",
+    "new": "New",
+    "and": "and"
   },
   "auth": {
     "login": "Login",
@@ -54,7 +58,25 @@
     "confirmPassword": "Confirm Password",
     "enterNewPasswordBelow": "Enter your new password below.",
     "minSixCharacters": "Minimum 6 characters",
-    "repeatNewPassword": "Repeat new password"
+    "repeatNewPassword": "Repeat new password",
+    "security": "Security",
+    "changePassword": "Change Password",
+    "changeEmail": "Change Email",
+    "joinCorre": "Join Corre",
+    "startJourney": "Start your running journey today",
+    "creatingAccount": "Creating Account...",
+    "createAccount": "Create Account",
+    "bySigningUp": "By signing up, you agree to our",
+    "signIn": "Sign In",
+    "passwordMismatch": "Passwords do not match",
+    "passwordResetSuccess": "Your password has been reset successfully.",
+    "resetPasswordSubtitle": "Enter your new password below.",
+    "setNewPassword": "Set New Password",
+    "changeEmailInfo": "You will receive a confirmation email at your new address.",
+    "emailUpdateConfirmation": "A confirmation link has been sent to your new email address.",
+    "currentPassword": "Current Password",
+    "newEmail": "New Email",
+    "passwordUpdated": "Password updated successfully!"
   },
   "navigation": {
     "home": "Home",
@@ -80,6 +102,8 @@
     "time": "Time",
     "location": "Location",
     "selectLocation": "Select Location on Map",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
     "participants": "Participants",
     "joinEvent": "Join Event",
     "leaveEvent": "Leave Event",
@@ -96,6 +120,7 @@
     "updateEventSuccess": "Event updated successfully!",
     "deleteEventSuccess": "Event deleted successfully!",
     "noEvents": "No events found",
+    "noEventsDescription": "Check back later for upcoming events",
     "eventTypes": {
       "routine": "Routine Run",
       "special": "Special Event",
@@ -127,10 +152,11 @@
     "streetRun": "Street Run",
     "morningRun": "Morning Run",
     "meetingPoint": "Meeting Point",
-    "upcoming": "Upcoming"
+    "upcoming": "Upcoming",
+    "checkedIn": "Checked In"
   },
   "leaderboard": {
-    "title": "Leaderboard",
+    "title": "Ranking",
     "monthly": "This Month",
     "allTime": "All Time",
     "rank": "Rank",
@@ -178,7 +204,17 @@
     "discountPartners": "10% OFF at partners",
     "vipAccess": "VIP access to events",
     "priorityQueue": "Priority queue",
-    "recentActivity": "Recent Activity"
+    "recentActivity": "Recent Activity",
+    "scanner": "SCANNER",
+    "name": "NAME",
+    "memberId": "MEMBER ID",
+    "scanToEarn": "SCAN TO EARN POINTS",
+    "tapToFlip": "Tap to flip",
+    "updatesIn": "Updates in",
+    "points": "POINTS",
+    "xpLevel": "XP (LEVEL)",
+    "nextLevel": "NEXT LEVEL",
+    "xpTo": "XP to"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -207,6 +243,7 @@
     "titlePlaceholder": "Ex: Nike Shoes 42",
     "noShopItems": "No items in the shop at the moment.",
     "noCommunityItems": "No items announced.",
+    "emptyCart": "Your cart is empty",
     "sellItem": "Sell Item",
     "addPhoto": "Add Photo",
     "condition": "Condition",
@@ -223,7 +260,9 @@
       "accessories": "Accessories",
       "electronics": "Electronics",
       "other": "Other"
-    }
+    },
+    "processing": "PROCESSING...",
+    "buyNow": "BUY NOW"
   },
   "profile": {
     "title": "Profile",
@@ -268,9 +307,16 @@
     "instagram": "Instagram",
     "enterInstagram": "Your Instagram handle",
     "tapToChange": "Tap to change photo",
+    "changeEmail": "Change Email",
     "wallet": "Wallet",
     "notifications": "Notifications",
-    "guestPass": "Guest Pass"
+    "guestPass": "Guest Pass",
+    "welcomeKit": "Welcome Kit",
+    "neighborhood": "Neighborhood",
+    "monthPoints": "Month Points",
+    "lifetimePoints": "Lifetime Points",
+    "guestCanAttend": "Your guest can attend the event with you!",
+    "welcomeKitPreparing": "Your welcome kit is being prepared! You'll receive a notification when it ships."
   },
   "friends": {
     "title": "Friends",
@@ -286,7 +332,8 @@
     "noRequests": "No pending requests",
     "removeFriend": "Remove Friend",
     "confirmRemove": "Are you sure you want to remove this friend?",
-    "suggested": "Suggested Friends"
+    "suggested": "Suggested Friends",
+    "nowFriends": "You are now friends!"
   },
   "achievements": {
     "firstRun": "First Run",
@@ -321,6 +368,12 @@
     "permissionDenied": "Permission denied",
     "locationPermissionDenied": "Location permission is required for check-ins",
     "cameraPermissionDenied": "Camera permission is required to scan QR codes",
+    "permissionNeeded": "Permission Needed",
+    "allowCamera": "ALLOW CAMERA",
+    "applicableDiscount": "APPLICABLE DISCOUNT",
+    "setupRequired": "Setup Required",
+    "sellerSetupNeeded": "You need to set up your payment account before selling.",
+    "setupNow": "Set Up Now",
     "fillAllFields": "Please fill in all fields.",
     "updateProfile": "Could not update profile.",
     "passwordsDoNotMatch": "Passwords do not match.",
@@ -328,7 +381,12 @@
     "updatePassword": "Could not update password.",
     "createAd": "Could not create ad.",
     "loadFeed": "Could not load feed.",
-    "permissionRequired": "Permission is required to continue."
+    "permissionRequired": "Permission is required to continue.",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "required": "Required",
+    "loadPost": "Could not load post.",
+    "passwordMismatch": "Passwords do not match.",
+    "userNotFound": "User not found."
   },
   "validation": {
     "required": "This field is required",
@@ -340,7 +398,10 @@
     "profileUpdated": "Profile updated successfully!",
     "passwordUpdated": "Password updated successfully!",
     "redeemRequestSent": "Redeem request sent!",
-    "ItemAnnounced": "Your item has been announced!"
+    "ItemAnnounced": "Your item has been announced!",
+    "itemAnnounced": "Your item has been announced!",
+    "listingPublished": "Your listing has been published!",
+    "sellerActivated": "Your seller account has been activated."
   },
   "settings": {
     "title": "Settings",
@@ -382,7 +443,11 @@
     "noRecentActivity": "No recent activity.",
     "friends": "Friends",
     "community": "Community",
-    "activities": "Activities"
+    "activities": "Activities",
+    "postDetails": "Post Details",
+    "comments": "Comments",
+    "noComments": "No comments yet. Be the first to comment!",
+    "writeComment": "Write a comment..."
   },
   "runHistory": {
     "title": "Run History",
@@ -396,7 +461,11 @@
     "available": "Available",
     "used": "Used",
     "your": "Your",
-    "validUntil": "Valid until"
+    "validUntil": "Valid until",
+    "useCoupon": "USE COUPON",
+    "insufficientBalance": "INSUFFICIENT BALANCE",
+    "noCouponsAvailable": "No coupons available",
+    "noCouponsInCategory": "No coupons in this category"
   },
   "onboarding": {
     "slide1Title": "Welcome to Corre",
@@ -435,5 +504,52 @@
     },
     "joinedOn": "Joined on",
     "friend": "Friend"
+  },
+  "subscription": {
+    "plans": "PLANS",
+    "title": "SUBSCRIPTION",
+    "mostPopular": "MOST POPULAR",
+    "premium": "PREMIUM",
+    "perMonth": "/month",
+    "subscribe": "Subscribe to",
+    "viewPlans": "📊 View Plans",
+    "compareFeatures": "📋 Compare Features",
+    "processing": "Processing...",
+    "noPlansAvailable": "No plans available at the moment.",
+    "failedToLoad": "Failed to load subscription plans. Please try again later.",
+    "success": "Success! 🎉",
+    "successMessage": "You are now subscribed to {{plan}}!\n\nYour subscription is now active.",
+    "failedToProcess": "Failed to process subscription"
+  },
+  "runTracker": {
+    "run": "RUN",
+    "track": "TRACK",
+    "cancelRun": "Do you want to cancel the run?",
+    "points": "POINTS",
+    "start": "START",
+    "pause": "PAUSE",
+    "finish": "FINISH",
+    "resume": "RESUME",
+    "newRun": "NEW RUN",
+    "pointsByDistance": "POINTS BY DISTANCE"
+  },
+  "shop": {
+    "orderHistory": "Order History",
+    "noOrdersYet": "Your order history will appear here after your first purchase.",
+    "paymentProcessing": "Your payment is being processed. Check your order history for updates.",
+    "securePayment": "Your card information is securely processed by Stripe",
+    "noOrders": "No orders yet",
+    "viewOrders": "View Orders",
+    "paymentProcessingTitle": "Payment Processing"
+  },
+  "partnerCoupons": {
+    "yourDiscountLevel": "Your discount level:",
+    "title": "Partner Coupons"
+  },
+  "welcomeKit": {
+    "kitBeingPrepared": "Kit Being Prepared"
+  },
+  "guestPass": {
+    "inviteGuest": "Invite a Guest"
   }
 }

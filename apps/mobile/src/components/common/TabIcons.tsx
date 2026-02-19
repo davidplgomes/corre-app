@@ -155,18 +155,51 @@ export const MedalIcon: React.FC<IconProps> = ({
     </Svg>
 );
 
-// Settings Icon
+// Settings Icon (Gear/Cog)
 export const SettingsIcon: React.FC<IconProps> = ({
     size = 24,
     color = '#FFFFFF'
 }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" />
         <Path
-            d="M12 2V4M12 20V22M2 12H4M20 12H22M4.93 4.93L6.34 6.34M17.66 17.66L19.07 19.07M4.93 19.07L6.34 17.66M17.66 6.34L19.07 4.93"
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
             stroke={color}
             strokeWidth="1.5"
             strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.5" />
+    </Svg>
+);
+
+// Bell Icon (Notifications)
+export const BellIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9ZM13.73 21a2 2 0 0 1-3.46 0"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+// Chevron Left Icon
+export const ChevronLeftIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M15 18L9 12L15 6"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
         />
     </Svg>
 );
@@ -464,6 +497,17 @@ export const CloseIcon: React.FC<IconProps> = ({
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path d="M18 6L6 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         <Path d="M6 6L18 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+// Arrow Right Icon (Join)
+export const ArrowRightIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M5 12H19" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M12 5L19 12L12 19" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
 

@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
@@ -9,6 +8,24 @@ import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
 
 const APP_VERSION = 'v1.0.5';
+
+// ─── Onboarding Context ───────────────────────────────────
+// Allows ProfileSetup to signal onboarding completion,
+// triggering a re-render that swaps OnboardingNavigator → TabNavigator.
+
+interface OnboardingContextType {
+    completeOnboarding: () => Promise<void>;
+}
+
+const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
+
+export const useOnboarding = () => {
+    const ctx = useContext(OnboardingContext);
+    if (!ctx) throw new Error('useOnboarding must be used within RootNavigator');
+    return ctx;
+};
+
+// ─── Splash ────────────────────────────────────────────────
 
 const SplashScreen = () => (
     <View style={styles.splashContainer}>
@@ -28,42 +45,59 @@ const SplashScreen = () => (
     </View>
 );
 
-
+// ─── Root Navigator ────────────────────────────────────────
 
 export const RootNavigator: React.FC = () => {
-    const { user, loading } = useAuth();
-    const [isCheckingOnboarding, setIsCheckingOnboarding] = React.useState(true);
-    const [hasSeenOnboarding, setHasSeenOnboarding] = React.useState(false);
+    const { user, loading, profile } = useAuth();
+    const [hasCompletedProfile, setHasCompletedProfile] = React.useState(false);
+    const [profileChecked, setProfileChecked] = React.useState(false);
 
     React.useEffect(() => {
-        const checkOnboarding = async () => {
-            try {
-                const value = await AsyncStorage.getItem('hasSeenOnboarding');
-                setHasSeenOnboarding(value === 'true');
-            } catch (e) {
-                console.error('Error checking onboarding status', e);
-            } finally {
-                setIsCheckingOnboarding(false);
-            }
-        };
+        if (loading) {
+            // Auth still loading — reset so we don't show stale state
+            setProfileChecked(false);
+            return;
+        }
 
-        checkOnboarding();
+        if (!user) {
+            // No user, no need to check profile
+            setProfileChecked(true);
+            setHasCompletedProfile(false);
+            return;
+        }
+
+        if (!profile) {
+            // User exists but profile hasn't loaded yet — keep waiting
+            return;
+        }
+
+        // Both user and profile are available — check onboarding
+        const isComplete = !!(profile.fullName || profile.city);
+        setHasCompletedProfile(isComplete);
+        setProfileChecked(true);
+    }, [user, profile, loading]);
+
+    const completeOnboarding = useCallback(async () => {
+        // No need to set AsyncStorage anymore - we check database profile
+        setHasCompletedProfile(true); // triggers re-render → TabNavigator
     }, []);
 
-    if (loading || isCheckingOnboarding) {
+    if (loading || !profileChecked) {
         return <SplashScreen />;
     }
 
     return (
-        <NavigationContainer>
-            {!user ? (
-                <AuthNavigator />
-            ) : !hasSeenOnboarding ? (
-                <OnboardingNavigator />
-            ) : (
-                <TabNavigator />
-            )}
-        </NavigationContainer>
+        <OnboardingContext.Provider value={{ completeOnboarding }}>
+            <NavigationContainer>
+                {!user ? (
+                    <AuthNavigator />
+                ) : !hasCompletedProfile ? (
+                    <OnboardingNavigator />
+                ) : (
+                    <TabNavigator />
+                )}
+            </NavigationContainer>
+        </OnboardingContext.Provider>
     );
 };
 

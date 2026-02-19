@@ -31,8 +31,7 @@ import { Event, EventParticipant } from '../../types';
 import { formatDateTime, formatEventDate, isUpcoming, isWithinCheckInWindow } from '../../utils/date';
 // import { EVENT_POINTS } from '../../constants/points'; // Unused in new design for now
 // import { TierKey } from '../../constants/tiers'; // Unused in new design for now
-import { ChevronRightIcon, MapIcon } from '../../components/common/TabIcons';
-import { ArrowLogo } from '../../components/common/ArrowLogo';
+import { ChevronRightIcon, MapIcon, CloseIcon, ArrowRightIcon } from '../../components/common/TabIcons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -144,8 +143,8 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     const timeStr = eventDate.toLocaleTimeString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' });
     const city = event.location_name?.split(',')[0] || 'CITY';
 
-    // Mock Bib Number - In real app, this would be assigned dynamically
-    const bibNumber = "001";
+    // Bib number based on participant count (user would be next)
+    const bibNumber = String(participants.length + 1).padStart(3, '0');
 
     return (
         <View style={styles.container}>
@@ -191,11 +190,11 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                             {/* Date & Time */}
                             <View style={styles.dateTimeRow}>
                                 <View>
-                                    <Text style={styles.label}>DATA</Text>
+                                    <Text style={styles.label}>{t('events.date', 'DATA').toUpperCase()}</Text>
                                     <Text style={styles.valueLarge}>{dateStr}</Text>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={styles.label}>HORÁRIO</Text>
+                                    <Text style={styles.label}>{t('events.time', 'HORÁRIO').toUpperCase()}</Text>
                                     <Text style={styles.valueLarge}>{timeStr}</Text>
                                 </View>
                             </View>
@@ -245,13 +244,22 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                     <Text style={styles.actionButtonText}>
                                         {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEventButton').toUpperCase()) : t('events.participate').toUpperCase()}
                                     </Text>
-                                    <ArrowLogo size={44} color="#FFF" backgroundColor="#000" />
+                                    {/* Show CloseIcon for Leave Event, ArrowRightIcon for Join/Check In */}
+                                    {hasJoined && isUpcoming(event.event_datetime) && !isWithinCheckInWindow(event.event_datetime) ? (
+                                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+                                            <CloseIcon size={24} color="#FFF" />
+                                        </View>
+                                    ) : (
+                                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+                                            <ArrowRightIcon size={24} color="#FFF" />
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
                             )}
                             {/* Checked In State */}
                             {hasCheckedIn && (
                                 <View style={[styles.actionButton, { backgroundColor: theme.colors.success }]}>
-                                    <Text style={styles.actionButtonText}>PRESENÇA CONFIRMADA</Text>
+                                    <Text style={styles.actionButtonText}>{t('events.checkedIn', 'PRESENÇA CONFIRMADA').toUpperCase()}</Text>
                                 </View>
                             )}
 

@@ -59,6 +59,7 @@ export async function getWalletBalance(userId: string): Promise<WalletBalance> {
         routine: txs.filter(tx => tx.source_type === 'routine').reduce((sum, tx) => sum + tx.points_remaining, 0),
         special: txs.filter(tx => tx.source_type === 'special').reduce((sum, tx) => sum + tx.points_remaining, 0),
         race: txs.filter(tx => tx.source_type === 'race').reduce((sum, tx) => sum + tx.points_remaining, 0),
+        purchase_refund: txs.filter(tx => tx.source_type === 'purchase_refund').reduce((sum, tx) => sum + tx.points_remaining, 0),
     };
 
     return {
@@ -220,10 +221,10 @@ export async function getAvailablePoints(userId: string): Promise<number> {
 // ============ Cart Functions ============
 
 /**
- * Get cart items for user
+ * Get cart items for user with full product details
  */
 export async function getCartItems(userId: string): Promise<CartItem[]> {
-    const { data, error } = await supabase
+    const { data: cartItems, error } = await supabase
         .from('cart_items')
         .select('*')
         .eq('user_id', userId)
@@ -234,8 +235,73 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
         throw error;
     }
 
-    // TODO: Join with shop/marketplace items for full details
-    return (data || []) as CartItem[];
+    if (!cartItems || cartItems.length === 0) {
+        return [];
+    }
+
+    // Separate shop and marketplace items
+    const shopItemIds = cartItems
+        .filter(item => item.item_type === 'shop')
+        .map(item => item.item_id);
+
+    const marketplaceItemIds = cartItems
+        .filter(item => item.item_type === 'marketplace')
+        .map(item => item.item_id);
+
+    // Fetch shop items details
+    let shopItems: any[] = [];
+    if (shopItemIds.length > 0) {
+        const { data, error: shopError } = await supabase
+            .from('corre_shop_items')
+            .select('id, title, points_price, image_url, stock')
+            .in('id', shopItemIds);
+
+        if (!shopError && data) {
+            shopItems = data;
+        }
+    }
+
+    // Fetch marketplace items details
+    let marketplaceItems: any[] = [];
+    if (marketplaceItemIds.length > 0) {
+        const { data, error: marketplaceError } = await supabase
+            .from('marketplace_listings')
+            .select('id, title, price_cents, images, is_available')
+            .in('id', marketplaceItemIds);
+
+        if (!marketplaceError && data) {
+            marketplaceItems = data;
+        }
+    }
+
+    // Merge cart items with product details
+    const itemsWithDetails = cartItems.map(cartItem => {
+        if (cartItem.item_type === 'shop') {
+            const shopItem = shopItems.find(item => item.id === cartItem.item_id);
+            return {
+                ...cartItem,
+                item: shopItem ? {
+                    title: shopItem.title,
+                    price: shopItem.points_price / 100, // Convert points to euros (mock conversion)
+                    image_url: shopItem.image_url,
+                    stock: shopItem.stock,
+                } : null,
+            };
+        } else {
+            const marketplaceItem = marketplaceItems.find(item => item.id === cartItem.item_id);
+            return {
+                ...cartItem,
+                item: marketplaceItem ? {
+                    title: marketplaceItem.title,
+                    price: marketplaceItem.price_cents / 100, // Convert cents to euros
+                    image_url: marketplaceItem.images?.[0] || null, // Use first image
+                    is_available: marketplaceItem.is_available,
+                } : null,
+            };
+        }
+    });
+
+    return itemsWithDetails as CartItem[];
 }
 
 /**

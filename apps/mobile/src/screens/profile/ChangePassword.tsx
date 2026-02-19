@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../constants/theme';
-import { Button, Input } from '../../components/common';
+import { Button, Input, BackButton } from '../../components/common';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase/client';
+import * as Haptics from 'expo-haptics';
 
 type ChangePasswordProps = {
     navigation: any;
@@ -64,12 +65,10 @@ export const ChangePassword: React.FC<ChangePasswordProps> = ({ navigation }) =>
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backText}>← {t('common.back')}</Text>
-                    </TouchableOpacity>
+                    <BackButton onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.goBack();
+                    }} />
                     <Text style={styles.headerTitle}>{t('profile.changePassword')}</Text>
                     <View style={{ width: 60 }} />
                 </View>
@@ -128,13 +127,6 @@ const styles = StyleSheet.create({
         paddingVertical: theme.spacing[4],
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border.default,
-    },
-    backButton: {
-        paddingVertical: theme.spacing[2],
-    },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
     },
     headerTitle: {
         fontSize: theme.typography.size.h4,

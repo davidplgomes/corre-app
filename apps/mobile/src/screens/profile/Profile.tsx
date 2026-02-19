@@ -14,9 +14,8 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { signOut } from '../../services/supabase/auth';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -24,7 +23,7 @@ type ProfileProps = {
 
 export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { profile, user } = useAuth();
+    const { profile, user, signOut } = useAuth();
 
     const tier = (profile?.membershipTier || 'basico') as keyof typeof tierColors;
     const tierConfig = tierColors[tier];
@@ -38,18 +37,10 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         }
     };
 
-    // Stats matching the design
+    // Stats from real user profile data
     const stats = {
-        totalDistance: '350km',
-        totalTime: '32h 15m',
-        totalRuns: 45,
-        averagePace: "5'30\"/km",
-        currentPoints: profile?.currentMonthPoints || 1250,
-        lifetimePoints: profile?.totalLifetimePoints || 4850,
-        nextTier: 'LENDÁRIO',
-        nextTierProgress: 75,
-        thisWeekRuns: 3,
-        thisWeekDistance: '15.2km',
+        currentPoints: profile?.currentMonthPoints || 0,
+        lifetimePoints: profile?.totalLifetimePoints || 0,
     };
 
     const userName = profile?.fullName || user?.email?.split('@')[0] || 'Corredor';
@@ -64,12 +55,12 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('Wallet');
             },
-            badge: stats.currentPoints,
+            badge: stats.currentPoints || null,
         },
         {
             id: 'notifications',
             label: t('profile.notifications'),
-            icon: <SettingsIcon size={20} color="#FFF" />,
+            icon: <BellIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('Notifications');
@@ -83,7 +74,6 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('RunHistory');
             },
-            badge: stats.thisWeekRuns,
         },
         {
             id: 'runMap',
@@ -229,37 +219,37 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                             <BlurView intensity={30} tint="dark" style={styles.statCard}>
                                 <View style={styles.statContent}>
                                     <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>🏅</Text>
+                                        <Text style={styles.statLabel}>{t('profile.tier', 'TIER').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{tierConfig.label}</Text>
+                                </View>
+                            </BlurView>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
                                         <Text style={styles.statIcon}>📍</Text>
-                                        <Text style={styles.statLabel}>{t('profile.distance').toUpperCase()}</Text>
+                                        <Text style={styles.statLabel}>{t('profile.neighborhood', 'BAIRRO').toUpperCase()}</Text>
                                     </View>
-                                    <Text style={styles.statValue}>{stats.totalDistance}</Text>
-                                </View>
-                            </BlurView>
-                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
-                                <View style={styles.statContent}>
-                                    <View style={styles.statHeader}>
-                                        <Text style={styles.statIcon}>⏱</Text>
-                                        <Text style={styles.statLabel}>{t('profile.time').toUpperCase()}</Text>
-                                    </View>
-                                    <Text style={styles.statValue}>{stats.totalTime}</Text>
-                                </View>
-                            </BlurView>
-                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
-                                <View style={styles.statContent}>
-                                    <View style={styles.statHeader}>
-                                        <Text style={styles.statIcon}>🏃</Text>
-                                        <Text style={styles.statLabel}>{t('events.runs').toUpperCase()}</Text>
-                                    </View>
-                                    <Text style={styles.statValue}>{stats.totalRuns}</Text>
+                                    <Text style={styles.statValue} numberOfLines={1}>{profile?.neighborhood || '—'}</Text>
                                 </View>
                             </BlurView>
                             <BlurView intensity={30} tint="dark" style={styles.statCard}>
                                 <View style={styles.statContent}>
                                     <View style={styles.statHeader}>
                                         <Text style={styles.statIcon}>⚡</Text>
-                                        <Text style={styles.statLabel}>{t('profile.averagePace').toUpperCase()}</Text>
+                                        <Text style={styles.statLabel}>{t('profile.monthPoints', 'PTS MÊS').toUpperCase()}</Text>
                                     </View>
-                                    <Text style={styles.statValue}>{stats.averagePace}</Text>
+                                    <Text style={styles.statValue}>{stats.currentPoints}</Text>
+                                </View>
+                            </BlurView>
+                            <BlurView intensity={30} tint="dark" style={styles.statCard}>
+                                <View style={styles.statContent}>
+                                    <View style={styles.statHeader}>
+                                        <Text style={styles.statIcon}>🏆</Text>
+                                        <Text style={styles.statLabel}>{t('profile.lifetimePoints', 'TOTAL').toUpperCase()}</Text>
+                                    </View>
+                                    <Text style={styles.statValue}>{stats.lifetimePoints}</Text>
                                 </View>
                             </BlurView>
                         </View>

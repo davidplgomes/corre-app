@@ -64,17 +64,35 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
 
 /**
  * Get suggested friends (random users who are not friends for now)
+ * Optimized: uses batch queries instead of N+1 individual status checks
  */
 export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    // Get current friends IDs
-    const friends = await getFriends();
-    const friendIds = friends.map(f => f.id);
-    const excludeIds = [user.id, ...friendIds];
+    // Single query: get all friendship records for this user (any status)
+    const { data: allFriendships } = await supabase
+        .from('friendships')
+        .select('requester_id, addressee_id, status')
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
-    // Fetch users NOT in exclude list
+    // Build maps for exclusion and status lookup
+    const acceptedIds = new Set<string>();
+    const pendingStatusMap = new Map<string, 'pending' | 'accepted' | 'none'>();
+
+    for (const f of allFriendships || []) {
+        const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id;
+        if (f.status === 'accepted') {
+            acceptedIds.add(otherId);
+        } else if (f.status === 'pending') {
+            pendingStatusMap.set(otherId, 'pending');
+        }
+    }
+
+    // Exclude self and accepted friends
+    const excludeIds = [user.id, ...Array.from(acceptedIds)];
+
+    // Fetch suggested users
     const { data, error } = await supabase
         .from('users')
         .select('id, full_name, membership_tier, avatar_url')
@@ -86,7 +104,11 @@ export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
         return [];
     }
 
-    return data.map(u => ({ ...u, friendship_status: 'none' }));
+    // Map status from our pre-built lookup (no extra queries)
+    return (data || []).map(u => ({
+        ...u,
+        friendship_status: pendingStatusMap.get(u.id) || 'none',
+    }));
 };
 
 /**
@@ -107,26 +129,37 @@ export const getFriendshipStatus = async (userId: string): Promise<'pending' | '
 };
 
 /**
- * Send a friend request
+ * Send a friend request.
+ * If the addressee's profile is public ('anyone'), the friendship is auto-accepted.
+ * Returns { success, autoAccepted } so the UI can react accordingly.
  */
-export const sendFriendRequest = async (addresseeId: string): Promise<boolean> => {
+export const sendFriendRequest = async (addresseeId: string): Promise<{ success: boolean; autoAccepted: boolean }> => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    if (!user) return { success: false, autoAccepted: false };
+
+    // Check if the target user has a public profile
+    const { data: targetUser } = await supabase
+        .from('users')
+        .select('privacy_visibility')
+        .eq('id', addresseeId)
+        .single();
+
+    const isPublic = targetUser?.privacy_visibility === 'anyone';
 
     const { error } = await supabase
         .from('friendships')
         .insert({
             requester_id: user.id,
             addressee_id: addresseeId,
-            status: 'pending',
+            status: isPublic ? 'accepted' : 'pending',
         });
 
     if (error) {
         console.error('Error sending friend request:', error);
-        return false;
+        return { success: false, autoAccepted: false };
     }
 
-    return true;
+    return { success: true, autoAccepted: isPublic };
 };
 
 /**
@@ -157,6 +190,28 @@ export const rejectFriendRequest = async (friendshipId: string): Promise<boolean
 
     if (error) {
         console.error('Error rejecting friend request:', error);
+        return false;
+    }
+
+    return true;
+};
+
+/**
+ * Cancel an outgoing friend request (only pending requests sent by the current user)
+ */
+export const cancelFriendRequest = async (addresseeId: string): Promise<boolean> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+        .from('friendships')
+        .delete()
+        .eq('requester_id', user.id)
+        .eq('addressee_id', addresseeId)
+        .eq('status', 'pending');
+
+    if (error) {
+        console.error('Error cancelling friend request:', error);
         return false;
     }
 

@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner, Button } from '../../components/common';
+import { LoadingSpinner, Button, BackButton } from '../../components/common';
 import { supabase } from '../../services/supabase/client';
 
 interface WelcomeKitScreenProps {
@@ -152,9 +152,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
             <SafeAreaView style={styles.container} edges={['top']}>
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#FFF" />
-                    </TouchableOpacity>
+                    <BackButton style={styles.backButton} />
                     <Text style={styles.headerTitle}>Welcome Kit</Text>
                     <View style={{ width: 40 }} />
                 </View>
@@ -197,9 +195,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
             <SafeAreaView style={styles.container} edges={['top']}>
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#FFF" />
-                    </TouchableOpacity>
+                    <BackButton style={styles.backButton} />
                     <Text style={styles.headerTitle}>Welcome Kit</Text>
                     <View style={{ width: 40 }} />
                 </View>
@@ -367,10 +363,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,

@@ -14,8 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner, Button } from '../../components/common';
+import { LoadingSpinner, Button, BackButton } from '../../components/common';
 import { supabase } from '../../services/supabase/client';
+import * as Haptics from 'expo-haptics';
 
 interface EventWaitlistScreenProps {
     navigation: any;
@@ -226,9 +227,10 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
+                <BackButton onPress={() => {
+                    Haptics.selectionAsync();
+                    navigation.goBack();
+                }} />
                 <Text style={styles.headerTitle}>Event Waitlist</Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -310,12 +312,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,

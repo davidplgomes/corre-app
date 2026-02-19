@@ -14,11 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { Button, LoadingSpinner } from '../../components/common';
+import { Button, LoadingSpinner, BackButton } from '../../components/common';
 import { clearCart, consumePoints } from '../../services/supabase/wallet';
-import { createPaymentIntent, confirmPayment } from '../../services/payments';
+import { createPaymentIntent, confirmPayment as storePaymentIntent } from '../../services/payments';
 import { supabase } from '../../services/supabase/client';
 import { ShippingAddress } from '../../types';
 
@@ -38,8 +39,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
     const { cartItems, subtotal, pointsToUse, total } = route.params;
     const { t } = useTranslation();
     const { user } = useAuth();
+    const { confirmPayment } = useStripe();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
+    const [cardComplete, setCardComplete] = useState(false);
 
     const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
         name: '',
@@ -53,6 +56,32 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
     const updateAddress = (field: keyof ShippingAddress, value: string) => {
         setShippingAddress(prev => ({ ...prev, [field]: value }));
+    };
+
+    /**
+     * Poll order status waiting for webhook to confirm payment
+     * Returns final status: 'paid' | 'payment_failed' | 'timeout'
+     */
+    const pollOrderStatus = async (orderId: string, maxAttempts = 15): Promise<'paid' | 'payment_failed' | 'timeout'> => {
+        for (let i = 0; i < maxAttempts; i++) {
+            // Wait 2 seconds between polls
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const { data: order } = await supabase
+                .from('orders')
+                .select('status')
+                .eq('id', orderId)
+                .single();
+
+            if (order?.status === 'paid') {
+                return 'paid';
+            }
+            if (order?.status === 'payment_failed') {
+                return 'payment_failed';
+            }
+        }
+        // After 30 seconds (15 attempts × 2s), consider it a timeout
+        return 'timeout';
     };
 
     const validateShipping = (): boolean => {
@@ -83,6 +112,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
     const handlePlaceOrder = async () => {
         if (!user?.id) return;
+
+        if (!cardComplete) {
+            Alert.alert('Error', 'Please enter complete card details');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -128,18 +162,57 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 throw new Error('Failed to create payment');
             }
 
-            // Confirm payment (in production, this would show Stripe payment sheet)
-            const { success, error: paymentError } = await confirmPayment(
+            // Store payment intent ID (webhook will update status)
+            const { success, error: paymentError } = await storePaymentIntent(
                 paymentIntent.id,
-                user.id,
                 order.id
             );
 
             if (!success) {
-                throw new Error(paymentError || 'Payment failed');
+                throw new Error(paymentError || 'Payment confirmation failed');
             }
 
-            // Consume points if used
+            // Confirm payment with Stripe using the card data
+            const { error: stripeError } = await confirmPayment(paymentIntent.clientSecret, {
+                paymentMethodType: 'Card',
+            });
+
+            if (stripeError) {
+                // Update order status to failed
+                await supabase
+                    .from('orders')
+                    .update({ status: 'payment_failed' })
+                    .eq('id', order.id);
+
+                throw new Error(stripeError.message || 'Payment failed');
+            }
+
+            // Wait for webhook to confirm payment (polls every 2s for up to 30s)
+            const finalStatus = await pollOrderStatus(order.id);
+
+            if (finalStatus === 'payment_failed') {
+                throw new Error('Payment was declined. Please try a different payment method.');
+            } else if (finalStatus === 'timeout') {
+                // Payment is processing - show pending state
+                Alert.alert(
+                    'Payment Processing',
+                    'Your payment is being processed. Check your order history for updates.',
+                    [
+                        {
+                            text: 'View Orders',
+                            onPress: () => {
+                                navigation.reset({
+                                    index: 0,
+                                    routes: [{ name: 'OrderHistory' }],
+                                });
+                            }
+                        }
+                    ]
+                );
+                return;
+            }
+
+            // Payment confirmed! Consume points and clear cart
             if (pointsToUse > 0) {
                 await consumePoints(user.id, pointsToUse);
             }
@@ -198,12 +271,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
+                <BackButton
                     onPress={() => step === 'shipping' ? navigation.goBack() : setStep('shipping')}
                     style={styles.backButton}
-                >
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
+                />
                 <Text style={styles.headerTitle}>Checkout</Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -320,33 +391,28 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
                             <View style={styles.cardInputs}>
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Card Number</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="1234 5678 9012 3456"
-                                        placeholderTextColor="#666"
-                                        keyboardType="numeric"
+                                    <Text style={styles.inputLabel}>Card Details</Text>
+                                    <CardField
+                                        postalCodeEnabled={false}
+                                        placeholders={{
+                                            number: '4242 4242 4242 4242',
+                                        }}
+                                        cardStyle={{
+                                            backgroundColor: '#1A1A1A',
+                                            textColor: '#FFFFFF',
+                                            placeholderColor: '#666666',
+                                            borderRadius: 12,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                        }}
+                                        style={styles.cardField}
+                                        onCardChange={(cardDetails) => {
+                                            setCardComplete(cardDetails.complete);
+                                        }}
                                     />
-                                </View>
-                                <View style={styles.row}>
-                                    <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                        <Text style={styles.inputLabel}>Expiry</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="MM/YY"
-                                            placeholderTextColor="#666"
-                                        />
-                                    </View>
-                                    <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                        <Text style={styles.inputLabel}>CVC</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="123"
-                                            placeholderTextColor="#666"
-                                            keyboardType="numeric"
-                                            secureTextEntry
-                                        />
-                                    </View>
+                                    <Text style={styles.cardHint}>
+                                        🔒 Your card information is securely processed by Stripe
+                                    </Text>
                                 </View>
                             </View>
 
@@ -419,10 +485,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 18,
@@ -566,6 +628,17 @@ const styles = StyleSheet.create({
     },
     cardInputs: {
         marginBottom: 24,
+    },
+    cardField: {
+        width: '100%',
+        height: 50,
+        marginVertical: 8,
+    },
+    cardHint: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
     },
 
     // Summary

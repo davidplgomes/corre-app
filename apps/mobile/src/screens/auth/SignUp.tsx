@@ -8,13 +8,14 @@ import {
     Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef } from '../../components/common';
+import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef, BackButton } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { signUp } from '../../services/supabase/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { validateField } from '../../utils/validation';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { theme } from '../../constants/theme';
+import * as Haptics from 'expo-haptics';
 
 const { height } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ type SignUpScreenProps = {
 
 export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
     const { t, i18n } = useTranslation();
+    const { signUp } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
@@ -91,20 +93,18 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 style={styles.container}
             >
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={styles.backButton}
-                    >
-                        <Text style={styles.backIcon}>←</Text>
-                    </TouchableOpacity>
+                    <BackButton onPress={() => {
+                        Haptics.selectionAsync();
+                        navigation.goBack();
+                    }} />
                     <View style={styles.headerContent}>
                         <Image
                             source={require('../../../assets/icon.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <Text style={styles.title}>Join Corre</Text>
-                        <Text style={styles.tagline}>Start your running journey today</Text>
+                        <Text style={styles.title}>{t('auth.joinCorre', 'Join Corre')}</Text>
+                        <Text style={styles.tagline}>{t('auth.startJourney', 'Start your running journey today')}</Text>
                     </View>
                 </View>
 
@@ -113,8 +113,8 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
                     <ShakeView ref={fullNameShakeRef}>
                         <Input
-                            label="Full Name"
-                            placeholder="John Doe"
+                            label={t('auth.fullName', 'Full Name')}
+                            placeholder={t('auth.fullNamePlaceholder', 'John Doe')}
                             value={fullName}
                             onChangeText={setFullName}
                             error={fullNameError}
@@ -127,8 +127,8 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
                     <ShakeView ref={emailShakeRef}>
                         <Input
-                            label="Email"
-                            placeholder="your@email.com"
+                            label={t('auth.email', 'Email')}
+                            placeholder={t('auth.emailPlaceholder', 'your@email.com')}
                             value={email}
                             onChangeText={setEmail}
                             error={emailError}
@@ -142,8 +142,8 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
                     <ShakeView ref={passwordShakeRef}>
                         <Input
-                            label="Password"
-                            placeholder="Min. 8 characters"
+                            label={t('auth.password', 'Password')}
+                            placeholder={t('auth.passwordPlaceholder', 'Min. 8 characters')}
                             value={password}
                             onChangeText={setPassword}
                             error={passwordError}
@@ -156,8 +156,8 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                     </ShakeView>
 
                     <Input
-                        label="Neighborhood (optional)"
-                        placeholder="Ex: Ribeira, Cedofeita..."
+                        label={t('auth.neighborhood', 'Neighborhood (optional)')}
+                        placeholder={t('auth.neighborhoodPlaceholder', 'Ex: Ribeira, Cedofeita...')}
                         value={neighborhood}
                         onChangeText={setNeighborhood}
                         autoCapitalize="words"
@@ -165,7 +165,7 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                     />
 
                     <Button
-                        title={loading ? 'Creating Account...' : 'Create Account'}
+                        title={loading ? t('auth.creatingAccount', 'Creating Account...') : t('auth.createAccount', 'Create Account')}
                         onPress={handleSignUp}
                         loading={loading}
                         variant="primary"
@@ -175,16 +175,16 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                     />
 
                     <Text style={styles.termsText}>
-                        By signing up, you agree to our{' '}
-                        <Text style={styles.termsLink}>Terms of Service</Text>
-                        {' '}and{' '}
-                        <Text style={styles.termsLink}>Privacy Policy</Text>
+                        {t('auth.bySigningUp', 'By signing up, you agree to our')}{' '}
+                        <Text style={styles.termsLink}>{t('settings.termsOfUse', 'Terms of Service')}</Text>
+                        {' '}{t('common.and', 'and')}{' '}
+                        <Text style={styles.termsLink}>{t('settings.privacyPolicy', 'Privacy Policy')}</Text>
                     </Text>
 
                     <View style={styles.footer}>
-                        <Text style={styles.footerText}>Already have an account?</Text>
+                        <Text style={styles.footerText}>{t('auth.alreadyHaveAccount', 'Already have an account?')}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                            <Text style={styles.loginText}>Sign In</Text>
+                            <Text style={styles.loginText}>{t('auth.signIn', 'Sign In')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -205,22 +205,6 @@ const styles = StyleSheet.create({
     header: {
         marginBottom: theme.spacing[8],
         marginTop: theme.spacing[4],
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: theme.radius.md, // Soft square (12px)
-        backgroundColor: theme.colors.background.card,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: theme.spacing[4],
-        borderWidth: 1,
-        borderColor: theme.colors.border.default,
-    },
-    backIcon: {
-        fontSize: 24,
-        color: theme.colors.text.primary,
-        marginTop: -2,
     },
     headerContent: {
         alignItems: 'center',

@@ -12,8 +12,11 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SettingsProps = {
     navigation: any;
@@ -23,14 +26,29 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const { t, i18n } = useTranslation();
     const { profile } = useAuth();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-    const [darkMode, setDarkMode] = React.useState(true);
+
     const [privacyVisibility, setPrivacyVisibility] = React.useState<PrivacyVisibility>('friends');
 
     React.useEffect(() => {
+        loadSettings();
         if (profile?.id) {
             getPrivacySetting(profile.id).then(setPrivacyVisibility);
         }
     }, [profile?.id]);
+
+    const loadSettings = async () => {
+        try {
+            const storedNotifications = await AsyncStorage.getItem('@corre:notificationsEnabled');
+
+
+            if (storedNotifications !== null) {
+                setNotificationsEnabled(storedNotifications === 'true');
+            }
+
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+        }
+    };
 
     const handlePrivacyChange = async (visibility: PrivacyVisibility) => {
         if (!profile?.id) return;
@@ -49,15 +67,17 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
         i18n.changeLanguage(lang);
     };
 
-    const handleToggleNotifications = (value: boolean) => {
+    const handleToggleNotifications = async (value: boolean) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setNotificationsEnabled(value);
+        try {
+            await AsyncStorage.setItem('@corre:notificationsEnabled', String(value));
+        } catch (error) {
+            console.error('Failed to save notifications setting:', error);
+        }
     };
 
-    const handleToggleDarkMode = (value: boolean) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setDarkMode(value);
-    };
+
 
     const languages = [
         { code: 'pt', label: 'Português' },
@@ -77,17 +97,17 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                 >
                     {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity
+                        <BackButton
                             style={styles.backButton}
                             onPress={() => {
                                 Haptics.selectionAsync();
                                 navigation.goBack();
                             }}
-                        >
-                            <Text style={styles.backText}>← {t('common.back')}</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.headerLabel}>{t('settings.title').toUpperCase()}</Text>
-                        <Text style={styles.headerTitle}>{t('settings.preferences')}</Text>
+                        />
+                        <View>
+                            <Text style={styles.headerLabel}>{t('settings.title').toUpperCase()}</Text>
+                            <Text style={styles.headerTitle}>{t('settings.preferences')}</Text>
+                        </View>
                     </View>
 
                     {/* Notifications Section */}
@@ -109,24 +129,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                         </View>
                     </View>
 
-                    {/* Appearance Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('settings.darkMode').toUpperCase()}</Text>
-                        <View style={styles.settingCard}>
-                            <View style={styles.settingInfo}>
-                                <Text style={styles.settingLabel}>{t('settings.darkMode')}</Text>
-                                <Text style={styles.settingDescription}>
-                                    {t('settings.darkMode')}
-                                </Text>
-                            </View>
-                            <Switch
-                                value={darkMode}
-                                onValueChange={handleToggleDarkMode}
-                                trackColor={{ false: theme.colors.gray[600], true: theme.colors.brand.primary }}
-                                thumbColor={theme.colors.white}
-                            />
-                        </View>
-                    </View>
+
 
                     {/* Integrations Section */}
                     <View style={styles.section}>
@@ -185,6 +188,16 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             }}
                         >
                             <Text style={styles.menuItemLabel}>{t('profile.changePassword')}</Text>
+                            <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('ChangeEmail');
+                            }}
+                        >
+                            <Text style={styles.menuItemLabel}>{t('profile.changeEmail')}</Text>
                             <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
                         </TouchableOpacity>
                         <View style={styles.menuItem}>
@@ -269,16 +282,14 @@ const styles = StyleSheet.create({
 
     // Header
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: theme.spacing[6],
         paddingTop: theme.spacing[2],
         paddingBottom: theme.spacing[6],
     },
     backButton: {
-        marginBottom: theme.spacing[3],
-    },
-    backText: {
-        fontSize: theme.typography.size.bodyMD,
-        color: theme.colors.brand.primary,
+        marginRight: theme.spacing[4],
     },
     headerLabel: {
         fontSize: theme.typography.size.caption,

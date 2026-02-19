@@ -9,7 +9,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserJoinedEvents } from '../../services/supabase/events';
 import { getFeedPosts } from '../../services/supabase/feed';
 import { getWeatherForEvent, getCurrentLocationWeather, formatWeather } from '../../services/weather';
-import { getUserGamificationProfile, PlanType } from '../../services/monetization.mock';
+import { SubscriptionsApi } from '../../api/endpoints/subscriptions.api';
+import { PlanType } from '../../types/subscription.types';
 import { Skeleton } from '../../components/common';
 import {
     CalendarIcon,
@@ -136,10 +137,16 @@ export const HomeScreen = ({ navigation }: any) => {
             // Load user subscription plan
             if (user?.id) {
                 try {
-                    const gamification = await getUserGamificationProfile(user.id);
-                    setUserPlan(gamification.subscription?.planType || 'free');
+                    const response = await SubscriptionsApi.getCurrentSubscription(user.id);
+                    if (response.data && response.data.planName) {
+                        const planName = response.data.planName.toLowerCase();
+                        setUserPlan(planName as PlanType);
+                    } else {
+                        setUserPlan('free');
+                    }
                 } catch (e) {
                     console.error('Error loading user plan:', e);
+                    setUserPlan('free');
                 }
             }
 
@@ -169,7 +176,7 @@ export const HomeScreen = ({ navigation }: any) => {
                     <View style={styles.quickActionIcon}>
                         <Icon size={24} color="#FFF" fill="#FFF" />
                     </View>
-                    <Text style={styles.quickActionLabel}>{label.toUpperCase()}</Text>
+                    <Text style={styles.quickActionLabel} numberOfLines={1} adjustsFontSizeToFit>{label.toUpperCase()}</Text>
                 </View>
             </BlurView>
         </TouchableOpacity>
@@ -298,17 +305,17 @@ export const HomeScreen = ({ navigation }: any) => {
                     <View style={styles.quickActionsGrid}>
                         <QuickAction
                             icon={CardIcon}
-                            label="Cupons"
+                            label={t('coupons.title')}
                             onPress={() => navigation.navigate('Loyalty')}
                         />
                         <QuickAction
                             icon={CalendarIcon}
-                            label="Eventos"
+                            label={t('events.title')}
                             onPress={() => navigation.navigate('Events')}
                         />
                         <QuickAction
                             icon={TrophyIcon}
-                            label="Ranking"
+                            label={t('leaderboard.title')}
                             onPress={() => navigation.navigate('Feed', { screen: 'Leaderboard' })}
                         />
                     </View>

@@ -4,6 +4,8 @@ export { Card } from './Card';
 export { LoadingSpinner } from './LoadingSpinner';
 export { ErrorMessage } from './ErrorMessage';
 export { LanguageSwitcher } from './LanguageSwitcher';
+export { BackButton } from './BackButton';
+export { Header } from './Header';
 export * from './TabIcons';
 export * from './Skeleton';
 export * from './AnimatedList';

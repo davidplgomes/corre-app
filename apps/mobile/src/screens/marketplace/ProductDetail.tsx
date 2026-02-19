@@ -15,8 +15,11 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
-import { ChevronRightIcon } from '../../components/common/TabIcons';
+import { useStripe } from '@stripe/stripe-react-native';
+import { CloseIcon } from '../../components/common/TabIcons';
 import { supabase } from '../../services/supabase/client';
+import { getWalletBalance, consumePoints } from '../../services/supabase/wallet';
+import { useAuth } from '../../contexts/AuthContext';
 
 type ProductDetailProps = {
     route: any;
@@ -25,7 +28,9 @@ type ProductDetailProps = {
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation }) => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const { product } = route.params || {};
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     if (!product) {
         return null;
@@ -46,22 +51,35 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                 if (error) throw error;
                 if (data?.error) throw new Error(data.error);
 
-                // Simulate Stripe Sheet (Placeholder)
-                Alert.alert(
-                    'Pagamento (Simulação)',
-                    `Cliente Secret Gerado: ${data.clientSecret?.substring(0, 8)}...\n\nO Stripe PaymentSheet abriria aqui.`,
-                    [
-                        { text: 'Cancelar', style: 'cancel' },
-                        {
-                            text: 'Pagar R$ ' + (product.price || 0).toFixed(2),
-                            onPress: () => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                Alert.alert('Sucesso', 'Compra realizada com sucesso!');
-                                navigation.goBack();
-                            }
-                        }
-                    ]
-                );
+                // Init Stripe Sheet
+                const { error: initError } = await initPaymentSheet({
+                    merchantDisplayName: 'Corre Marketplace',
+                    paymentIntentClientSecret: data.clientSecret,
+                    appearance: {
+                        colors: {
+                            primary: theme.colors.brand.primary,
+                            background: '#1A1A1A',
+                            componentBackground: '#2A2A2A',
+                            primaryText: '#FFFFFF',
+                            secondaryText: '#AAAAAA',
+                            placeholderText: '#666666',
+                        },
+                    }
+                });
+
+                if (initError) throw initError;
+
+                // Present
+                const { error: stripeError } = await presentPaymentSheet();
+
+                if (stripeError) {
+                    if (stripeError.code === 'Canceled') return;
+                    throw stripeError;
+                }
+
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Sucesso', 'Compra realizada com sucesso!');
+                navigation.goBack();
 
             } catch (err: any) {
                 console.error('Payment error:', err);
@@ -70,9 +88,50 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
             return;
         }
 
-        // 2. If Shop Item -> Redeem with Points (Mock)
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert(t('common.success'), t('success.redeemRequestSent'));
+        // 2. If Shop Item -> Redeem with Points
+        if (!user) return;
+
+        try {
+            const pointsCost = product.points || 0;
+            if (pointsCost > 0) {
+                // Check balance
+                const balance = await getWalletBalance(user.id);
+                if (balance.total_available < pointsCost) {
+                    Alert.alert('Saldo Insuficiente', `Você precisa de ${pointsCost} pontos. Seu saldo: ${balance.total_available}`);
+                    return;
+                }
+
+                // Confirm redemption
+                Alert.alert(
+                    'Confirmar Resgate',
+                    `Deseja resgatar este item por ${pointsCost} pontos?`,
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                            text: 'Confirmar',
+                            onPress: async () => {
+                                try {
+                                    await consumePoints(user.id, pointsCost);
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                    Alert.alert(t('common.success'), 'Item resgatado com sucesso! Verifique seu email.');
+                                    navigation.goBack();
+                                } catch (error: any) {
+                                    console.error('Redemption error:', error);
+                                    Alert.alert('Erro', 'Falha ao resgatar item.');
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                // Free item or error
+                Alert.alert('Info', 'Este item não tem custo de pontos definido.');
+            }
+
+        } catch (error) {
+            console.error('Wallet check error:', error);
+            Alert.alert('Erro', 'Não foi possível verificar seu saldo.');
+        }
     };
 
     return (
@@ -90,13 +149,14 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                     <View style={styles.imageContainer}>
                         <Image source={{ uri: product.image_url || product.image }} style={styles.image} />
                         <TouchableOpacity
-                            style={styles.backButton}
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 navigation.goBack();
                             }}
+                            style={styles.backButton}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <ChevronRightIcon size={24} color="#FFF" />
+                            <CloseIcon size={20} color="#FFF" />
                         </TouchableOpacity>
                         <LinearGradient
                             colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -195,17 +255,14 @@ const styles = StyleSheet.create({
     backButton: {
         position: 'absolute',
         top: 50,
-        left: 20,
-        width: 40,
-        height: 40,
-        backgroundColor: 'rgba(0,0,0,0.5)', // Darker background for visibility
-        borderRadius: 12, // Standard radius
-        alignItems: 'center',
-        justifyContent: 'center',
+        right: 20,
         zIndex: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        transform: [{ rotate: '180deg' }]
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     imageOverlay: {
         position: 'absolute',

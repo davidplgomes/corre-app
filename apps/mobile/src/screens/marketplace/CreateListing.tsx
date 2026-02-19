@@ -17,7 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
 import { uploadAvatar } from '../../services/supabase/storage'; // Reuse similar logic, or create new
-import { ChevronRightIcon, PlusIcon } from '../../components/common/TabIcons';
+import { PlusIcon } from '../../components/common/TabIcons';
+import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 
 type CreateListingProps = {
@@ -150,9 +151,7 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
         <View style={styles.container}>
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ChevronRightIcon size={24} color="#FFF" />
-                    </TouchableOpacity>
+                    <BackButton style={styles.backButton} />
                     <Text style={styles.headerTitle}>{t('marketplace.sellItem').toUpperCase()}</Text>
                     <View style={{ width: 24 }} />
                 </View>
@@ -279,8 +278,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.1)',
     },
     backButton: {
-        padding: 8,
-        transform: [{ rotate: '180deg' }], // Rotate the container instead of icon
     },
     headerTitle: {
         color: '#FFF',

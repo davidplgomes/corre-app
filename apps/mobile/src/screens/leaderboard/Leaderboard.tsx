@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
+import { CloseIcon } from '../../components/common/TabIcons';
 import { useTranslation } from 'react-i18next';
 import { LoadingSpinner, AnimatedListItem } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
@@ -204,8 +206,8 @@ export const Leaderboard: React.FC = () => {
                             <Text style={styles.headerLabel}>GLOBAL RANKING</Text>
                             <Text style={styles.headerTitle}>LEADERBOARD</Text>
                         </View>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-                            <Text style={styles.closeIcon}>×</Text>
+                        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <CloseIcon size={20} color="#FFF" />
                         </TouchableOpacity>
                     </View>
 
@@ -287,17 +289,12 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     closeButton: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    closeIcon: {
-        color: '#FFF',
-        fontSize: 18,
-        marginTop: -2,
     },
     headerLabel: {
         fontSize: 10,
