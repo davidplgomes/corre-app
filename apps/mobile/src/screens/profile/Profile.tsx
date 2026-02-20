@@ -92,7 +92,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('Achievements');
             },
-            badge: 8,
+            badge: null,
         },
         {
             id: 'friends',
@@ -203,7 +203,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                                 <View style={[styles.tierBadge, { backgroundColor: tierConfig.primary }]}>
                                     <Text style={styles.tierText}>{tierConfig.label}</Text>
                                 </View>
-                                <Text style={styles.memberSince}>{t('profile.memberSince')} {t('profile.january')} 2025</Text>
+                                <Text style={styles.memberSince}>{t('profile.memberSince')} {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : '2025'}</Text>
                             </View>
                         </BlurView>
 

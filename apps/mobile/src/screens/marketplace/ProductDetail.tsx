@@ -11,6 +11,7 @@ import {
     ImageBackground
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
@@ -78,12 +79,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                 }
 
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Sucesso', 'Compra realizada com sucesso!');
+                Alert.alert(t('common.success'), t('marketplace.purchaseSuccess', 'Compra realizada com sucesso!'));
                 navigation.goBack();
 
             } catch (err: any) {
                 console.error('Payment error:', err);
-                Alert.alert('Erro no Pagamento', err.message || 'Não foi possível iniciar o pagamento.');
+                Alert.alert(t('marketplace.paymentError', 'Erro no Pagamento'), err.message || t('marketplace.paymentFailed', 'Não foi possível iniciar o pagamento.'));
             }
             return;
         }
@@ -97,27 +98,27 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                 // Check balance
                 const balance = await getWalletBalance(user.id);
                 if (balance.total_available < pointsCost) {
-                    Alert.alert('Saldo Insuficiente', `Você precisa de ${pointsCost} pontos. Seu saldo: ${balance.total_available}`);
+                    Alert.alert(t('marketplace.insufficientBalance', 'Saldo Insuficiente'), t('marketplace.needPoints', 'Você precisa de {{needed}} pontos. Seu saldo: {{balance}}').replace('{{needed}}', String(pointsCost)).replace('{{balance}}', String(balance.total_available)));
                     return;
                 }
 
                 // Confirm redemption
                 Alert.alert(
-                    'Confirmar Resgate',
-                    `Deseja resgatar este item por ${pointsCost} pontos?`,
+                    t('marketplace.confirmRedeem', 'Confirmar Resgate'),
+                    t('marketplace.redeemQuestion', 'Deseja resgatar este item por {{points}} pontos?').replace('{{points}}', String(pointsCost)),
                     [
-                        { text: 'Cancelar', style: 'cancel' },
+                        { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
                         {
-                            text: 'Confirmar',
+                            text: t('common.confirm', 'Confirmar'),
                             onPress: async () => {
                                 try {
                                     await consumePoints(user.id, pointsCost);
                                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                    Alert.alert(t('common.success'), 'Item resgatado com sucesso! Verifique seu email.');
+                                    Alert.alert(t('common.success'), t('marketplace.redeemSuccess', 'Item resgatado com sucesso! Verifique seu email.'));
                                     navigation.goBack();
                                 } catch (error: any) {
                                     console.error('Redemption error:', error);
-                                    Alert.alert('Erro', 'Falha ao resgatar item.');
+                                    Alert.alert(t('common.error'), t('marketplace.redeemFailed', 'Falha ao resgatar item.'));
                                 }
                             }
                         }
@@ -125,12 +126,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                 );
             } else {
                 // Free item or error
-                Alert.alert('Info', 'Este item não tem custo de pontos definido.');
+                Alert.alert('Info', t('marketplace.noPointsCost', 'Este item não tem custo de pontos definido.'));
             }
 
         } catch (error) {
             console.error('Wallet check error:', error);
-            Alert.alert('Erro', 'Não foi possível verificar seu saldo.');
+            Alert.alert(t('common.error'), t('marketplace.balanceCheckFailed', 'Não foi possível verificar seu saldo.'));
         }
     };
 
@@ -221,10 +222,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
     );
 };
 
-// Simple LinearGradient replacement
-const LinearGradient = ({ colors, style }: any) => (
-    <View style={[style, { backgroundColor: 'transparent' }]} />
-);
+
 
 const styles = StyleSheet.create({
     container: {
@@ -260,7 +258,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },

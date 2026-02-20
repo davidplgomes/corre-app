@@ -30,7 +30,16 @@
       "WebFetch(domain:www.strava.com)",
       "Bash(node -e:*)",
       "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''pt.json''\\)\\); console.log\\(''pt.json: valid''\\)\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase migration repair:*)",
+      "Bash(supabase db execute:*)",
+      "Bash(supabase migration:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase secrets:*)",
+      "Bash(curl:*)",
+      "Bash(timeout:*)"
     ]
   },
   "enabledMcpjsonServers": [

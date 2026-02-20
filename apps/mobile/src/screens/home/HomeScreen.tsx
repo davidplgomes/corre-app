@@ -249,7 +249,7 @@ export const HomeScreen = ({ navigation }: any) => {
                                     <TouchableOpacity
                                         key={run.id}
                                         style={[styles.heroCardContainer, { marginRight: 16, zIndex: index === 0 ? 100 : 1 }]}
-                                        onPress={() => navigation.navigate('Events', { screen: 'EventDetail', params: { eventId: run.id } })}
+                                        onPress={() => navigation.navigate('Events', { screen: 'EventDetail', params: { eventId: run.id }, initial: false })}
                                         activeOpacity={0.8}
                                     >
                                         <BlurView intensity={30} tint="dark" style={styles.heroCard}>
@@ -316,7 +316,7 @@ export const HomeScreen = ({ navigation }: any) => {
                         <QuickAction
                             icon={TrophyIcon}
                             label={t('leaderboard.title')}
-                            onPress={() => navigation.navigate('Feed', { screen: 'Leaderboard' })}
+                            onPress={() => navigation.navigate('Feed', { screen: 'Leaderboard', params: { from: 'Home' }, initial: false })}
                         />
                     </View>
 

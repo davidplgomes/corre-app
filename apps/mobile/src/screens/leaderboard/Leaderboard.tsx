@@ -76,7 +76,7 @@ export const Leaderboard: React.FC = () => {
                     user_id: entry.user_id,
                     points: entry.points,
                     rank: entry.rank || index + 1,
-                    name: entry.users?.full_name || 'Corredor',
+                    name: entry.users?.full_name || t('common.runner', 'Corredor'),
                     tier: entry.users?.membership_tier || 'free',
                 }));
                 setLeaderboard(transformedData);
@@ -117,13 +117,13 @@ export const Leaderboard: React.FC = () => {
     };
 
     const getTierLabel = (tier: string) => {
-        const tierConfig = tierColors[tier as keyof typeof tierColors];
-        return tierConfig?.label || 'FREE';
+        const tierKey = `loyalty.tiers.${tier}`;
+        return t(tierKey, { defaultValue: tierColors[tier as keyof typeof tierColors]?.label || 'FREE' }).toUpperCase();
     };
 
     const renderItem = ({ item, index }: { item: any; index: number }) => {
         const rank = item.rank || index + 1;
-        const name = item.name || item.users?.full_name || 'Corredor';
+        const name = item.name || item.users?.full_name || t('common.runner', 'Corredor');
         const tier = item.tier || item.users?.membership_tier || 'free';
         const points = item.points;
         const isCurrentUser = item.user_id === profile?.id || name === currentUser.name;
@@ -172,7 +172,7 @@ export const Leaderboard: React.FC = () => {
                             {/* Points */}
                             <View style={styles.pointsContainer}>
                                 <Text style={styles.points}>{points}</Text>
-                                <Text style={styles.pointsLabel}>PTS</Text>
+                                <Text style={styles.pointsLabel}>{t('leaderboard.pts', 'PTS')}</Text>
                             </View>
                         </View>
                     </BlurView>
@@ -203,8 +203,8 @@ export const Leaderboard: React.FC = () => {
                     {/* Header */}
                     <View style={styles.header}>
                         <View>
-                            <Text style={styles.headerLabel}>GLOBAL RANKING</Text>
-                            <Text style={styles.headerTitle}>LEADERBOARD</Text>
+                            <Text style={styles.headerLabel}>{t('leaderboard.globalRanking', 'GLOBAL RANKING')}</Text>
+                            <Text style={styles.headerTitle}>{t('leaderboard.leaderboard', 'LEADERBOARD')}</Text>
                         </View>
                         <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <CloseIcon size={20} color="#FFF" />
@@ -218,18 +218,18 @@ export const Leaderboard: React.FC = () => {
                                 <View style={styles.userCardLeft}>
                                     <View style={styles.rankBadge}>
                                         <Text style={styles.userRankText}>{currentUser.rank}</Text>
-                                        <Text style={styles.userRankLabel}>POS</Text>
+                                        <Text style={styles.userRankLabel}>{t('leaderboard.pos', 'POS')}</Text>
                                     </View>
                                     <View style={styles.userDetails}>
                                         <Text style={styles.userCardName}>{currentUser.name.toUpperCase()}</Text>
                                         <Text style={[styles.userCardTier, { color: theme.colors.brand.primary }]}>
-                                            {getTierLabel(currentUser.tier)} • LEVEL 12
+                                            {getTierLabel(currentUser.tier)} • {t('leaderboard.level', 'LEVEL')} 12
                                         </Text>
                                     </View>
                                 </View>
                                 <View style={styles.userCardRight}>
                                     <Text style={styles.userCardPoints}>{currentUser.points}</Text>
-                                    <Text style={styles.userCardPointsLabel}>PTS</Text>
+                                    <Text style={styles.userCardPointsLabel}>{t('leaderboard.pts', 'PTS')}</Text>
                                 </View>
                             </View>
                         </BlurView>

@@ -88,6 +88,14 @@ module.exports = {
           merchantIdentifier: 'merchant.com.corre',
           enableGooglePay: true
         }
+      ],
+      'expo-web-browser',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/notification-icon.png',
+          color: '#FF8800'
+        }
       ]
     ]
   }

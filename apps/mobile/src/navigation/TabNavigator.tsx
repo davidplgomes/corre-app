@@ -56,7 +56,7 @@ export type EventsStackParamList = {
 
 export type FeedStackParamList = {
     FeedMain: undefined;
-    Leaderboard: undefined;
+    Leaderboard: { from?: string } | undefined;
     PostDetails: { postId: string; post?: any };
     UserProfile: { userId: string };
 };
@@ -273,6 +273,11 @@ export const TabNavigator: React.FC = () => {
                         <TabIcon label={t('navigation.events')} icon="calendar" focused={focused} />
                     ),
                 }}
+                listeners={({ navigation }) => ({
+                    tabPress: () => {
+                        navigation.navigate('Events', { screen: 'EventList' });
+                    },
+                })}
             />
             <Tab.Screen
                 name="Feed"

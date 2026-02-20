@@ -37,6 +37,29 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
     const [buying, setBuying] = useState(false);
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
+    useEffect(() => {
+        const fetchListing = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('marketplace_items')
+                    .select('*, seller:users!seller_id(id, full_name, avatar_url, membership_tier)')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                setListing(data);
+            } catch (error) {
+                console.error('Error fetching listing:', error);
+                Alert.alert('Erro', 'Não foi possível carregar o anúncio.');
+                navigation.goBack();
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchListing();
+    }, [id]);
+
     const handleBuy = async () => {
         if (!user) return;
         if (user.id === listing.seller.id) {

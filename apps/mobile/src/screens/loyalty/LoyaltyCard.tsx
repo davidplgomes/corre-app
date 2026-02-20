@@ -120,11 +120,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
         { id: '3', text: t('loyalty.priorityQueue'), icon: '⚡' },
     ];
 
-    const recentActivity = [
-        { id: '1', type: 'earn', points: 150, description: t('events.morningRun'), date: '14 Jan' },
-        { id: '2', type: 'earn', points: 100, description: t('events.morningRun'), date: '12 Jan' },
-        { id: '3', type: 'redeem', points: -200, description: t('marketplace.title'), date: '10 Jan' },
-    ];
+    const recentActivity: { id: string; type: string; points: number; description: string; date: string }[] = [];
 
     return (
         <View style={styles.container}>
@@ -248,7 +244,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                         <Text style={styles.sectionTitle}>{t('loyalty.recentActivity').toUpperCase()}</Text>
                         <BlurView intensity={15} tint="dark" style={styles.listGlass}>
                             <View style={styles.listContainer}>
-                                {recentActivity.map((activity, index) => (
+                                {recentActivity.length > 0 ? recentActivity.map((activity, index) => (
                                     <View key={activity.id} style={[
                                         styles.activityRow,
                                         index !== recentActivity.length - 1 && styles.borderBottom
@@ -270,7 +266,11 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                                             {activity.points > 0 ? '+' : ''}{activity.points}
                                         </Text>
                                     </View>
-                                ))}
+                                )) : (
+                                    <View style={styles.activityRow}>
+                                        <Text style={styles.activityDate}>{t('loyalty.noActivity', 'Nenhuma atividade recente')}</Text>
+                                    </View>
+                                )}
                             </View>
                         </BlurView>
                     </View>

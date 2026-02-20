@@ -22,6 +22,9 @@ const resources = {
 
 const LANGUAGE_KEY = '@corre_app:language';
 
+// Bind react-i18next immediately
+i18n.use(initReactI18next);
+
 export const initI18n = async () => {
   try {
     const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
@@ -32,7 +35,7 @@ export const initI18n = async () => {
       ? deviceLanguage
       : 'en';
 
-    await i18n.use(initReactI18next).init({
+    await i18n.init({
       compatibilityJSON: 'v3',
       resources,
       lng: savedLanguage || defaultLanguage,
@@ -68,5 +71,4 @@ export const getCurrentLanguage = (): 'en' | 'pt' | 'es' => {
 
 export default i18n;
 
-// Auto-initialize i18n when this module is imported
-initI18n().catch(console.error);
+

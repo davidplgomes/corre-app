@@ -30,16 +30,26 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     const [events, setEvents] = useState<Event[]>([]); // Start empty, not with mocks
     const [loading, setLoading] = useState(true); // Start loading
     const [refreshing, setRefreshing] = useState(false);
-    const [activeFilter, setActiveFilter] = useState<string>('Todos');
+    const [activeFilter, setActiveFilter] = useState<string>('all');
 
-    // Stats from the design
-    const stats = {
-        totalRuns: 12,
-        totalDistance: '85k',
-        totalPoints: 450,
-    };
+    // Compute stats from loaded events
+    const stats = useMemo(() => {
+        const totalRuns = events.length;
+        const totalPoints = events.reduce((sum, e) => sum + (e.points_value || 0), 0);
+        return {
+            totalRuns,
+            totalDistance: `${totalRuns * 5}k`, // Estimate based on event count
+            totalPoints,
+        };
+    }, [events]);
 
-    const filters = ['Todos', '5K', '10K', 'Meia Maratona', 'Treino'];
+    const filters = [
+        { key: 'all', label: t('events.filterAll', 'Todos') },
+        { key: '5k', label: '5K' },
+        { key: '10k', label: '10K' },
+        { key: 'half', label: t('events.filterHalf', 'Meia Maratona') },
+        { key: 'training', label: t('events.filterTraining', 'Treino') },
+    ];
 
     const loadEvents = useCallback(async () => {
         try {
@@ -67,15 +77,15 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
     }, [loadEvents]);
 
     const filteredEvents = useMemo(() => {
-        if (activeFilter === 'Todos') return events;
+        if (activeFilter === 'all') return events;
         return events.filter(event => {
             const location = event.location_name || '';
             const description = event.description || '';
             const searchTerms = `${event.title} ${description} ${location}`.toLowerCase();
-            if (activeFilter === '5K') return searchTerms.includes('5k') || searchTerms.includes('5 km');
-            if (activeFilter === '10K') return searchTerms.includes('10k') || searchTerms.includes('10 km');
-            if (activeFilter === 'Meia Maratona') return searchTerms.includes('21k') || searchTerms.includes('21 km') || searchTerms.includes('meia');
-            if (activeFilter === 'Treino') return searchTerms.includes('treino');
+            if (activeFilter === '5k') return searchTerms.includes('5k') || searchTerms.includes('5 km');
+            if (activeFilter === '10k') return searchTerms.includes('10k') || searchTerms.includes('10 km');
+            if (activeFilter === 'half') return searchTerms.includes('21k') || searchTerms.includes('21 km') || searchTerms.includes('meia') || searchTerms.includes('half');
+            if (activeFilter === 'training') return searchTerms.includes('treino') || searchTerms.includes('training') || searchTerms.includes('entrenamiento');
             return true;
         });
     }, [events, activeFilter]);
@@ -129,7 +139,7 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                     <FlatList
                         horizontal
                         data={filters}
-                        keyExtractor={(item) => item}
+                        keyExtractor={(item) => item.key}
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.filtersList}
                         renderItem={({ item }) => (
@@ -137,18 +147,18 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                                 <TouchableOpacity
                                     style={[
                                         styles.filterPill,
-                                        activeFilter === item && styles.filterPillActive
+                                        activeFilter === item.key && styles.filterPillActive
                                     ]}
                                     onPress={() => {
                                         Haptics.selectionAsync();
-                                        setActiveFilter(item);
+                                        setActiveFilter(item.key);
                                     }}
                                 >
                                     <Text style={[
                                         styles.filterText,
-                                        activeFilter === item && styles.filterTextActive
+                                        activeFilter === item.key && styles.filterTextActive
                                     ]}>
-                                        {item.toUpperCase()}
+                                        {item.label.toUpperCase()}
                                     </Text>
                                 </TouchableOpacity>
                             </BlurView>
@@ -172,14 +182,14 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                         </AnimatedListItem>
                     )}
                     ListEmptyComponent={
-                        !loading && (
+                        !loading ? (
                             <View style={styles.emptyState}>
                                 <Text style={styles.emptyStateTitle}>{t('events.noEvents') || 'No Events'}</Text>
                                 <Text style={styles.emptyStateSubtitle}>
                                     {t('events.noEventsDescription') || 'Check back later for upcoming events'}
                                 </Text>
                             </View>
-                        )
+                        ) : null
                     }
                     contentContainerStyle={styles.listContent}
                     refreshControl={
@@ -192,6 +202,18 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                 />
             </SafeAreaView>
+
+            {/* Create Event FAB */}
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    navigation.navigate('CreateEvent');
+                }}
+                activeOpacity={0.8}
+            >
+                <Text style={styles.fabIcon}>+</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -348,5 +370,29 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
         lineHeight: 20,
+    },
+
+    // FAB
+    fab: {
+        position: 'absolute',
+        bottom: 100,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: theme.colors.brand.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 8,
+        shadowColor: theme.colors.brand.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+    },
+    fabIcon: {
+        fontSize: 28,
+        fontWeight: '300',
+        color: '#FFF',
+        marginTop: -2,
     },
 });

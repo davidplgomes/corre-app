@@ -22,6 +22,7 @@ type SellerOnboardingProps = {
 };
 
 export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }) => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'pending' | 'active'>('pending');
@@ -34,17 +35,17 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
             // In production: Create Stripe account via API, get account link, open in browser.
 
             Alert.alert(
-                'Modo de Demonstração',
-                'Em produção, isso redirecionaria para o Stripe Connect Onboarding.\n\nPara fins de teste, vamos ativar sua conta agora.',
+                t('seller.demoMode', 'Modo de Demonstração'),
+                t('seller.demoDescription', 'Em produção, isso redirecionaria para o Stripe Connect Onboarding.\n\nPara fins de teste, vamos ativar sua conta agora.'),
                 [
-                    { text: 'Cancelar', style: 'cancel' },
-                    { text: 'Simular Ativação', onPress: simulateActivation }
+                    { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
+                    { text: t('seller.simulateActivation', 'Simular Ativação'), onPress: simulateActivation }
                 ]
             );
 
         } catch (error: any) {
             console.error('Onboarding error:', error);
-            Alert.alert('Erro', 'Falha ao iniciar onboarding');
+            Alert.alert(t('common.error'), t('seller.onboardingFailed', 'Falha ao iniciar onboarding'));
         } finally {
             setLoading(false);
         }
@@ -82,11 +83,11 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
                     });
             }
 
-            Alert.alert('Sucesso!', 'Sua conta de vendedor foi ativada.');
+            Alert.alert(t('common.success'), t('seller.accountActivated', 'Sua conta de vendedor foi ativada.'));
             navigation.goBack();
         } catch (error) {
             console.error(error);
-            Alert.alert('Erro', 'Falha ao ativar conta simulada');
+            Alert.alert(t('common.error'), t('seller.activationFailed', 'Falha ao ativar conta simulada'));
         } finally {
             setLoading(false);
         }
@@ -97,7 +98,7 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
             <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <BackButton style={styles.backButton} />
-                    <Text style={styles.headerTitle}>CONFIGURAR PAGAMENTOS</Text>
+                    <Text style={styles.headerTitle}>{t('seller.setupPayments', 'CONFIGURAR PAGAMENTOS').toUpperCase()}</Text>
                     <View style={{ width: 24 }} />
                 </View>
 
@@ -106,17 +107,17 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
                         <VerifiedIcon size={64} color={theme.colors.brand.primary} />
                     </View>
 
-                    <Text style={styles.title}>Receba por suas vendas</Text>
+                    <Text style={styles.title}>{t('seller.receivePayments', 'Receba por suas vendas')}</Text>
 
                     <Text style={styles.description}>
-                        Para vender no Marketplace, precisamos conectar uma conta bancária para você receber seus pagamentos de forma segura.
+                        {t('seller.connectDescription', 'Para vender no Marketplace, precisamos conectar uma conta bancária para você receber seus pagamentos de forma segura.')}
                     </Text>
 
                     <View style={styles.infoCard}>
-                        <Text style={styles.infoTitle}>Como funciona?</Text>
-                        <Text style={styles.infoText}>• Usamos o Stripe Connect para pagamentos seguros.</Text>
-                        <Text style={styles.infoText}>• O dinheiro cai direto na sua conta bancária.</Text>
-                        <Text style={styles.infoText}>• Taxa da plataforma: 5% por venda.</Text>
+                        <Text style={styles.infoTitle}>{t('seller.howItWorks', 'Como funciona?')}</Text>
+                        <Text style={styles.infoText}>• {t('seller.stripeConnect', 'Usamos o Stripe Connect para pagamentos seguros.')}</Text>
+                        <Text style={styles.infoText}>• {t('seller.directDeposit', 'O dinheiro cai direto na sua conta bancária.')}</Text>
+                        <Text style={styles.infoText}>• {t('seller.platformFee', 'Taxa da plataforma: 5% por venda.')}</Text>
                     </View>
                 </View>
 
@@ -129,7 +130,7 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
                         {loading ? (
                             <ActivityIndicator color="#000" />
                         ) : (
-                            <Text style={styles.buttonText}>CONECTAR CONTA</Text>
+                            <Text style={styles.buttonText}>{t('seller.connectAccount', 'CONECTAR CONTA').toUpperCase()}</Text>
                         )}
                     </TouchableOpacity>
                 </View>

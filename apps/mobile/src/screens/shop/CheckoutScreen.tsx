@@ -86,19 +86,19 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
     const validateShipping = (): boolean => {
         if (!shippingAddress.name.trim()) {
-            Alert.alert('Error', 'Please enter your name');
+            Alert.alert(t('common.error'), t('checkout.enterName', 'Please enter your name'));
             return false;
         }
         if (!shippingAddress.line1.trim()) {
-            Alert.alert('Error', 'Please enter your address');
+            Alert.alert(t('common.error'), t('checkout.enterAddress', 'Please enter your address'));
             return false;
         }
         if (!shippingAddress.city.trim()) {
-            Alert.alert('Error', 'Please enter your city');
+            Alert.alert(t('common.error'), t('checkout.enterCity', 'Please enter your city'));
             return false;
         }
         if (!shippingAddress.postal_code.trim()) {
-            Alert.alert('Error', 'Please enter your postal code');
+            Alert.alert(t('common.error'), t('checkout.enterPostal', 'Please enter your postal code'));
             return false;
         }
         return true;
@@ -114,7 +114,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
         if (!user?.id) return;
 
         if (!cardComplete) {
-            Alert.alert('Error', 'Please enter complete card details');
+            Alert.alert(t('common.error'), t('checkout.enterCard', 'Please enter complete card details'));
             return;
         }
 
@@ -195,11 +195,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
             } else if (finalStatus === 'timeout') {
                 // Payment is processing - show pending state
                 Alert.alert(
-                    'Payment Processing',
-                    'Your payment is being processed. Check your order history for updates.',
+                    t('checkout.processing', 'Payment Processing'),
+                    t('checkout.processingMessage', 'Your payment is being processed. Check your order history for updates.'),
                     [
                         {
-                            text: 'View Orders',
+                            text: t('checkout.viewOrders', 'View Orders'),
                             onPress: () => {
                                 navigation.reset({
                                     index: 0,
@@ -225,7 +225,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
         } catch (error: any) {
             console.error('Checkout error:', error);
-            Alert.alert('Error', error.message || 'Failed to complete order');
+            Alert.alert(t('common.error'), error.message || t('checkout.orderFailed', 'Failed to complete order'));
         } finally {
             setLoading(false);
         }
@@ -235,7 +235,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
         return (
             <View style={styles.loadingContainer}>
                 <LoadingSpinner />
-                <Text style={styles.loadingText}>Processing your order...</Text>
+                <Text style={styles.loadingText}>{t('checkout.processingOrder', 'Processing your order...')}</Text>
             </View>
         );
     }
@@ -248,17 +248,17 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                     <View style={styles.successIcon}>
                         <Ionicons name="checkmark-circle" size={80} color="#10B981" />
                     </View>
-                    <Text style={styles.successTitle}>Order Placed!</Text>
+                    <Text style={styles.successTitle}>{t('checkout.orderPlaced', 'Order Placed!')}</Text>
                     <Text style={styles.successSubtitle}>
-                        Thank you for your purchase. You'll receive a confirmation email shortly.
+                        {t('checkout.orderConfirmation', "Thank you for your purchase. You'll receive a confirmation email shortly.")}
                     </Text>
                     <Button
-                        title="View Orders"
+                        title={t('checkout.viewOrders', 'View Orders')}
                         onPress={() => navigation.navigate('OrderHistory')}
                         style={styles.viewOrdersButton}
                     />
                     <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-                        <Text style={styles.continueLink}>Continue Shopping</Text>
+                        <Text style={styles.continueLink}>{t('checkout.continueShopping', 'Continue Shopping')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -275,7 +275,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                     onPress={() => step === 'shipping' ? navigation.goBack() : setStep('shipping')}
                     style={styles.backButton}
                 />
-                <Text style={styles.headerTitle}>Checkout</Text>
+                <Text style={styles.headerTitle}>{t('checkout.title', 'Checkout')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -285,14 +285,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                     <View style={[styles.stepCircle, styles.stepActive]}>
                         <Text style={styles.stepNumber}>1</Text>
                     </View>
-                    <Text style={[styles.stepLabel, styles.stepLabelActive]}>Shipping</Text>
+                    <Text style={[styles.stepLabel, styles.stepLabelActive]}>{t('checkout.shipping', 'Shipping')}</Text>
                 </View>
                 <View style={[styles.progressLine, step === 'payment' && styles.progressLineActive]} />
                 <View style={styles.progressStep}>
                     <View style={[styles.stepCircle, step === 'payment' && styles.stepActive]}>
                         <Text style={styles.stepNumber}>2</Text>
                     </View>
-                    <Text style={[styles.stepLabel, step === 'payment' && styles.stepLabelActive]}>Payment</Text>
+                    <Text style={[styles.stepLabel, step === 'payment' && styles.stepLabelActive]}>{t('checkout.payment', 'Payment')}</Text>
                 </View>
             </View>
 
@@ -307,10 +307,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 >
                     {step === 'shipping' && (
                         <>
-                            <Text style={styles.sectionTitle}>Shipping Address</Text>
+                            <Text style={styles.sectionTitle}>{t('checkout.shippingAddress', 'Shipping Address')}</Text>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Full Name</Text>
+                                <Text style={styles.inputLabel}>{t('checkout.fullName', 'Full Name')}</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={shippingAddress.name}
@@ -321,7 +321,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Address Line 1</Text>
+                                <Text style={styles.inputLabel}>{t('checkout.addressLine1', 'Address Line 1')}</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={shippingAddress.line1}
@@ -332,7 +332,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Address Line 2 (Optional)</Text>
+                                <Text style={styles.inputLabel}>{t('checkout.addressLine2', 'Address Line 2 (Optional)')}</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={shippingAddress.line2}
@@ -344,7 +344,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>City</Text>
+                                    <Text style={styles.inputLabel}>{t('checkout.city', 'City')}</Text>
                                     <TextInput
                                         style={styles.input}
                                         value={shippingAddress.city}
@@ -354,7 +354,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     />
                                 </View>
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                    <Text style={styles.inputLabel}>Postal Code</Text>
+                                    <Text style={styles.inputLabel}>{t('checkout.postalCode', 'Postal Code')}</Text>
                                     <TextInput
                                         style={styles.input}
                                         value={shippingAddress.postal_code}
@@ -366,7 +366,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Country</Text>
+                                <Text style={styles.inputLabel}>{t('checkout.country', 'Country')}</Text>
                                 <View style={styles.countrySelect}>
                                     <Text style={styles.countryText}>{shippingAddress.country}</Text>
                                     <Ionicons name="chevron-down" size={20} color="#888" />
@@ -377,7 +377,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
                     {step === 'payment' && (
                         <>
-                            <Text style={styles.sectionTitle}>Payment Method</Text>
+                            <Text style={styles.sectionTitle}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
 
                             <View style={styles.paymentOption}>
                                 <View style={styles.paymentRadio}>
@@ -386,12 +386,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     </View>
                                 </View>
                                 <Ionicons name="card" size={24} color={theme.colors.brand.primary} />
-                                <Text style={styles.paymentLabel}>Credit/Debit Card</Text>
+                                <Text style={styles.paymentLabel}>{t('checkout.creditDebit', 'Credit/Debit Card')}</Text>
                             </View>
 
                             <View style={styles.cardInputs}>
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Card Details</Text>
+                                    <Text style={styles.inputLabel}>{t('checkout.cardDetails', 'Card Details')}</Text>
                                     <CardField
                                         postalCodeEnabled={false}
                                         placeholders={{
@@ -411,30 +411,30 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                         }}
                                     />
                                     <Text style={styles.cardHint}>
-                                        🔒 Your card information is securely processed by Stripe
+                                        🔒 {t('checkout.stripeSecure', 'Your card information is securely processed by Stripe')}
                                     </Text>
                                 </View>
                             </View>
 
                             {/* Order Summary */}
                             <View style={styles.summaryCard}>
-                                <Text style={styles.sectionTitle}>Order Summary</Text>
+                                <Text style={styles.sectionTitle}>{t('checkout.orderSummary', 'Order Summary')}</Text>
                                 <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Items ({cartItems.length})</Text>
+                                    <Text style={styles.summaryLabel}>{t('checkout.items', 'Items')} ({cartItems.length})</Text>
                                     <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
                                 </View>
                                 {pointsToUse > 0 && (
                                     <View style={styles.summaryRow}>
-                                        <Text style={styles.discountLabel}>Points Discount</Text>
+                                        <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
                                         <Text style={styles.discountValue}>-€{(pointsToUse / 100).toFixed(2)}</Text>
                                     </View>
                                 )}
                                 <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Shipping</Text>
-                                    <Text style={styles.summaryValue}>Free</Text>
+                                    <Text style={styles.summaryLabel}>{t('checkout.shipping', 'Shipping')}</Text>
+                                    <Text style={styles.summaryValue}>{t('checkout.free', 'Free')}</Text>
                                 </View>
                                 <View style={styles.totalRow}>
-                                    <Text style={styles.totalLabel}>Total</Text>
+                                    <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
                                     <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
                                 </View>
                             </View>
@@ -446,18 +446,18 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 <View style={styles.bottomSection}>
                     {step === 'shipping' ? (
                         <Button
-                            title="Continue to Payment"
+                            title={t('checkout.continueToPayment', 'Continue to Payment')}
                             onPress={handleContinueToPayment}
                         />
                     ) : (
                         <Button
-                            title={`Pay €${total.toFixed(2)}`}
+                            title={`${t('checkout.pay', 'Pay')} €${total.toFixed(2)}`}
                             onPress={handlePlaceOrder}
                         />
                     )}
                 </View>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 

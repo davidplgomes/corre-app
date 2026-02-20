@@ -112,12 +112,12 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
                     {/* Notifications Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>{t('settings.enableNotifications').toUpperCase()}</Text>
+                        <Text style={styles.sectionTitle}>{t('settings.notifications', 'NOTIFICAÇÕES').toUpperCase()}</Text>
                         <View style={styles.settingCard}>
                             <View style={styles.settingInfo}>
                                 <Text style={styles.settingLabel}>{t('settings.enableNotifications')}</Text>
                                 <Text style={styles.settingDescription}>
-                                    {t('settings.enableNotifications')}
+                                    {t('settings.notificationsDescription', 'Receber alertas de eventos e atividades')}
                                 </Text>
                             </View>
                             <Switch

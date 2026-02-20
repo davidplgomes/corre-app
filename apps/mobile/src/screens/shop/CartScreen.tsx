@@ -64,7 +64,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             setAvailablePoints(points);
         } catch (error) {
             console.error('Error loading cart:', error);
-            Alert.alert('Error', 'Failed to load cart items');
+            Alert.alert(t('common.error'), t('cart.loadFailed', 'Failed to load cart items'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -86,7 +86,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             setCartItems(prev => prev.filter(item => item.id !== cartItemId));
         } catch (error) {
             console.error('Error removing item:', error);
-            Alert.alert('Error', 'Failed to remove item');
+            Alert.alert(t('common.error'), t('cart.removeFailed', 'Failed to remove item'));
         }
     };
 
@@ -109,12 +109,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
     const handleClearCart = () => {
         Alert.alert(
-            'Clear Cart',
-            'Are you sure you want to remove all items?',
+            t('cart.clearCart', 'Clear Cart'),
+            t('cart.clearConfirm', 'Are you sure you want to remove all items?'),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel', 'Cancel'), style: 'cancel' },
                 {
-                    text: 'Clear',
+                    text: t('cart.clear', 'Clear'),
                     style: 'destructive',
                     onPress: async () => {
                         if (!user?.id) return;
@@ -156,10 +156,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             {/* Header */}
             <View style={styles.header}>
                 <BackButton style={styles.backButton} />
-                <Text style={styles.headerTitle}>Cart</Text>
+                <Text style={styles.headerTitle}>{t('cart.title', 'Cart')}</Text>
                 {cartItems.length > 0 && (
                     <TouchableOpacity onPress={handleClearCart} style={styles.clearButton}>
-                        <Text style={styles.clearText}>Clear</Text>
+                        <Text style={styles.clearText}>{t('cart.clear', 'Clear')}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -167,12 +167,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             {cartItems.length === 0 ? (
                 <View style={styles.emptyState}>
                     <Ionicons name="cart-outline" size={64} color="#666" />
-                    <Text style={styles.emptyTitle}>Your cart is empty</Text>
+                    <Text style={styles.emptyTitle}>{t('cart.emptyTitle', 'Your cart is empty')}</Text>
                     <Text style={styles.emptySubtitle}>
-                        Browse the marketplace to find amazing deals!
+                        {t('cart.emptySubtitle', 'Browse the marketplace to find amazing deals!')}
                     </Text>
                     <Button
-                        title="Browse Shop"
+                        title={t('cart.browseShop', 'Browse Shop')}
                         onPress={() => navigation.navigate('Marketplace')}
                         style={styles.browseButton}
                     />
@@ -237,13 +237,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                             <View style={styles.pointsSection}>
                                 <View style={styles.pointsHeader}>
                                     <Ionicons name="wallet" size={20} color={theme.colors.brand.primary} />
-                                    <Text style={styles.pointsTitle}>Use Points</Text>
+                                    <Text style={styles.pointsTitle}>{t('cart.usePoints', 'Use Points')}</Text>
                                 </View>
                                 <Text style={styles.pointsAvailable}>
-                                    You have {availablePoints} points available
+                                    {t('cart.pointsAvailable', 'You have {{count}} points available').replace('{{count}}', String(availablePoints))}
                                 </Text>
                                 <Text style={styles.pointsMax}>
-                                    Max discount: {maxPointsDiscount} points (20% of order)
+                                    {t('cart.maxDiscount', 'Max discount: {{count}} points (20% of order)').replace('{{count}}', String(maxPointsDiscount))}
                                 </Text>
                                 <View style={styles.pointsInput}>
                                     <TouchableOpacity
@@ -273,10 +273,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                             <View style={styles.upgradeSection}>
                                 <Ionicons name="lock-closed" size={24} color="#888" />
                                 <Text style={styles.upgradeText}>
-                                    Upgrade to Pro or Club to use points for discounts!
+                                    {t('cart.upgradeMessage', 'Upgrade to Pro or Club to use points for discounts!')}
                                 </Text>
                                 <TouchableOpacity onPress={() => navigation.navigate('SubscriptionScreen')}>
-                                    <Text style={styles.upgradeLink}>Upgrade Now</Text>
+                                    <Text style={styles.upgradeLink}>{t('cart.upgradeNow', 'Upgrade Now')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -285,21 +285,21 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                     {/* Bottom Summary */}
                     <View style={styles.bottomSection}>
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Subtotal</Text>
+                            <Text style={styles.summaryLabel}>{t('cart.subtotal', 'Subtotal')}</Text>
                             <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
                         </View>
                         {pointsToUse > 0 && (
                             <View style={styles.summaryRow}>
-                                <Text style={styles.discountLabel}>Points Discount</Text>
+                                <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
                                 <Text style={styles.discountValue}>-€{pointsDiscount.toFixed(2)}</Text>
                             </View>
                         )}
                         <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>Total</Text>
+                            <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
                             <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
                         </View>
                         <Button
-                            title="Proceed to Checkout"
+                            title={t('cart.proceedToCheckout', 'Proceed to Checkout')}
                             onPress={() => navigation.navigate('Checkout', {
                                 cartItems,
                                 subtotal,

@@ -261,7 +261,7 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                             if (runState === 'running' || runState === 'paused') {
                                 Alert.alert(
                                     t('common.confirm'),
-                                    'Deseja cancelar a corrida?',
+                                    t('runs.cancelRun', 'Deseja cancelar a corrida?'),
                                     [
                                         { text: t('common.no'), style: 'cancel' },
                                         { text: t('common.yes'), onPress: () => { resetRun(); navigation.goBack(); } },
@@ -273,8 +273,8 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                         }}
                     />
                     <View>
-                        <Text style={styles.headerLabel}>CORRIDA</Text>
-                        <Text style={styles.headerTitle}>RASTREAR</Text>
+                        <Text style={styles.headerLabel}>{t('runs.run', 'CORRIDA').toUpperCase()}</Text>
+                        <Text style={styles.headerTitle}>{t('runs.track', 'RASTREAR').toUpperCase()}</Text>
                     </View>
                 </View>
 
@@ -284,7 +284,7 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                     <BlurView intensity={30} tint="dark" style={styles.statCardLarge}>
                         <View style={styles.statCardContent}>
                             <Text style={styles.statValueLarge}>{distanceKm.toFixed(2)}</Text>
-                            <Text style={styles.statLabelLarge}>KM</Text>
+                            <Text style={styles.statLabelLarge}>{t('common.km', 'KM').toUpperCase()}</Text>
                         </View>
                     </BlurView>
 
@@ -307,7 +307,7 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                     {/* Points Preview */}
                     <BlurView intensity={20} tint="dark" style={styles.pointsPreview}>
                         <View style={styles.pointsContent}>
-                            <Text style={styles.pointsLabel}>PONTOS</Text>
+                            <Text style={styles.pointsLabel}>{t('leaderboard.points', 'PONTOS').toUpperCase()}</Text>
                             <Text style={styles.pointsValue}>+{pointsPreview}</Text>
                         </View>
                     </BlurView>
@@ -317,17 +317,17 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                 <View style={styles.controls}>
                     {runState === 'idle' && (
                         <TouchableOpacity style={styles.startButton} onPress={startTracking}>
-                            <Text style={styles.startButtonText}>INICIAR</Text>
+                            <Text style={styles.startButtonText}>{t('runs.start', 'INICIAR').toUpperCase()}</Text>
                         </TouchableOpacity>
                     )}
 
                     {runState === 'running' && (
                         <View style={styles.runningControls}>
                             <TouchableOpacity style={styles.pauseButton} onPress={pauseTracking}>
-                                <Text style={styles.controlButtonText}>⏸ PAUSAR</Text>
+                                <Text style={styles.controlButtonText}>⏸ {t('runs.pause', 'PAUSAR').toUpperCase()}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.stopButton} onPress={finishRun}>
-                                <Text style={styles.controlButtonText}>⏹ FINALIZAR</Text>
+                                <Text style={styles.controlButtonText}>⏹ {t('runs.finish', 'FINALIZAR').toUpperCase()}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -335,32 +335,32 @@ export const RunTracker: React.FC<RunTrackerProps> = ({ navigation }) => {
                     {runState === 'paused' && (
                         <View style={styles.runningControls}>
                             <TouchableOpacity style={styles.resumeButton} onPress={resumeTracking}>
-                                <Text style={styles.controlButtonText}>▶ CONTINUAR</Text>
+                                <Text style={styles.controlButtonText}>▶ {t('runs.resume', 'CONTINUAR').toUpperCase()}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.stopButton} onPress={finishRun}>
-                                <Text style={styles.controlButtonText}>⏹ FINALIZAR</Text>
+                                <Text style={styles.controlButtonText}>⏹ {t('runs.finish', 'FINALIZAR').toUpperCase()}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {runState === 'finished' && (
                         <TouchableOpacity style={styles.startButton} onPress={resetRun}>
-                            <Text style={styles.startButtonText}>NOVA CORRIDA</Text>
+                            <Text style={styles.startButtonText}>{t('runs.newRun', 'NOVA CORRIDA').toUpperCase()}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
 
                 {/* Points Legend */}
                 <View style={styles.legend}>
-                    <Text style={styles.legendTitle}>PONTOS POR DISTÂNCIA</Text>
+                    <Text style={styles.legendTitle}>{t('runs.pointsByDistance', 'PONTOS POR DISTÂNCIA').toUpperCase()}</Text>
                     <View style={styles.legendRow}>
-                        <Text style={styles.legendItem}>0-2km: {RUN_POINTS.UNDER_2KM}pt</Text>
-                        <Text style={styles.legendItem}>2-5km: {RUN_POINTS.UNDER_5KM}pts</Text>
-                        <Text style={styles.legendItem}>5-10km: {RUN_POINTS.UNDER_10KM}pts</Text>
+                        <Text style={styles.legendItem}>0-2km: {RUN_POINTS.UNDER_2KM} {t('leaderboard.pts')}</Text>
+                        <Text style={styles.legendItem}>2-5km: {RUN_POINTS.UNDER_5KM} {t('leaderboard.pts')}</Text>
+                        <Text style={styles.legendItem}>5-10km: {RUN_POINTS.UNDER_10KM} {t('leaderboard.pts')}</Text>
                     </View>
                     <View style={styles.legendRow}>
-                        <Text style={styles.legendItem}>10-21km: {RUN_POINTS.UNDER_21KM}pts</Text>
-                        <Text style={styles.legendItem}>21km+: {RUN_POINTS.MARATHON_PLUS}pts</Text>
+                        <Text style={styles.legendItem}>10-21km: {RUN_POINTS.UNDER_21KM} {t('leaderboard.pts')}</Text>
+                        <Text style={styles.legendItem}>21km+: {RUN_POINTS.MARATHON_PLUS} {t('leaderboard.pts')}</Text>
                     </View>
                 </View>
             </SafeAreaView>

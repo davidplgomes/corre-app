@@ -117,7 +117,7 @@ export async function createSubscriptionCheckout(
         const priceId = SUBSCRIPTION_PLANS[planKey];
         if (!priceId) throw new Error('Invalid plan selected');
 
-        const { data, error } = await supabase.functions.invoke('transactions/stripe/create-subscription', {
+        const { data, error } = await supabase.functions.invoke('stripe-create-subscription', {
             body: { priceId }
         });
 
@@ -143,7 +143,7 @@ export async function createSubscriptionCheckout(
  */
 export async function cancelSubscription(userId: string, subscriptionId: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data, error } = await supabase.functions.invoke('transactions/stripe/create-subscription', {
+        const { data, error } = await supabase.functions.invoke('stripe-create-subscription', {
             body: { action: 'cancel', subscriptionId }
         });
 

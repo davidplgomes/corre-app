@@ -68,7 +68,7 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
     const handleCreate = async () => {
         if (!user) return;
         if (!title || !price || !category.value || !condition.value || !image) {
-            Alert.alert('Campos obrigatórios', 'Por favor preencha todos os campos e adicione uma foto.');
+            Alert.alert(t('marketplace.requiredFields', 'Campos obrigatórios'), t('marketplace.fillAllFieldsPhoto', 'Por favor preencha todos os campos e adicione uma foto.'));
             return;
         }
 
@@ -83,11 +83,11 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
             if (!sellerAccount || !sellerAccount.charges_enabled) {
                 Alert.alert(
-                    'Configuração Necessária',
-                    'Você precisa configurar sua conta de recebimento antes de vender.',
+                    t('seller.setupRequired', 'Configuração Necessária'),
+                    t('seller.needSetup', 'Você precisa configurar sua conta de recebimento antes de vender.'),
                     [
-                        { text: 'Cancelar', style: 'cancel' },
-                        { text: 'Configurar Agora', onPress: () => navigation.navigate('SellerOnboarding') }
+                        { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
+                        { text: t('seller.setupNow', 'Configurar Agora'), onPress: () => navigation.navigate('SellerOnboarding') }
                     ]
                 );
                 setLoading(false);
@@ -136,12 +136,12 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
             if (insertError) throw insertError;
 
-            Alert.alert('Sucesso', 'Seu anúncio foi publicado!');
+            Alert.alert(t('common.success'), t('marketplace.listingPublished', 'Seu anúncio foi publicado!'));
             navigation.goBack();
 
         } catch (error: any) {
             console.error('Create listing error:', error);
-            Alert.alert('Erro', error.message || 'Falha ao criar anúncio');
+            Alert.alert(t('common.error'), error.message || t('marketplace.createListingFailed', 'Falha ao criar anúncio'));
         } finally {
             setLoading(false);
         }

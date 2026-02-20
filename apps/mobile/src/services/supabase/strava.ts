@@ -1,5 +1,9 @@
-import { makeRedirectUri, startAsync } from 'expo-auth-session';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './client';
+
+// Ensure web browser redirects are handled properly
+WebBrowser.maybeCompleteAuthSession();
 
 // Strava Config
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID;
@@ -48,7 +52,7 @@ export interface StravaStats {
 
 /**
  * Initiate Strava OAuth Flow
- * Requires 'expo-auth-session' to be installed
+ * Uses expo-web-browser for OAuth flow
  */
 export const connectStrava = async (): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -56,21 +60,28 @@ export const connectStrava = async (): Promise<{ success: boolean; error?: strin
             return { success: false, error: 'Strava configuration missing' };
         }
 
-        // 1. Get Authorization Code
+        // 1. Build authorization URL
         const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(
             STRAVA_REDIRECT_URI
         )}&response_type=code&scope=read,activity:read_all`;
 
-        const result = await startAsync({ authUrl });
+        // 2. Open browser for OAuth
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, STRAVA_REDIRECT_URI);
 
         if (result.type !== 'success') {
             return { success: false, error: 'Authorization failed or cancelled' };
         }
 
-        const { code } = result.params;
+        // 3. Extract code from redirect URL
+        const url = new URL(result.url);
+        const code = url.searchParams.get('code');
 
-        // 2. Exchange Code for Token via Edge Function
-        const { data, error } = await supabase.functions.invoke('strava-auth', {
+        if (!code) {
+            return { success: false, error: 'No authorization code received' };
+        }
+
+        // 4. Exchange Code for Token via Edge Function
+        const { error } = await supabase.functions.invoke('strava-auth', {
             body: { code, redirect_uri: STRAVA_REDIRECT_URI }
         });
 
