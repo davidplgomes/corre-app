@@ -15,18 +15,40 @@ import { useTranslation } from 'react-i18next';
 import { ClockIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { getUserRuns } from '../../services/supabase/feed';
+import { getStravaActivities, formatDistance, formatDuration } from '../../services/supabase/strava';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Haptics from 'expo-haptics';
+
+interface RunItem {
+    id: string;
+    date: string;
+    distance: string;
+    time: string;
+    pace: string;
+    points: number;
+    source: 'manual' | 'strava';
+    name?: string;
+}
 
 type RunHistoryProps = {
     navigation: any;
 };
 
 export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
-    const [runs, setRuns] = useState<any[]>([]);
+    const [runs, setRuns] = useState<RunItem[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
     const { t } = useTranslation();
+
+    // Helper to calculate pace from distance (meters) and time (seconds)
+    const calculatePace = (distanceMeters: number, timeSeconds: number): string => {
+        if (!distanceMeters || distanceMeters <= 0 || !timeSeconds) return "--'--\"/km";
+        const distanceKm = distanceMeters / 1000;
+        const paceSecondsPerKm = timeSeconds / distanceKm;
+        const minutes = Math.floor(paceSecondsPerKm / 60);
+        const seconds = Math.round(paceSecondsPerKm % 60);
+        return `${minutes}'${seconds.toString().padStart(2, '0')}"/km`;
+    };
 
     useEffect(() => {
         const fetchRuns = async () => {
@@ -36,18 +58,42 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
             }
             try {
                 setLoading(true);
-                const data = await getUserRuns(user.id);
 
-                const formattedRuns = data.map(post => ({
+                // Fetch both manual runs and Strava activities in parallel
+                const [manualData, stravaData] = await Promise.all([
+                    getUserRuns(user.id).catch(() => []),
+                    getStravaActivities(50).catch(() => [])
+                ]);
+
+                // Format manual runs
+                const manualRuns: RunItem[] = manualData.map(post => ({
                     id: post.id,
                     date: post.created_at,
                     distance: post.meta_data?.distance || '0km',
                     time: post.meta_data?.time || '00:00',
-                    pace: post.meta_data?.pace || "0'00\"/km",
-                    points: post.meta_data?.points || 0
+                    pace: post.meta_data?.pace || "--'--\"/km",
+                    points: post.meta_data?.points || 0,
+                    source: 'manual' as const
                 }));
 
-                setRuns(formattedRuns);
+                // Format Strava activities
+                const stravaRuns: RunItem[] = stravaData.map(activity => ({
+                    id: `strava-${activity.strava_id}`,
+                    date: activity.start_date,
+                    distance: `${formatDistance(activity.distance_meters)}km`,
+                    time: formatDuration(activity.moving_time_seconds),
+                    pace: calculatePace(activity.distance_meters, activity.moving_time_seconds),
+                    points: activity.points_earned || 0,
+                    source: 'strava' as const,
+                    name: activity.name
+                }));
+
+                // Combine and sort by date (newest first)
+                const allRuns = [...manualRuns, ...stravaRuns].sort(
+                    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                );
+
+                setRuns(allRuns);
             } catch (error) {
                 console.error('Error fetching runs:', error);
                 setRuns([]);
@@ -73,25 +119,29 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
 
     const totalRuns = runs.length;
 
-    const renderItem = ({ item }: { item: any }) => {
+    const renderItem = ({ item }: { item: RunItem }) => {
         const { day, month } = formatDate(item.date);
+        const isStrava = item.source === 'strava';
 
         return (
-            <TouchableOpacity
-                style={styles.runCard}
-                onPress={() => navigation.navigate('RunMap', { run: item })}
+            <View
+                style={[styles.runCard, isStrava && styles.stravaCard]}
             >
                 {/* Date */}
                 <View style={styles.dateSection}>
                     <Text style={styles.dateDay}>{day}</Text>
-                    <Text style={styles.dateMonth}>{month}</Text>
+                    <Text style={[styles.dateMonth, isStrava && styles.stravaAccent]}>{month}</Text>
                 </View>
 
                 {/* Accent Line */}
-                <View style={styles.accentLine} />
+                <View style={[styles.accentLine, isStrava && styles.stravaLine]} />
 
                 {/* Stats */}
                 <View style={styles.statsSection}>
+                    {/* Activity name for Strava */}
+                    {isStrava && item.name && (
+                        <Text style={styles.activityName} numberOfLines={1}>{item.name}</Text>
+                    )}
                     <View style={styles.statRow}>
                         <View style={styles.stat}>
                             <Text style={styles.statValue}>{item.distance}</Text>
@@ -108,11 +158,15 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                     </View>
                 </View>
 
-                {/* Points */}
+                {/* Points / Source Badge */}
                 <View style={styles.pointsSection}>
-                    <Text style={styles.pointsValue}>+{item.points}</Text>
+                    {item.points > 0 ? (
+                        <Text style={styles.pointsValue}>+{item.points}</Text>
+                    ) : isStrava ? (
+                        <Text style={styles.stravaBadge}>STRAVA</Text>
+                    ) : null}
                 </View>
-            </TouchableOpacity>
+            </View>
         );
     };
 
@@ -335,6 +389,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '900',
         color: theme.colors.brand.primary,
+    },
+    // Strava-specific styles
+    stravaCard: {
+        borderColor: '#FC4C02', // Strava orange
+        borderLeftWidth: 3,
+    },
+    stravaAccent: {
+        color: '#FC4C02',
+    },
+    stravaLine: {
+        backgroundColor: '#FC4C02',
+    },
+    activityName: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.7)',
+        marginBottom: 8,
+    },
+    stravaBadge: {
+        fontSize: 8,
+        fontWeight: '900',
+        color: '#FC4C02',
+        letterSpacing: 0.5,
     },
     fab: {
         position: 'absolute',

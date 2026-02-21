@@ -32,6 +32,8 @@ import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
 import { CreateListing } from '../screens/marketplace/CreateListing';
 import { SellerOnboarding } from '../screens/marketplace/SellerOnboarding';
+import { MyListings } from '../screens/marketplace/MyListings';
+import { EditListing } from '../screens/marketplace/EditListing';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { WalletScreen } from '../screens/wallet/WalletScreen';
 import { CartScreen, CheckoutScreen, OrderHistoryScreen, OrderDetailScreen } from '../screens/shop';
@@ -73,6 +75,8 @@ export type MarketplaceStackParamList = {
     ProductDetail: { product: any; type: 'shop' | 'community' };
     CreateListing: undefined;
     SellerOnboarding: undefined;
+    MyListings: undefined;
+    EditListing: { listingId: string; listing?: any };
     Cart: undefined;
     Checkout: { cartItems: any[]; subtotal: number; pointsToUse: number; total: number };
     OrderHistory: undefined;
@@ -97,6 +101,11 @@ export type ProfileStackParamList = {
     GuestPass: undefined;
     WelcomeKit: undefined;
     Referral: undefined;
+    // Seller Dashboard
+    MyListings: undefined;
+    CreateListing: undefined;
+    EditListing: { listingId: string; listing?: any };
+    SellerOnboarding: undefined;
 };
 
 export type MainTabParamList = {
@@ -156,6 +165,8 @@ const MarketplaceStackNavigator: React.FC = () => (
         <MarketplaceStack.Screen name="ProductDetail" component={ProductDetail} />
         <MarketplaceStack.Screen name="CreateListing" component={CreateListing} />
         <MarketplaceStack.Screen name="SellerOnboarding" component={SellerOnboarding} />
+        <MarketplaceStack.Screen name="MyListings" component={MyListings} />
+        <MarketplaceStack.Screen name="EditListing" component={EditListing} />
         <MarketplaceStack.Screen name="Cart" component={CartScreen} />
         <MarketplaceStack.Screen name="Checkout" component={CheckoutScreen} />
         <MarketplaceStack.Screen name="OrderHistory" component={OrderHistoryScreen} />
@@ -183,6 +194,11 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="GuestPass" component={GuestPassScreen} />
         <ProfileStack.Screen name="WelcomeKit" component={WelcomeKitScreen} />
         <ProfileStack.Screen name="Referral" component={ReferralScreen} />
+        {/* Seller Dashboard */}
+        <ProfileStack.Screen name="MyListings" component={MyListings} />
+        <ProfileStack.Screen name="CreateListing" component={CreateListing} />
+        <ProfileStack.Screen name="EditListing" component={EditListing} />
+        <ProfileStack.Screen name="SellerOnboarding" component={SellerOnboarding} />
     </ProfileStack.Navigator>
 );
 

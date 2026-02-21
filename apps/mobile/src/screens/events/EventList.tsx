@@ -202,18 +202,6 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                 />
             </SafeAreaView>
-
-            {/* Create Event FAB */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    navigation.navigate('CreateEvent');
-                }}
-                activeOpacity={0.8}
-            >
-                <Text style={styles.fabIcon}>+</Text>
-            </TouchableOpacity>
         </View>
     );
 };
@@ -370,29 +358,5 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
         lineHeight: 20,
-    },
-
-    // FAB
-    fab: {
-        position: 'absolute',
-        bottom: 100,
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.brand.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 8,
-        shadowColor: theme.colors.brand.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-    },
-    fabIcon: {
-        fontSize: 28,
-        fontWeight: '300',
-        color: '#FFF',
-        marginTop: -2,
     },
 });

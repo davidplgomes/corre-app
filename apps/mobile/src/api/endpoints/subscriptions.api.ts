@@ -25,7 +25,7 @@ class SubscriptionsApiClass {
         logger.info('SUBSCRIPTION', 'Fetching available products');
 
         return apiClient.invokeFunction<StripeProductDisplay[]>(
-            'transactions/stripe/sync-products'
+            'stripe-sync-products'
         );
     }
 
@@ -74,7 +74,7 @@ class SubscriptionsApiClass {
         logger.info('SUBSCRIPTION', 'Creating subscription', { priceId: request.priceId });
 
         return apiClient.invokeFunction<{ subscriptionId: string; clientSecret?: string }>(
-            'transactions/stripe/create-subscription',
+            'stripe-create-subscription',
             { priceId: request.priceId }
         );
     }
@@ -84,7 +84,7 @@ class SubscriptionsApiClass {
         logger.info('SUBSCRIPTION', `Cancelling subscription: ${subscriptionId}`);
 
         return apiClient.invokeFunction<void>(
-            'transactions/stripe/create-subscription',
+            'stripe-create-subscription',
             { action: 'cancel', subscriptionId }
         );
     }

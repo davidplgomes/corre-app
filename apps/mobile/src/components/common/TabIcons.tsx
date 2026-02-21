@@ -611,3 +611,79 @@ export const CompassIcon: React.FC<IconProps> = ({
         <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
+
+// Strava Logo Icon (Official shape)
+export const StravaIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FC4C02'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066l-2.084 4.116zM7.478 14.023l4.843-9.611L8.479 4.41 3.633 14.023h3.845zm4.845 0h3.069L10.84.408l-1.456 2.87 2.939 5.826-5.054.002 5.054 5.917z"
+            fill={color}
+        />
+    </Svg>
+);
+
+// Sync Icon (Refresh arrows)
+export const SyncIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M21 2v6h-6M3 22v-6h6M21 13a9 9 0 0 1-15.36 6.36L3 22M3 11a9 9 0 0 1 15.36-6.36L21 2"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+// Bolt Icon (Lightning/Energy)
+export const BoltIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+// Leaderboard Icon (Podium)
+export const LeaderboardIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF'
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Rect x="4" y="14" width="4" height="8" rx="1" stroke={color} strokeWidth="1.5" />
+        <Rect x="10" y="8" width="4" height="14" rx="1" stroke={color} strokeWidth="1.5" />
+        <Rect x="16" y="11" width="4" height="11" rx="1" stroke={color} strokeWidth="1.5" />
+        <Path d="M12 3L13 6H11L12 3Z" fill={color} />
+    </Svg>
+);
+
+// Checkmark Circle Icon
+export const CheckCircleIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+    filled = false
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="10" fill={filled ? color : 'none'} stroke={color} strokeWidth="1.5" />
+        <Path
+            d="M8 12l3 3 5-6"
+            stroke={filled ? '#000' : color}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);

@@ -58,9 +58,7 @@ module.exports = {
     updates: {
       url: 'https://u.expo.dev/64b3844f-ce00-402b-976b-8e4d8f36714e'
     },
-    runtimeVersion: {
-      policy: 'appVersion'
-    },
+    runtimeVersion: '1.0.2',
     extra: {
       EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
       EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,

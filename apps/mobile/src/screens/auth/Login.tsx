@@ -8,7 +8,7 @@ import {
     Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef } from '../../components/common';
+import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef, LanguageSelector } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import { GoogleIcon, AppleIcon } from '../../components/auth/AuthIcons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -91,7 +91,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
                         style={styles.brandNameLogo}
                         resizeMode="contain"
                     />
-                    <Text style={styles.tagline}>Run together, grow together</Text>
+                    <Text style={styles.tagline}>{t('auth.tagline', 'Run together, grow together')}</Text>
                 </View>
 
                 <View style={styles.formContainer}>
@@ -100,7 +100,7 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
                     <ShakeView ref={emailShakeRef}>
                         <Input
                             label={t('auth.email')}
-                            placeholder="your@email.com"
+                            placeholder="email@example.com"
                             value={email}
                             onChangeText={setEmail}
                             error={emailError}
@@ -131,11 +131,11 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
                         onPress={() => navigation.navigate('ForgotPassword')}
                         style={styles.forgotButton}
                     >
-                        <Text style={styles.forgotText}>Forgot password?</Text>
+                        <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
                     </TouchableOpacity>
 
                     <Button
-                        title={loading ? 'Signing in...' : 'Sign In'}
+                        title={loading ? t('auth.signingIn') : t('auth.signIn')}
                         onPress={handleLogin}
                         loading={loading}
                         variant="primary"
@@ -146,28 +146,30 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
 
                     <View style={styles.divider}>
                         <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>or continue with</Text>
+                        <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
                         <View style={styles.dividerLine} />
                     </View>
 
                     <View style={styles.socialButtons}>
                         <TouchableOpacity style={[styles.socialButton, styles.appleButton]} onPress={() => Haptics.selectionAsync()}>
                             <AppleIcon size={20} color="#FFFFFF" />
-                            <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                            <Text style={styles.appleButtonText}>{t('auth.continueWithApple')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={() => Haptics.selectionAsync()}>
                             <GoogleIcon size={20} />
-                            <Text style={styles.googleButtonText}>Continue with Google</Text>
+                            <Text style={styles.googleButtonText}>{t('auth.continueWithGoogle')}</Text>
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.footer}>
-                        <Text style={styles.footerText}>Don't have an account?</Text>
+                        <Text style={styles.footerText}>{t('auth.dontHaveAccount')}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Text style={styles.signUpText}>Sign Up</Text>
+                            <Text style={styles.signUpText}>{t('auth.signup')}</Text>
                         </TouchableOpacity>
                     </View>
+
+                    <LanguageSelector />
                 </View>
             </Animated.View>
         </Screen>

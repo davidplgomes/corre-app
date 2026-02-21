@@ -8,7 +8,7 @@ import {
     Image,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef, BackButton } from '../../components/common';
+import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef, BackButton, LanguageSelector } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../../contexts/AuthContext';
@@ -93,13 +93,16 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 style={styles.container}
             >
                 <View style={styles.header}>
-                    <BackButton onPress={() => {
-                        Haptics.selectionAsync();
-                        navigation.goBack();
-                    }} />
+                    <BackButton
+                        onPress={() => {
+                            Haptics.selectionAsync();
+                            navigation.goBack();
+                        }}
+                        style={styles.backButton}
+                    />
                     <View style={styles.headerContent}>
                         <Image
-                            source={require('../../../assets/icon.png')}
+                            source={require('../../../assets/11.png')}
                             style={styles.logo}
                             resizeMode="contain"
                         />
@@ -187,6 +190,8 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                             <Text style={styles.loginText}>{t('auth.signIn', 'Sign In')}</Text>
                         </TouchableOpacity>
                     </View>
+
+                    <LanguageSelector />
                 </View>
             </Animated.View>
         </Screen>
@@ -203,16 +208,24 @@ const styles = StyleSheet.create({
         paddingBottom: theme.spacing[8],
     },
     header: {
-        marginBottom: theme.spacing[8],
-        marginTop: theme.spacing[4],
+        marginBottom: theme.spacing[6],
+        marginTop: theme.spacing[2],
+        position: 'relative',
+    },
+    backButton: {
+        position: 'absolute',
+        top: 0,
+        left: -8,
+        zIndex: 10,
     },
     headerContent: {
         alignItems: 'center',
+        paddingTop: theme.spacing[2],
     },
     logo: {
-        width: 60,
-        height: 60,
-        marginBottom: theme.spacing[4],
+        width: 100,
+        height: 100,
+        marginBottom: theme.spacing[3],
     },
     title: {
         fontSize: theme.typography.size.displaySM,
@@ -222,6 +235,7 @@ const styles = StyleSheet.create({
         letterSpacing: -1,
         marginBottom: theme.spacing[2],
         textTransform: 'uppercase',
+        textAlign: 'center',
     },
     tagline: {
         fontSize: theme.typography.size.bodyMD,

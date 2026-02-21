@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           languagePreference: data.language_preference,
           qrCodeSecret: data.qr_code_secret,
           isMerchant: data.is_merchant,
+          onboardingCompleted: data.onboarding_completed ?? false,
           createdAt: new Date(data.created_at),
           updatedAt: new Date(data.updated_at),
         });

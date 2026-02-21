@@ -21,6 +21,7 @@ export interface UserProfile {
   languagePreference: 'en' | 'pt' | 'es';
   qrCodeSecret: string;
   isMerchant: boolean;
+  onboardingCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

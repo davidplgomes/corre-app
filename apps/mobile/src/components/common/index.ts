@@ -4,6 +4,7 @@ export { Card } from './Card';
 export { LoadingSpinner } from './LoadingSpinner';
 export { ErrorMessage } from './ErrorMessage';
 export { LanguageSwitcher } from './LanguageSwitcher';
+export { LanguageSelector } from './LanguageSelector';
 export { BackButton } from './BackButton';
 export { Header } from './Header';
 export * from './TabIcons';

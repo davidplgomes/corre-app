@@ -1,4 +1,3 @@
-import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './client';
 
@@ -7,15 +6,17 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Strava Config
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID;
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 if (!STRAVA_CLIENT_ID) {
     console.warn('Strava Client ID is missing. Please set EXPO_PUBLIC_STRAVA_CLIENT_ID in your .env file.');
 }
 
-const STRAVA_REDIRECT_URI = makeRedirectUri({
-    scheme: 'corre-app',
-    path: 'strava-auth',
-});
+// Use the Supabase edge function URL as the callback (Strava requires web URLs, not custom schemes)
+const STRAVA_REDIRECT_URI = `${SUPABASE_URL}/functions/v1/strava-auth`;
+
+// App's deep link URL for receiving callbacks from the edge function
+const APP_REDIRECT_URL = 'corre-app://strava-auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,41 +54,64 @@ export interface StravaStats {
 /**
  * Initiate Strava OAuth Flow
  * Uses expo-web-browser for OAuth flow
+ *
+ * Flow:
+ * 1. App opens Strava OAuth page with edge function as redirect_uri
+ * 2. User authorizes on Strava
+ * 3. Strava redirects to our edge function with code
+ * 4. Edge function exchanges code, saves tokens, redirects to app
+ * 5. App receives deep link with success/error status
  */
 export const connectStrava = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-        if (!STRAVA_CLIENT_ID) {
+        if (!STRAVA_CLIENT_ID || !SUPABASE_URL) {
             return { success: false, error: 'Strava configuration missing' };
         }
 
-        // 1. Build authorization URL
-        const authUrl = `https://www.strava.com/oauth/authorize?client_id=${STRAVA_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-            STRAVA_REDIRECT_URI
-        )}&response_type=code&scope=read,activity:read_all`;
+        // Get current user ID to pass in state parameter
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: 'Please log in first' };
+        }
 
-        // 2. Open browser for OAuth
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, STRAVA_REDIRECT_URI);
+        // Build authorization URL with user_id in state parameter
+        const authUrl = `https://www.strava.com/oauth/authorize?` +
+            `client_id=${STRAVA_CLIENT_ID}` +
+            `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
+            `&response_type=code` +
+            `&scope=read,activity:read_all` +
+            `&state=${user.id}`;
+
+        console.log('Opening Strava auth URL:', authUrl);
+
+        // Open browser - it will redirect to edge function, which redirects back to app
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, APP_REDIRECT_URL);
 
         if (result.type !== 'success') {
-            return { success: false, error: 'Authorization failed or cancelled' };
+            return { success: false, error: 'Authorization cancelled' };
         }
 
-        // 3. Extract code from redirect URL
+        // Parse the result URL from the edge function redirect
         const url = new URL(result.url);
-        const code = url.searchParams.get('code');
+        const success = url.searchParams.get('success');
+        const error = url.searchParams.get('error');
 
-        if (!code) {
-            return { success: false, error: 'No authorization code received' };
+        if (error) {
+            const errorMessages: Record<string, string> = {
+                'denied': 'Authorization was denied',
+                'missing_params': 'Missing authorization parameters',
+                'token_exchange_failed': 'Failed to connect with Strava',
+                'database_error': 'Failed to save connection',
+                'unknown': 'An unknown error occurred',
+            };
+            return { success: false, error: errorMessages[error] || error };
         }
 
-        // 4. Exchange Code for Token via Edge Function
-        const { error } = await supabase.functions.invoke('strava-auth', {
-            body: { code, redirect_uri: STRAVA_REDIRECT_URI }
-        });
+        if (success === 'true') {
+            return { success: true };
+        }
 
-        if (error) throw error;
-
-        return { success: true };
+        return { success: false, error: 'Unknown response from authorization' };
     } catch (error: any) {
         console.error('Error connecting Strava:', error);
         return { success: false, error: error.message };
@@ -130,14 +154,18 @@ export const disconnectStravaComplete = async (): Promise<boolean> => {
         // If we have a token, deauthorize on Strava side
         if (connection?.access_token) {
             try {
-                await fetch('https://www.strava.com/oauth/deauthorize', {
+                const response = await fetch('https://www.strava.com/oauth/deauthorize', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${connection.access_token}`,
                         'Content-Type': 'application/json'
                     }
                 });
-                console.log('Deauthorized on Strava side');
+                if (response.ok) {
+                    console.log('Deauthorized on Strava side successfully');
+                } else {
+                    console.warn(`Strava deauth failed with status ${response.status} (continuing with local delete)`);
+                }
             } catch (stravaError) {
                 // Continue anyway - we'll delete our local data
                 console.warn('Strava deauth API call failed (continuing with local delete):', stravaError);

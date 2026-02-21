@@ -19,8 +19,9 @@ import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, LoadingSpinner } from '../../components/common';
-import { getMarketplaceItems, getShopItems, createMarketplaceItem } from '../../services/supabase/marketplace';
+import { getMarketplaceItems, getShopItems, createMarketplaceItem, getSellerListings } from '../../services/supabase/marketplace';
 import { MarketplaceItem, ShopItem } from '../../types';
+import { supabase } from '../../services/supabase/client';
 
 type MarketplaceScreenProps = {
     navigation: any;
@@ -58,6 +59,24 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
     const [newItemTitle, setNewItemTitle] = useState('');
     const [newItemPrice, setNewItemPrice] = useState('');
     const [creating, setCreating] = useState(false);
+    const [hasListings, setHasListings] = useState(false);
+
+    // Check if user has listings for My Items button
+    useEffect(() => {
+        const checkUserListings = async () => {
+            if (!profile?.id) return;
+            try {
+                const { count } = await supabase
+                    .from('marketplace_listings')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('seller_id', profile.id);
+                setHasListings((count || 0) > 0);
+            } catch (error) {
+                console.error('Error checking user listings:', error);
+            }
+        };
+        checkUserListings();
+    }, [profile?.id]);
 
     const loadData = useCallback(async () => {
         try {
@@ -203,17 +222,30 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                         </BlurView>
                     </View>
 
-                    {/* Create Button (Only for Community) */}
+                    {/* Action Buttons (Only for Community) */}
                     {viewMode === 'community' && (
-                        <TouchableOpacity
-                            style={styles.createButtonFloat}
-                            onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                navigation.navigate('CreateListing');
-                            }}
-                        >
-                            <Text style={styles.createButtonText}>+ {t('marketplace.announce').toUpperCase()}</Text>
-                        </TouchableOpacity>
+                        <View style={styles.actionButtonsContainer}>
+                            {hasListings && (
+                                <TouchableOpacity
+                                    style={styles.myListingsButton}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        navigation.navigate('MyListings');
+                                    }}
+                                >
+                                    <Text style={styles.myListingsButtonText}>{t('marketplace.myItems', 'MY ITEMS').toUpperCase()}</Text>
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                                style={styles.createButtonFloat}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    navigation.navigate('CreateListing');
+                                }}
+                            >
+                                <Text style={styles.createButtonText}>+ {t('marketplace.announce').toUpperCase()}</Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
 
                     {/* List */}
@@ -471,20 +503,38 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 14,
     },
-    createButtonFloat: {
+    actionButtonsContainer: {
         position: 'absolute',
-        bottom: 180, // Safely clear TabBar (approx 120px) + margin
+        bottom: 180,
         alignSelf: 'center',
-        backgroundColor: theme.colors.brand.primary, // Solid orange
+        flexDirection: 'row',
+        gap: 12,
+        zIndex: 100,
+    },
+    myListingsButton: {
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+    },
+    myListingsButtonText: {
+        color: '#FFF',
+        fontWeight: '700',
+        letterSpacing: 1,
+        fontSize: 12,
+    },
+    createButtonFloat: {
+        backgroundColor: theme.colors.brand.primary,
         paddingHorizontal: 24,
         paddingVertical: 14,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: theme.colors.brand.primary,
-        zIndex: 100,
     },
     createButtonText: {
-        color: '#FFF', // White text
+        color: '#FFF',
         fontWeight: '700',
         letterSpacing: 1,
         fontSize: 12,

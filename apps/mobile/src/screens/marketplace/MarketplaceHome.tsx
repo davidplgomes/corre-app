@@ -13,10 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
 import { LoadingSpinner } from '../../components/common';
 import { SearchIcon, FilterIcon, PlusIcon } from '../../components/common/TabIcons';
+import { useAuth } from '../../contexts/AuthContext';
 
 type MarketplaceHomeProps = {
     navigation: any;
@@ -37,10 +39,29 @@ type Listing = {
 
 export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({ navigation }) => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [hasListings, setHasListings] = useState(false);
+
+    // Check if user has any listings
+    useEffect(() => {
+        const checkUserListings = async () => {
+            if (!user?.id) return;
+            try {
+                const { count } = await supabase
+                    .from('marketplace_listings')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('seller_id', user.id);
+                setHasListings((count || 0) > 0);
+            } catch (error) {
+                console.error('Error checking user listings:', error);
+            }
+        };
+        checkUserListings();
+    }, [user?.id]);
 
     const fetchListings = async () => {
         try {
@@ -121,16 +142,32 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({ navigation }) 
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.headerLabel}>COMMUNITY</Text>
-                        <Text style={styles.headerTitle}>MARKET</Text>
+                        <Text style={styles.headerLabel}>{t('marketplace.community', 'COMMUNITY')}</Text>
+                        <Text style={styles.headerTitle}>{t('marketplace.market', 'MARKET')}</Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.sellButton}
-                        onPress={() => navigation.navigate('CreateListing')}
-                    >
-                        <PlusIcon size={20} color="#000" />
-                        <Text style={styles.sellButtonText}>VENDER</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerButtons}>
+                        {hasListings && (
+                            <TouchableOpacity
+                                style={styles.myListingsButton}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    navigation.navigate('MyListings');
+                                }}
+                            >
+                                <Text style={styles.myListingsText}>{t('marketplace.myListings', 'MY ITEMS')}</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={styles.sellButton}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                navigation.navigate('CreateListing');
+                            }}
+                        >
+                            <PlusIcon size={20} color="#000" />
+                            <Text style={styles.sellButtonText}>{t('marketplace.sell', 'SELL')}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Search */}
@@ -205,6 +242,25 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontStyle: 'italic',
         color: '#FFF',
+    },
+    headerButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    myListingsButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    myListingsText: {
+        color: '#FFF',
+        fontWeight: '700',
+        fontSize: 10,
+        letterSpacing: 0.5,
     },
     sellButton: {
         flexDirection: 'row',

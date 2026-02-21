@@ -39,7 +39,13 @@
       "Bash(supabase functions deploy:*)",
       "Bash(supabase secrets:*)",
       "Bash(curl:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(npx supabase secrets set:*)",
+      "Bash(npx supabase db query:*)",
+      "Bash(supabase functions list:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(npm ls:*)"
     ]
   },
   "enabledMcpjsonServers": [

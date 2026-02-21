@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, MapIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -73,15 +73,6 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('RunHistory');
-            },
-        },
-        {
-            id: 'runMap',
-            label: t('profile.runMap'),
-            icon: <MapIcon size={20} color="#FFF" />,
-            onPress: () => {
-                Haptics.selectionAsync();
-                navigation.navigate('RunMap');
             },
         },
         {

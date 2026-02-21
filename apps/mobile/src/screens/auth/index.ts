@@ -3,6 +3,7 @@ export { SignUp } from './SignUp';
 export { ForgotPassword } from './ForgotPassword';
 export { Onboarding } from './Onboarding';
 export { ProfileSetup } from './ProfileSetup';
+export { StravaConnect } from './StravaConnect';
 export { ChangePasswordScreen } from './ChangePasswordScreen';
 export { ChangeEmailScreen } from './ChangeEmailScreen';
 export { ResetPasswordScreen } from './ResetPasswordScreen';

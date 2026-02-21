@@ -1,11 +1,12 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Onboarding, ProfileSetup } from '../screens/auth';
+import { Onboarding, ProfileSetup, StravaConnect } from '../screens/auth';
 import { theme } from '../constants/theme';
 
 export type OnboardingStackParamList = {
     Onboarding: undefined;
     ProfileSetup: undefined;
+    StravaConnect: undefined;
 };
 
 const Stack = createStackNavigator<OnboardingStackParamList>();
@@ -21,6 +22,7 @@ export const OnboardingNavigator: React.FC = () => {
         >
             <Stack.Screen name="Onboarding" component={Onboarding} />
             <Stack.Screen name="ProfileSetup" component={ProfileSetup} />
+            <Stack.Screen name="StravaConnect" component={StravaConnect} />
         </Stack.Navigator>
     );
 };

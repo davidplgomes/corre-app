@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    StatusBar, Switch, Alert
+    StatusBar, Switch, Alert,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
@@ -15,6 +17,7 @@ import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
+import { connectStrava, disconnectStravaComplete, isStravaConnected } from '../../services/supabase/strava';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -26,6 +29,8 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const { t, i18n } = useTranslation();
     const { profile } = useAuth();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+    const [stravaConnected, setStravaConnected] = React.useState(false);
+    const [stravaLoading, setStravaLoading] = React.useState(false);
 
     const [privacyVisibility, setPrivacyVisibility] = React.useState<PrivacyVisibility>('friends');
 
@@ -35,6 +40,62 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
             getPrivacySetting(profile.id).then(setPrivacyVisibility);
         }
     }, [profile?.id]);
+
+    // Refresh Strava connection status when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            checkStravaConnection();
+        }, [])
+    );
+
+    const checkStravaConnection = async () => {
+        const connected = await isStravaConnected();
+        setStravaConnected(connected);
+    };
+
+    const handleStravaToggle = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setStravaLoading(true);
+
+        try {
+            if (stravaConnected) {
+                Alert.alert(
+                    t('settings.disconnectStrava', 'Disconnect Strava'),
+                    t('settings.disconnectStravaConfirm', 'This will remove your Strava connection and delete synced activities. Continue?'),
+                    [
+                        { text: t('common.cancel'), style: 'cancel', onPress: () => setStravaLoading(false) },
+                        {
+                            text: t('common.disconnect', 'Disconnect'),
+                            style: 'destructive',
+                            onPress: async () => {
+                                const success = await disconnectStravaComplete();
+                                if (success) {
+                                    setStravaConnected(false);
+                                    Alert.alert(t('common.success'), t('settings.stravaDisconnected', 'Strava disconnected successfully'));
+                                } else {
+                                    Alert.alert(t('common.error'), t('settings.stravaDisconnectError', 'Failed to disconnect Strava'));
+                                }
+                                setStravaLoading(false);
+                            }
+                        }
+                    ]
+                );
+            } else {
+                const result = await connectStrava();
+                if (result.success) {
+                    setStravaConnected(true);
+                    Alert.alert(t('common.success'), t('settings.stravaConnected', 'Strava connected successfully! Your activities will sync automatically.'));
+                } else {
+                    Alert.alert(t('common.error'), result.error || t('settings.stravaConnectError', 'Failed to connect Strava'));
+                }
+                setStravaLoading(false);
+            }
+        } catch (error) {
+            console.error('Strava toggle error:', error);
+            setStravaLoading(false);
+            Alert.alert(t('common.error'), t('errors.unknownError'));
+        }
+    };
 
     const loadSettings = async () => {
         try {
@@ -134,17 +195,36 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     {/* Integrations Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('settings.connectedApps').toUpperCase()}</Text>
-                        <View style={styles.settingCard}>
+                        <TouchableOpacity
+                            style={styles.settingCard}
+                            onPress={handleStravaToggle}
+                            disabled={stravaLoading}
+                            activeOpacity={0.7}
+                        >
                             <View style={styles.settingInfo}>
                                 <Text style={styles.settingLabel}>Strava</Text>
                                 <Text style={styles.settingDescription}>
-                                    {t('settings.connect')}
+                                    {stravaConnected
+                                        ? t('settings.stravaConnectedStatus', 'Connected - Tap to disconnect')
+                                        : t('settings.stravaDisconnectedStatus', 'Tap to connect your account')}
                                 </Text>
                             </View>
-                            <View style={styles.comingSoonBadge}>
-                                <Text style={styles.comingSoonText}>{t('settings.comingSoon').toUpperCase()}</Text>
-                            </View>
-                        </View>
+                            {stravaLoading ? (
+                                <ActivityIndicator size="small" color={theme.colors.brand.primary} />
+                            ) : (
+                                <View style={[
+                                    styles.connectionBadge,
+                                    stravaConnected && styles.connectionBadgeActive
+                                ]}>
+                                    <Text style={[
+                                        styles.connectionBadgeText,
+                                        stravaConnected && styles.connectionBadgeTextActive
+                                    ]}>
+                                        {stravaConnected ? t('common.connected', 'CONNECTED') : t('common.connect', 'CONNECT')}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
                     </View>
 
                     {/* Language Section */}
@@ -387,17 +467,26 @@ const styles = StyleSheet.create({
         fontSize: theme.typography.size.bodyMD,
         color: theme.colors.text.tertiary,
     },
-    comingSoonBadge: {
+    connectionBadge: {
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
-    comingSoonText: {
+    connectionBadgeActive: {
+        backgroundColor: theme.colors.success,
+        borderColor: theme.colors.success,
+    },
+    connectionBadgeText: {
         fontSize: 10,
-        fontWeight: '600' as const,
+        fontWeight: '700' as const,
         color: theme.colors.text.tertiary,
         letterSpacing: 0.5,
+    },
+    connectionBadgeTextActive: {
+        color: '#FFF',
     },
     privacyOptions: {
         flexDirection: 'row',

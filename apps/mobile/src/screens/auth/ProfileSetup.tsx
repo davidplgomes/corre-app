@@ -20,8 +20,6 @@ import { supabase } from '../../services/supabase/client';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAvatar, updateUserAvatarUrl } from '../../services/supabase/storage';
 import * as Haptics from 'expo-haptics';
-import { useOnboarding } from '../../navigation/RootNavigator';
-
 type ProfileSetupProps = {
     navigation: any;
 };
@@ -29,7 +27,6 @@ type ProfileSetupProps = {
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const { profile, refreshProfile } = useAuth();
-    const { completeOnboarding } = useOnboarding();
     const [bio, setBio] = useState('');
     const [city, setCity] = useState('');
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -90,9 +87,8 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
 
             await refreshProfile();
 
-            // Mark onboarding complete — this updates RootNavigator state,
-            // which swaps OnboardingNavigator → TabNavigator immediately.
-            await completeOnboarding();
+            // Navigate to Strava Connect step
+            navigation.navigate('StravaConnect');
 
         } catch (error) {
             console.error('Error updating profile:', error);
@@ -107,8 +103,9 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
             <StatusBar barStyle="light-content" backgroundColor="#000" />
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Setup Profile</Text>
-                    <Text style={styles.headerSubtitle}>Let's get to know you better</Text>
+                    <Text style={styles.stepIndicator}>{t('onboarding.step', 'STEP')} 2/3</Text>
+                    <Text style={styles.headerTitle}>{t('profile.setupProfile', 'Setup Profile')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('profile.setupSubtitle', "Let's get to know you better")}</Text>
                 </View>
 
                 <ScrollView style={styles.content}>
@@ -154,7 +151,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ navigation }) => {
 
                 <View style={styles.footer}>
                     <Button
-                        title="Finish"
+                        title={t('common.continue', 'Continue')}
                         onPress={handleFinish}
                         loading={loading}
                     />
@@ -176,6 +173,13 @@ const styles = StyleSheet.create({
     header: {
         marginBottom: 32,
         alignItems: 'center',
+    },
+    stepIndicator: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: theme.colors.brand.primary,
+        letterSpacing: 2,
+        marginBottom: 16,
     },
     headerTitle: {
         fontSize: 28,

@@ -4,14 +4,19 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno";
 
 /**
  * Stripe Create Subscription Edge Function
- * 
+ *
  * Handles:
  * - Creating a Stripe customer (if not exists)
  * - Creating a subscription for the user
  * - Cancelling an existing subscription
- * 
+ *
  * Called by: SubscriptionsApi.createSubscription() and SubscriptionsApi.cancelSubscription()
  */
+
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
     apiVersion: "2023-10-16",
@@ -21,6 +26,11 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req: Request) => {
+    // Handle CORS preflight
+    if (req.method === "OPTIONS") {
+        return new Response("ok", { headers: corsHeaders });
+    }
+
     try {
         // Verify JWT
         const authHeader = req.headers.get("Authorization")!;
@@ -32,7 +42,7 @@ Deno.serve(async (req: Request) => {
         if (authError || !user) {
             return new Response(JSON.stringify({ error: "Unauthorized" }), {
                 status: 401,
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
@@ -53,7 +63,7 @@ Deno.serve(async (req: Request) => {
                 .eq("user_id", user.id);
 
             return new Response(JSON.stringify({ success: true }), {
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
@@ -61,7 +71,7 @@ Deno.serve(async (req: Request) => {
         if (!priceId) {
             return new Response(JSON.stringify({ error: "priceId is required" }), {
                 status: 400,
-                headers: { "Content-Type": "application/json" },
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
 
@@ -119,13 +129,13 @@ Deno.serve(async (req: Request) => {
                 subscriptionId: subscription.id,
                 clientSecret: paymentIntent?.client_secret,
             }),
-            { headers: { "Content-Type": "application/json" } }
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     } catch (error) {
         console.error("Stripe error:", error);
         return new Response(
             JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 });

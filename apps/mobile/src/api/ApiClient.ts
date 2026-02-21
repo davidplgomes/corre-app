@@ -52,7 +52,7 @@ class ApiClient {
 
         try {
             const { data, error } = await supabase.functions.invoke(functionName, {
-                body: body ? JSON.stringify(body) : undefined,
+                body: body,
                 method: (options?.method || 'POST') as 'POST' | 'GET' | 'PUT' | 'PATCH' | 'DELETE',
             });
 

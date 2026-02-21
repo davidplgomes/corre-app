@@ -6,6 +6,7 @@ import { TabNavigator } from './TabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
+import { supabase } from '../services/supabase/client';
 
 const APP_VERSION = 'v1.0.5';
 
@@ -48,8 +49,8 @@ const SplashScreen = () => (
 // ─── Root Navigator ────────────────────────────────────────
 
 export const RootNavigator: React.FC = () => {
-    const { user, loading, profile } = useAuth();
-    const [hasCompletedProfile, setHasCompletedProfile] = React.useState(false);
+    const { user, loading, profile, refreshProfile } = useAuth();
+    const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(false);
     const [profileChecked, setProfileChecked] = React.useState(false);
 
     React.useEffect(() => {
@@ -62,7 +63,7 @@ export const RootNavigator: React.FC = () => {
         if (!user) {
             // No user, no need to check profile
             setProfileChecked(true);
-            setHasCompletedProfile(false);
+            setHasCompletedOnboarding(false);
             return;
         }
 
@@ -71,16 +72,32 @@ export const RootNavigator: React.FC = () => {
             return;
         }
 
-        // Both user and profile are available — check onboarding
-        const isComplete = !!(profile.fullName || profile.city);
-        setHasCompletedProfile(isComplete);
+        // Both user and profile are available — check onboarding_completed field
+        setHasCompletedOnboarding(profile.onboardingCompleted === true);
         setProfileChecked(true);
     }, [user, profile, loading]);
 
     const completeOnboarding = useCallback(async () => {
-        // No need to set AsyncStorage anymore - we check database profile
-        setHasCompletedProfile(true); // triggers re-render → TabNavigator
-    }, []);
+        if (!user) return;
+
+        try {
+            // Update database to mark onboarding as completed
+            await supabase
+                .from('users')
+                .update({ onboarding_completed: true })
+                .eq('id', user.id);
+
+            // Refresh profile to get updated state
+            await refreshProfile();
+
+            // Trigger re-render → TabNavigator
+            setHasCompletedOnboarding(true);
+        } catch (error) {
+            console.error('Error completing onboarding:', error);
+            // Still navigate even if save fails
+            setHasCompletedOnboarding(true);
+        }
+    }, [user, refreshProfile]);
 
     if (loading || !profileChecked) {
         return <SplashScreen />;
@@ -91,7 +108,7 @@ export const RootNavigator: React.FC = () => {
             <NavigationContainer>
                 {!user ? (
                     <AuthNavigator />
-                ) : !hasCompletedProfile ? (
+                ) : !hasCompletedOnboarding ? (
                     <OnboardingNavigator />
                 ) : (
                     <TabNavigator />
