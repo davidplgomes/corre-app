@@ -48,7 +48,7 @@ export function Navigation() {
                 {/* Logo - pushed to left edge */}
                 <Link href="/" className="relative w-28 md:w-32 h-8 block transition-transform hover:scale-105">
                     <Image
-                        src="/logo_hero.png"
+                        src="/logo_transparent.png"
                         alt="CORRE Logo"
                         fill
                         className="object-contain object-left"
@@ -156,7 +156,7 @@ function MobileMenu({ t, locale, onClose, onSelectChange }: { t: any, locale: st
             >
                 <div className="relative w-32 h-8">
                     <Image
-                        src="/logo_hero.png"
+                        src="/logo_transparent.png"
                         alt="CORRE Logo"
                         fill
                         className="object-contain object-left"
