@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 /**
@@ -14,7 +14,7 @@ import { useSearchParams } from 'next/navigation';
  * 3. This page redirects to the mobile app with the params
  * 4. Mobile app handles the payment completion
  */
-export default function StripeCallbackPage() {
+function StripeCallbackContent() {
     const [status, setStatus] = useState<'redirecting' | 'success' | 'cancelled' | 'fallback'>('redirecting');
     const searchParams = useSearchParams();
 
@@ -144,6 +144,25 @@ export default function StripeCallbackPage() {
                 <p style={styles.message}>Opening Corre app to complete your purchase.</p>
             </div>
         </div>
+    );
+}
+
+function LoadingFallback() {
+    return (
+        <div style={styles.container}>
+            <div style={styles.card}>
+                <div style={styles.spinner} />
+                <h1 style={styles.title}>Loading...</h1>
+            </div>
+        </div>
+    );
+}
+
+export default function StripeCallbackPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <StripeCallbackContent />
+        </Suspense>
     );
 }
 

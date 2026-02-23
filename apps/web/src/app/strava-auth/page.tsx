@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 /**
@@ -14,7 +14,7 @@ import { useSearchParams } from 'next/navigation';
  * 3. This page redirects to the mobile app with the params
  * 4. Mobile app exchanges the code for tokens
  */
-export default function StravaAuthPage() {
+function StravaAuthContent() {
     const [status, setStatus] = useState<'redirecting' | 'error' | 'fallback'>('redirecting');
     const searchParams = useSearchParams();
 
@@ -104,6 +104,25 @@ export default function StravaAuthPage() {
                 <p style={styles.message}>Opening Corre app to complete the connection.</p>
             </div>
         </div>
+    );
+}
+
+function LoadingFallback() {
+    return (
+        <div style={styles.container}>
+            <div style={styles.card}>
+                <div style={styles.spinner} />
+                <h1 style={styles.title}>Loading...</h1>
+            </div>
+        </div>
+    );
+}
+
+export default function StravaAuthPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <StravaAuthContent />
+        </Suspense>
     );
 }
 
