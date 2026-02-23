@@ -1,12 +1,38 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import * as Linking from 'expo-linking';
 import { AuthNavigator } from './AuthNavigator';
 import { TabNavigator } from './TabNavigator';
 import { OnboardingNavigator } from './OnboardingNavigator';
+import { ResetPasswordScreen } from '../screens/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
 import { supabase } from '../services/supabase/client';
+
+// Stack for password recovery flow
+const RecoveryStack = createStackNavigator();
+
+// Deep linking configuration for handling URLs
+const linking: LinkingOptions<ReactNavigation.RootParamList> = {
+    prefixes: [
+        Linking.createURL('/'),
+        'corre://',
+        'https://corre.app',
+        'https://*.supabase.co/auth/v1/callback',
+    ],
+    config: {
+        screens: {
+            // Auth flow screens
+            ResetPassword: 'auth/reset',
+            // Strava OAuth callback
+            StravaConnect: 'strava-auth',
+            // Stripe callback
+            StripeCallback: 'stripe-callback',
+        },
+    },
+};
 
 const APP_VERSION = 'v1.0.5';
 
@@ -49,7 +75,7 @@ const SplashScreen = () => (
 // ─── Root Navigator ────────────────────────────────────────
 
 export const RootNavigator: React.FC = () => {
-    const { user, loading, profile, refreshProfile } = useAuth();
+    const { user, loading, profile, refreshProfile, isPasswordRecovery, clearPasswordRecovery } = useAuth();
     const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(false);
     const [profileChecked, setProfileChecked] = React.useState(false);
 
@@ -103,9 +129,32 @@ export const RootNavigator: React.FC = () => {
         return <SplashScreen />;
     }
 
+    // Password recovery takes priority - show reset screen regardless of auth state
+    if (isPasswordRecovery) {
+        return (
+            <NavigationContainer linking={linking}>
+                <RecoveryStack.Navigator screenOptions={{ headerShown: false }}>
+                    <RecoveryStack.Screen
+                        name="ResetPassword"
+                        options={{ headerShown: false }}
+                    >
+                        {(props) => (
+                            <ResetPasswordScreen
+                                {...props}
+                                onComplete={() => {
+                                    clearPasswordRecovery();
+                                }}
+                            />
+                        )}
+                    </RecoveryStack.Screen>
+                </RecoveryStack.Navigator>
+            </NavigationContainer>
+        );
+    }
+
     return (
         <OnboardingContext.Provider value={{ completeOnboarding }}>
-            <NavigationContainer>
+            <NavigationContainer linking={linking}>
                 {!user ? (
                     <AuthNavigator />
                 ) : !hasCompletedOnboarding ? (

@@ -22,24 +22,12 @@ import { getCurrentMonthLeaderboard, getUserRank } from '../../services/supabase
 import { LeaderboardEntry } from '../../types';
 import { theme, tierColors } from '../../constants/theme';
 
-// Mock data for demo (matching the design)
-const MOCK_LEADERBOARD = [
-    { id: '1', user_id: '1', points: 1450, rank: 1, name: 'Carlos Mendes', tier: 'baixa_pace' },
-    { id: '2', user_id: '2', points: 1250, rank: 2, name: 'Ana Silva', tier: 'basico' },
-    { id: '3', user_id: '3', points: 1180, rank: 3, name: 'Bruno Costa', tier: 'baixa_pace' },
-    { id: '4', user_id: '4', points: 820, rank: 4, name: 'Mara Anderson', tier: 'basico' },
-    { id: '5', user_id: '5', points: 790, rank: 5, name: 'Vandui Drinnez', tier: 'free' },
-    { id: '6', user_id: '6', points: 650, rank: 6, name: 'Lucas Ferreira', tier: 'basico' },
-    { id: '7', user_id: '7', points: 580, rank: 7, name: 'Sofia Santos', tier: 'free' },
-    { id: '8', user_id: '8', points: 450, rank: 8, name: 'Miguel Pereira', tier: 'parceiros' },
-];
-
 export const Leaderboard: React.FC = () => {
     const { t } = useTranslation();
     const { profile } = useAuth();
     const navigation = useNavigation<any>();
 
-    const [leaderboard, setLeaderboard] = useState<any[]>(MOCK_LEADERBOARD);
+    const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [userRank, setUserRank] = useState<{ rank: number | null; points: number; total: number }>({
         rank: 1,
         points: 1250,
@@ -48,12 +36,12 @@ export const Leaderboard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Current user mock data (matches the design)
+    // Current user data from profile and rank
     const currentUser = {
-        name: profile?.fullName || 'Ana Silva',
-        tier: 'basico',
-        points: profile?.currentMonthPoints || 1250,
-        rank: 1,
+        name: profile?.fullName || t('common.runner', 'Corredor'),
+        tier: profile?.membershipTier || 'free',
+        points: userRank.points || profile?.currentMonthPoints || 0,
+        rank: userRank.rank || '-',
     };
 
     const loadData = useCallback(async () => {
@@ -68,9 +56,8 @@ export const Leaderboard: React.FC = () => {
                 getUserRank(profile.id),
             ]);
 
-            // If we have real data, use it; otherwise fallback to mock
+            // Transform data to match expected format
             if (leaderboardData && leaderboardData.length > 0) {
-                // Transform data to match expected format
                 const transformedData = leaderboardData.map((entry: any, index: number) => ({
                     id: entry.id,
                     user_id: entry.user_id,
@@ -78,11 +65,12 @@ export const Leaderboard: React.FC = () => {
                     rank: entry.rank || index + 1,
                     name: entry.users?.full_name || t('common.runner', 'Corredor'),
                     tier: entry.users?.membership_tier || 'free',
+                    users: entry.users, // Keep users data for avatar
                 }));
                 setLeaderboard(transformedData);
             } else {
-                // No real data, use mock
-                setLeaderboard(MOCK_LEADERBOARD);
+                // No data yet - leaderboard is empty
+                setLeaderboard([]);
             }
 
             // Update user rank
@@ -91,8 +79,8 @@ export const Leaderboard: React.FC = () => {
             }
         } catch (error) {
             console.error('Error loading leaderboard:', error);
-            // Fallback to mock data on error
-            setLeaderboard(MOCK_LEADERBOARD);
+            // Keep existing data or show empty state on error
+            // Don't clear data on refresh errors
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -249,6 +237,15 @@ export const Leaderboard: React.FC = () => {
                             />
                         }
                         showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            !loading ? (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="trophy-outline" size={48} color="rgba(255,255,255,0.3)" />
+                                    <Text style={styles.emptyText}>{t('leaderboard.noData', 'No rankings yet')}</Text>
+                                    <Text style={styles.emptySubtext}>{t('leaderboard.beFirst', 'Be the first to earn points!')}</Text>
+                                </View>
+                            ) : null
+                        }
                     />
                 </SafeAreaView>
             </ImageBackground>
@@ -477,5 +474,22 @@ const styles = StyleSheet.create({
         fontSize: 8,
         color: 'rgba(255,255,255,0.4)',
         fontWeight: '700',
+    },
+    emptyContainer: {
+        padding: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 16,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.3)',
+        marginTop: 8,
+        textAlign: 'center',
     },
 });

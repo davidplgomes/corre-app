@@ -160,11 +160,14 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
 
                 {/* Points / Source Badge */}
                 <View style={styles.pointsSection}>
-                    {item.points > 0 ? (
+                    {item.points > 0 && (
                         <Text style={styles.pointsValue}>+{item.points}</Text>
-                    ) : isStrava ? (
-                        <Text style={styles.stravaBadge}>STRAVA</Text>
-                    ) : null}
+                    )}
+                    {isStrava && (
+                        <View style={styles.stravaBadgeContainer}>
+                            <Text style={styles.stravaBadge}>via Strava</Text>
+                        </View>
+                    )}
                 </View>
             </View>
         );
@@ -221,6 +224,14 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                                 <Text style={styles.emptyText}>{t('runHistory.noRuns')}</Text>
                                 <Text style={styles.emptySubtext}>{t('runHistory.runsWillAppear')}</Text>
                             </View>
+                        }
+                        ListFooterComponent={
+                            runs.some(r => r.source === 'strava') ? (
+                                <View style={styles.stravaFooter}>
+                                    <Text style={styles.stravaFooterText}>Powered by </Text>
+                                    <Text style={styles.stravaFooterBrand}>Strava</Text>
+                                </View>
+                            ) : null
                         }
                     />
                 )}
@@ -407,11 +418,34 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.7)',
         marginBottom: 8,
     },
+    stravaBadgeContainer: {
+        backgroundColor: 'rgba(252, 76, 2, 0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        marginTop: 4,
+    },
     stravaBadge: {
-        fontSize: 8,
-        fontWeight: '900',
+        fontSize: 9,
+        fontWeight: '700',
         color: '#FC4C02',
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
+    },
+    stravaFooter: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginTop: 8,
+    },
+    stravaFooterText: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.5)',
+    },
+    stravaFooterBrand: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#FC4C02',
     },
     fab: {
         position: 'absolute',

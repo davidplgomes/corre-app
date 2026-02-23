@@ -82,10 +82,13 @@ export const signOut = async () => {
 
 /**
  * Send password reset email
+ * The redirectTo URL must match one of the Redirect URLs configured in Supabase
  */
 export const resetPassword = async (email: string) => {
     try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'corre://auth/reset',
+        });
         if (error) throw error;
     } catch (error) {
         console.error('Error resetting password:', error);

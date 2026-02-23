@@ -8,11 +8,12 @@ import { AuthApi } from '../../api/endpoints/auth.api';
 import { validateField } from '../../utils/validation';
 
 type ResetPasswordScreenProps = {
-    navigation: any;
-    route: any; // To get query params if using deep linking parsing or react-navigation params
+    navigation?: any;
+    route?: any; // To get query params if using deep linking parsing or react-navigation params
+    onComplete?: () => void; // Called after successful password reset
 };
 
-export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation, route }) => {
+export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation, route, onComplete }) => {
     const { t } = useTranslation();
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,16 +60,18 @@ export const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ naviga
                     t('common.success'),
                     t('auth.passwordResetSuccess') || 'Your password has been reset successfully.',
                     [{
-                        text: 'Login',
+                        text: t('common.continue') || 'Continue',
                         onPress: () => {
-                            // If we are logged in (session restored), we might want to go Home,
-                            // or if we want to force re-login, we sign out.
-                            // Usually with Supabase reset flow, you are logged in.
-                            // Let's navigate to Home or fallback to Login.
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Home' }], // Assuming 'Home' is the main app entry
-                            });
+                            // Call onComplete callback if provided (from RootNavigator)
+                            if (onComplete) {
+                                onComplete();
+                            } else if (navigation) {
+                                // Fallback: navigate if using standard navigation
+                                navigation.reset({
+                                    index: 0,
+                                    routes: [{ name: 'Home' }],
+                                });
+                            }
                         }
                     }]
                 );

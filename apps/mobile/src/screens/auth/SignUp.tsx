@@ -28,10 +28,11 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
     const { signUp } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [neighborhood, setNeighborhood] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [fullNameError, setFullNameError] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -40,10 +41,12 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
     const fullNameShakeRef = useRef<ShakeViewRef>(null);
     const emailShakeRef = useRef<ShakeViewRef>(null);
     const passwordShakeRef = useRef<ShakeViewRef>(null);
+    const confirmPasswordShakeRef = useRef<ShakeViewRef>(null);
 
     const handleSignUp = async () => {
         setEmailError('');
         setPasswordError('');
+        setConfirmPasswordError('');
         setFullNameError('');
         setError('');
 
@@ -69,10 +72,17 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
             return;
         }
 
+        // Validate password confirmation
+        if (password !== confirmPassword) {
+            setConfirmPasswordError(t('auth.passwordsDoNotMatch', 'Passwords do not match'));
+            confirmPasswordShakeRef.current?.shake();
+            return;
+        }
+
         setLoading(true);
 
         try {
-            await signUp(email, password, fullName, neighborhood || 'Porto', i18n.language);
+            await signUp(email, password, fullName, '', i18n.language);
         } catch (err: any) {
             setError(err.message || t('errors.unknownError'));
         } finally {
@@ -158,14 +168,20 @@ export const SignUp: React.FC<SignUpScreenProps> = ({ navigation }) => {
                         />
                     </ShakeView>
 
-                    <Input
-                        label={t('auth.neighborhood', 'Neighborhood (optional)')}
-                        placeholder={t('auth.neighborhoodPlaceholder', 'Ex: Ribeira, Cedofeita...')}
-                        value={neighborhood}
-                        onChangeText={setNeighborhood}
-                        autoCapitalize="words"
-                        containerStyle={styles.inputSpacing}
-                    />
+                    <ShakeView ref={confirmPasswordShakeRef}>
+                        <Input
+                            label={t('auth.confirmPassword', 'Confirm Password')}
+                            placeholder={t('auth.confirmPasswordPlaceholder', 'Re-enter your password')}
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            error={confirmPasswordError}
+                            isPassword
+                            autoCapitalize="none"
+                            autoComplete="password-new"
+                            textContentType="newPassword"
+                            containerStyle={styles.inputSpacing}
+                        />
+                    </ShakeView>
 
                     <Button
                         title={loading ? t('auth.creatingAccount', 'Creating Account...') : t('auth.createAccount', 'Create Account')}

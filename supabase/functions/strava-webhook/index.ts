@@ -14,6 +14,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Declare EdgeRuntime for Supabase Edge Functions background processing
+declare const EdgeRuntime: {
+    waitUntil: (promise: Promise<unknown>) => void;
+} | undefined;
+
 // ─── Configuration ───────────────────────────────────────────────────────────
 
 const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID')!;
@@ -22,7 +27,109 @@ const STRAVA_VERIFY_TOKEN = Deno.env.get('STRAVA_VERIFY_TOKEN') || 'CORRE_STRAVA
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-console.log("Strava Webhook v2.0 - Compliance & Gamification Ready");
+console.log("Strava Webhook v2.2 - Async Processing & Full Compliance");
+
+// ─── Strava Webhook Compliance Notes ─────────────────────────────────────────
+// Per Strava docs (https://developers.strava.com/docs/webhooks/):
+// 1. Must respond within 2 seconds with HTTP 200
+// 2. Complex operations should be processed asynchronously
+// 3. Strava retries up to 3 times on non-200 responses
+// 4. One subscription per application covers all athletes
+//
+// This implementation uses EdgeRuntime.waitUntil() for background processing
+// to ensure we respond quickly while still processing events.
+
+// ─── Rate Limiting Utilities ─────────────────────────────────────────────────
+
+/**
+ * Sleep for a specified number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry a function with exponential backoff
+ * Handles 429 rate limit errors specifically
+ */
+async function withRetry(
+    fn: () => Promise<Response>,
+    options: {
+        maxRetries?: number;
+        baseDelayMs?: number;
+        maxDelayMs?: number;
+        operationName?: string;
+    } = {}
+): Promise<Response> {
+    const {
+        maxRetries = 3,
+        baseDelayMs = 100,
+        maxDelayMs = 10000,
+        operationName = 'operation'
+    } = options;
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fn();
+
+            // Handle rate limiting (429)
+            if (response.status === 429) {
+                // Check for Retry-After header
+                const retryAfter = response.headers.get('Retry-After');
+                let delayMs: number;
+
+                if (retryAfter) {
+                    // Retry-After can be seconds or a date
+                    const retrySeconds = parseInt(retryAfter, 10);
+                    delayMs = isNaN(retrySeconds) ? 60000 : retrySeconds * 1000;
+                } else {
+                    // Default: exponential backoff with jitter
+                    delayMs = Math.min(
+                        baseDelayMs * Math.pow(2, attempt) + Math.random() * 100,
+                        maxDelayMs
+                    );
+                }
+
+                console.warn(`[Rate Limit] ${operationName} hit 429, waiting ${delayMs}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+
+                if (attempt < maxRetries) {
+                    await sleep(delayMs);
+                    continue;
+                }
+            }
+
+            // Handle server errors (5xx) with retry
+            if (response.status >= 500 && attempt < maxRetries) {
+                const delayMs = Math.min(
+                    baseDelayMs * Math.pow(2, attempt) + Math.random() * 100,
+                    maxDelayMs
+                );
+                console.warn(`[Server Error] ${operationName} got ${response.status}, retrying in ${delayMs}ms`);
+                await sleep(delayMs);
+                continue;
+            }
+
+            return response;
+
+        } catch (error) {
+            lastError = error as Error;
+            console.error(`[Error] ${operationName} attempt ${attempt + 1} failed:`, error);
+
+            if (attempt < maxRetries) {
+                const delayMs = Math.min(
+                    baseDelayMs * Math.pow(2, attempt) + Math.random() * 100,
+                    maxDelayMs
+                );
+                await sleep(delayMs);
+            }
+        }
+    }
+
+    // All retries exhausted
+    throw lastError || new Error(`${operationName} failed after ${maxRetries + 1} attempts`);
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -82,16 +189,19 @@ async function refreshStravaToken(
     try {
         console.log(`Refreshing token for athlete ${connection.strava_athlete_id}`);
 
-        const response = await fetch('https://www.strava.com/oauth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: STRAVA_CLIENT_ID,
-                client_secret: STRAVA_CLIENT_SECRET,
-                grant_type: 'refresh_token',
-                refresh_token: connection.refresh_token,
+        const response = await withRetry(
+            () => fetch('https://www.strava.com/oauth/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    client_id: STRAVA_CLIENT_ID,
+                    client_secret: STRAVA_CLIENT_SECRET,
+                    grant_type: 'refresh_token',
+                    refresh_token: connection.refresh_token,
+                }),
             }),
-        });
+            { operationName: 'refreshStravaToken', maxRetries: 3 }
+        );
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -150,9 +260,12 @@ async function fetchStravaActivity(
     accessToken: string
 ): Promise<StravaActivity | null> {
     try {
-        const response = await fetch(
-            `https://www.strava.com/api/v3/activities/${activityId}`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
+        const response = await withRetry(
+            () => fetch(
+                `https://www.strava.com/api/v3/activities/${activityId}`,
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+            ),
+            { operationName: `fetchStravaActivity(${activityId})`, maxRetries: 3 }
         );
 
         if (!response.ok) {
@@ -294,53 +407,59 @@ async function handleActivityDelete(
     return new Response('Delete processed', { status: 200 });
 }
 
-// ─── Handler: Activity Create/Update Event ───────────────────────────────────
+// ─── Background Processing Helper ────────────────────────────────────────────
 
-async function handleActivitySync(
+/**
+ * Process activity sync in background to meet 2-second response requirement.
+ * Uses EdgeRuntime.waitUntil() if available, otherwise runs inline.
+ */
+async function processActivityInBackground(
     supabase: SupabaseClient,
     athleteId: number,
     activityId: number,
     isUpdate: boolean
-): Promise<Response> {
-    console.log(`Processing activity ${isUpdate ? 'update' : 'create'}: ${activityId} for athlete ${athleteId}`);
+): Promise<void> {
+    try {
+        // Get user's Strava connection
+        const { data: connection, error: connError } = await supabase
+            .from('strava_connections')
+            .select('*')
+            .eq('strava_athlete_id', athleteId)
+            .single();
 
-    // Get user's Strava connection
-    const { data: connection, error: connError } = await supabase
-        .from('strava_connections')
-        .select('*')
-        .eq('strava_athlete_id', athleteId)
-        .single();
-
-    if (connError || !connection) {
-        console.warn(`No connection found for athlete ${athleteId}`);
-        return new Response('User not found', { status: 200 }); // Return 200 to acknowledge
-    }
-
-    // Sync the activity
-    const syncResult = await syncActivity(supabase, connection, activityId, isUpdate);
-
-    if (!syncResult.success) {
-        console.error(`Sync failed: ${syncResult.error}`);
-        return new Response('Sync failed', { status: 200 }); // Still 200 to acknowledge
-    }
-
-    // Award points ONLY for new activities (create), never for updates
-    if (!isUpdate) {
-        console.log(`Awarding points for new activity ${activityId}`);
-
-        const { data: pointsResult, error: pointsError } = await supabase.rpc(
-            'award_strava_activity_points',
-            { p_strava_activity_id: activityId }
-        );
-
-        if (pointsError) {
-            console.error('Points award error:', pointsError);
-        } else {
-            console.log('Points result:', JSON.stringify(pointsResult));
+        if (connError || !connection) {
+            console.warn(`No connection found for athlete ${athleteId}`);
+            return;
         }
-    }
 
-    return new Response('Activity processed', { status: 200 });
+        // Sync the activity
+        const syncResult = await syncActivity(supabase, connection, activityId, isUpdate);
+
+        if (!syncResult.success) {
+            console.error(`Sync failed: ${syncResult.error}`);
+            return;
+        }
+
+        // Award points ONLY for new activities (create), never for updates
+        if (!isUpdate) {
+            console.log(`Awarding points for new activity ${activityId}`);
+
+            const { data: pointsResult, error: pointsError } = await supabase.rpc(
+                'award_strava_activity_points',
+                { p_strava_activity_id: activityId }
+            );
+
+            if (pointsError) {
+                console.error('Points award error:', pointsError);
+            } else {
+                console.log('Points result:', JSON.stringify(pointsResult));
+            }
+        }
+
+        console.log(`[Background] Activity ${activityId} processing complete`);
+    } catch (error) {
+        console.error(`[Background] Error processing activity ${activityId}:`, error);
+    }
 }
 
 // ─── Main Handler ────────────────────────────────────────────────────────────
@@ -363,7 +482,7 @@ serve(async (req: Request) => {
 
             const supabase = getSupabaseClient();
 
-            // Handle athlete deauthorization
+            // Handle athlete deauthorization (quick operation - run inline)
             if (object_type === 'athlete' && updates?.authorized === 'false') {
                 return await handleDeauthorization(supabase, owner_id);
             }
@@ -372,13 +491,45 @@ serve(async (req: Request) => {
             if (object_type === 'activity') {
                 switch (aspect_type) {
                     case 'delete':
+                        // Delete is quick - run inline
                         return await handleActivityDelete(supabase, object_id);
 
                     case 'create':
-                        return await handleActivitySync(supabase, owner_id, object_id, false);
+                    case 'update': {
+                        // Activity sync requires API calls - process in background
+                        // Acknowledge immediately to meet 2-second requirement
+                        const isUpdate = aspect_type === 'update';
 
-                    case 'update':
-                        return await handleActivitySync(supabase, owner_id, object_id, true);
+                        // Use EdgeRuntime.waitUntil for background processing if available
+                        // This allows us to return immediately while continuing to process
+                        const backgroundTask = processActivityInBackground(
+                            supabase,
+                            owner_id,
+                            object_id,
+                            isUpdate
+                        );
+
+                        // Check if EdgeRuntime is available (Supabase Edge Functions)
+                        if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+                            EdgeRuntime.waitUntil(backgroundTask);
+                        } else {
+                            // Fallback: await inline (may exceed 2s for slow operations)
+                            await backgroundTask;
+                        }
+
+                        // Return 200 immediately
+                        return new Response(
+                            JSON.stringify({
+                                status: 'accepted',
+                                message: `Activity ${aspect_type} queued for processing`,
+                                activity_id: object_id
+                            }),
+                            {
+                                status: 200,
+                                headers: { 'Content-Type': 'application/json' }
+                            }
+                        );
+                    }
 
                     default:
                         console.log(`Unhandled activity aspect: ${aspect_type}`);

@@ -77,21 +77,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
  */
 export async function savePushToken(userId: string, token: string): Promise<boolean> {
     try {
-        // Store the token in the users table or a separate push_tokens table
-        // For now, we'll add it to a push_tokens array in user metadata
         const { error } = await supabase
             .from('users')
-            .update({
-                // Note: You may need to add a push_token column to the users table
-                // or create a separate push_tokens table
-            })
+            .update({ push_token: token })
             .eq('id', userId);
-
-        // Alternative: Store in a separate table
-        // const { error } = await supabase
-        //   .from('push_tokens')
-        //   .upsert({ user_id: userId, token, platform: Platform.OS })
-        //   .select();
 
         if (error) {
             console.error('Error saving push token:', error);

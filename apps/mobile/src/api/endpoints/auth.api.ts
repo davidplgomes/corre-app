@@ -148,7 +148,9 @@ class AuthApiClass {
 
         return apiClient.query<void>('auth.resetPassword', async () => {
             const supabase = apiClient.getSupabaseClient();
-            const { error } = await supabase.auth.resetPasswordForEmail(request.email);
+            const { error } = await supabase.auth.resetPasswordForEmail(request.email, {
+                redirectTo: 'corre://auth/reset',
+            });
 
             if (error) {
                 return { data: null, error: { message: error.message } };

@@ -8,10 +8,29 @@ export const isValidEmail = (email: string): boolean => {
 
 /**
  * Validate password strength
- * Requirements: At least 8 characters
+ * Requirements: At least 8 characters, 1 uppercase letter, 1 number
  */
 export const isValidPassword = (password: string): boolean => {
-    return password.length >= 8;
+    const minLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    return minLength && hasUppercase && hasNumber;
+};
+
+/**
+ * Get password validation error message
+ */
+export const getPasswordError = (password: string): string | null => {
+    if (password.length < 8) {
+        return 'Password must be at least 8 characters';
+    }
+    if (!/[A-Z]/.test(password)) {
+        return 'Password must contain at least 1 uppercase letter';
+    }
+    if (!/\d/.test(password)) {
+        return 'Password must contain at least 1 number';
+    }
+    return null;
 };
 
 /**
@@ -56,7 +75,8 @@ export const validateField = (
 
         case 'password':
             if (!value) return 'Password is required';
-            if (!isValidPassword(value)) return 'Password must be at least 8 characters';
+            const passwordError = getPasswordError(value);
+            if (passwordError) return passwordError;
             return null;
 
         case 'fullName':

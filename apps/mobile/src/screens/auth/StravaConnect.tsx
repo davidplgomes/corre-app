@@ -7,7 +7,7 @@ import {
     StatusBar,
     ActivityIndicator,
     ImageBackground,
-    Dimensions,
+    ScrollView,
     Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +25,6 @@ import {
     CheckCircleIcon,
 } from '../../components/common/TabIcons';
 
-const { width, height } = Dimensions.get('window');
 const STRAVA_ORANGE = '#FC4C02';
 
 type StravaConnectProps = {
@@ -137,11 +136,18 @@ export const StravaConnect: React.FC<StravaConnectProps> = ({ navigation }) => {
                         <Text style={styles.stepText}>{t('onboarding.step', 'STEP')} 3/3</Text>
                     </View>
 
-                    {/* Spacer */}
-                    <View style={styles.spacer} />
+                    {/* Main Content - Scrollable for smaller screens */}
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
+                    >
+                        {/* Spacer */}
+                        <View style={styles.spacer} />
 
-                    {/* Main Content */}
-                    <View style={styles.content}>
+                        {/* Main Content */}
+                        <View style={styles.content}>
                         {/* Strava Logo */}
                         <View style={styles.logoSection}>
                             <View style={[styles.logoCircle, connected && styles.logoCircleConnected]}>
@@ -236,6 +242,7 @@ export const StravaConnect: React.FC<StravaConnectProps> = ({ navigation }) => {
                             </View>
                         )}
                     </View>
+                    </ScrollView>
 
                     {/* Footer Buttons */}
                     <View style={styles.footer}>
@@ -307,8 +314,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backgroundImage: {
-        width,
-        height,
+        flex: 1,
+        width: '100%',
+        height: '100%',
     },
     gradient: {
         ...StyleSheet.absoluteFillObject,
@@ -316,6 +324,12 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         paddingHorizontal: 24,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     stepContainer: {
         alignItems: 'center',
@@ -328,7 +342,8 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
     },
     spacer: {
-        flex: 0.15,
+        height: 20,
+        minHeight: 20,
     },
     content: {
         flex: 1,
@@ -336,12 +351,12 @@ const styles = StyleSheet.create({
     },
     logoSection: {
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 16,
     },
     logoCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: STRAVA_ORANGE,
         justifyContent: 'center',
         alignItems: 'center',
@@ -371,21 +386,21 @@ const styles = StyleSheet.create({
         letterSpacing: 1.5,
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: '900',
         fontStyle: 'italic',
         color: '#FFF',
         textAlign: 'center',
         letterSpacing: 1,
-        marginBottom: 12,
+        marginBottom: 8,
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 15,
         color: 'rgba(255,255,255,0.7)',
         textAlign: 'center',
-        lineHeight: 24,
+        lineHeight: 22,
         maxWidth: '85%',
-        marginBottom: 32,
+        marginBottom: 20,
     },
     statsContainer: {
         flexDirection: 'row',
@@ -421,39 +436,39 @@ const styles = StyleSheet.create({
     },
     benefitsContainer: {
         width: '100%',
-        gap: 12,
+        gap: 10,
     },
     benefitRow: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.06)',
-        borderRadius: 14,
-        padding: 16,
+        borderRadius: 12,
+        padding: 14,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.08)',
     },
     benefitIconWrapper: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 40,
+        height: 40,
+        borderRadius: 10,
         backgroundColor: 'rgba(252, 76, 2, 0.15)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
+        marginRight: 12,
     },
     benefitTextContainer: {
         flex: 1,
     },
     benefitTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '700',
         color: '#FFF',
         marginBottom: 2,
     },
     benefitDesc: {
-        fontSize: 13,
+        fontSize: 12,
         color: 'rgba(255,255,255,0.5)',
-        lineHeight: 18,
+        lineHeight: 16,
     },
     footer: {
         paddingBottom: 16,

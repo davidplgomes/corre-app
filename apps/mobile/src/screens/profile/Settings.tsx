@@ -251,6 +251,11 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                                 </View>
                             )}
                         </TouchableOpacity>
+                        {/* Strava Attribution - Required by Strava Brand Guidelines */}
+                        <View style={styles.stravaAttribution}>
+                            <Text style={styles.stravaAttributionText}>Powered by </Text>
+                            <Text style={styles.stravaAttributionBrand}>Strava</Text>
+                        </View>
                     </View>
 
                     {/* Language Section */}
@@ -541,5 +546,21 @@ const styles = StyleSheet.create({
     },
     privacyOptionTextActive: {
         color: '#FFF',
+    },
+    stravaAttribution: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 12,
+        paddingVertical: 8,
+    },
+    stravaAttributionText: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.5)',
+    },
+    stravaAttributionBrand: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#FC4C02', // Strava orange
     },
 });

@@ -2,16 +2,19 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, Session, User } from '@services/supabase/client';
 import { UserProfile } from '../types/user.types';
 import * as Crypto from 'expo-crypto';
+import * as Linking from 'expo-linking';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
+  isPasswordRecovery: boolean;
   signUp: (email: string, password: string, fullName: string, neighborhood: string, languagePreference?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +24,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+
+  // Handle deep links for auth (password reset, etc.)
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      if (url.includes('access_token') || url.includes('refresh_token') || url.includes('type=recovery')) {
+        console.log('[Auth] Processing auth deep link');
+        // Extract hash fragment if present (Supabase uses hash for tokens)
+        const hashIndex = url.indexOf('#');
+        if (hashIndex !== -1) {
+          const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          const type = hashParams.get('type');
+
+          if (accessToken && refreshToken) {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) {
+              console.error('[Auth] Error setting session from deep link:', error);
+            } else if (type === 'recovery') {
+              setIsPasswordRecovery(true);
+            }
+          }
+        }
+      }
+    };
+
+    // Check if app was opened with a URL
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+
+    // Listen for URL changes while app is open
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     // Get initial session
@@ -35,9 +80,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] Auth state changed:', event);
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Handle PASSWORD_RECOVERY event
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[Auth] Password recovery session detected');
+        setIsPasswordRecovery(true);
+      }
+
       if (session?.user) {
         loadUserProfile(session.user.id);
       } else {
@@ -48,6 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const clearPasswordRecovery = () => {
+    setIsPasswordRecovery(false);
+  };
 
   const loadUserProfile = async (userId: string) => {
     try {
@@ -159,10 +216,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         session,
         loading,
+        isPasswordRecovery,
         signUp,
         signIn,
         signOut,
         refreshProfile,
+        clearPasswordRecovery,
       }}
     >
       {children}
