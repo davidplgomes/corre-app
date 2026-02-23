@@ -11,6 +11,10 @@
                 "quote": "MOVIDO A DADOS. ALIMENTADO PELA CULTURA.",
                 "events": {
                     "header": "PARTICIPE",
+                    "next": "PRÓXIMO",
+                    "upcoming": "EM BREVE",
+                    "noEvents": "Nenhum evento agendado.",
+                    "tbd": "A DEFINIR",
                     "event1": {
                         "title": "Terças de Ritmo",
                         "location": "GRAND CANAL DOCK",

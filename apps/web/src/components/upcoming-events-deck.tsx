@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTranslations, useLocale } from 'next-intl';
 import DisplayCards from "@/components/ui/display-cards"
 import { getUpcomingEvents } from "@/lib/services/events"
 import type { Event } from "@/types"
 
 export function UpcomingEventsDeck() {
+    const t = useTranslations('HomePage.sections.culture.events');
+    const locale = useLocale();
     const [events, setEvents] = useState<Event[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -30,7 +33,7 @@ export function UpcomingEventsDeck() {
     if (events.length === 0) {
         return (
             <div className="p-8 border border-white/10 rounded-xl bg-[#0A0A0A] text-center">
-                <p className="text-white/60">No upcoming events scheduled.</p>
+                <p className="text-white/60">{t('noEvents')}</p>
             </div>
         )
     }
@@ -53,14 +56,15 @@ export function UpcomingEventsDeck() {
 
         return {
             title: event.title,
-            location: event.location_name || 'TBD',
+            location: event.location_name || t('tbd'),
             date: date.getDate().toString(),
-            month: date.toLocaleString('default', { month: 'short' }).toUpperCase(),
-            weekday: date.toLocaleString('default', { weekday: 'short' }).toUpperCase(),
-            time: date.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            month: date.toLocaleString(locale, { month: 'short' }).toUpperCase(),
+            weekday: date.toLocaleString(locale, { weekday: 'short' }).toUpperCase(),
+            time: date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false }),
             points: `${event.points_value}PTS`,
             temperature: "12°C", // Placeholder weather
             isNext: isFirst,
+            badgeText: isFirst ? t('next') : t('upcoming'),
             className: positionClass
         }
     })

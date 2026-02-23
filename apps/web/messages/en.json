@@ -11,6 +11,10 @@
                 "quote": "POWERED BY DATA. FUELED BY CULTURE.",
                 "events": {
                     "header": "JOIN EVENTS",
+                    "next": "NEXT",
+                    "upcoming": "UPCOMING",
+                    "noEvents": "No upcoming events scheduled.",
+                    "tbd": "TBD",
                     "event1": {
                         "title": "Tempo Tuesdays",
                         "location": "GRAND CANAL DOCK",

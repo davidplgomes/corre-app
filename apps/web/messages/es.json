@@ -11,6 +11,10 @@
                 "quote": "IMPULSADO POR DATOS. ALIMENTADO POR LA CULTURA.",
                 "events": {
                     "header": "PARTICIPAR",
+                    "next": "PRÓXIMO",
+                    "upcoming": "PRÓXIMAMENTE",
+                    "noEvents": "No hay eventos programados.",
+                    "tbd": "POR DEFINIR",
                     "event1": {
                         "title": "Martes de Ritmo",
                         "location": "GRAND CANAL DOCK",

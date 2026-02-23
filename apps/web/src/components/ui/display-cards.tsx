@@ -14,6 +14,7 @@ interface DisplayCardProps {
     points?: string; // e.g. "5PTS"
     temperature?: string; // e.g. "12°C"
     isNext?: boolean;
+    badgeText?: string;
 }
 
 function DisplayCard({
@@ -27,6 +28,7 @@ function DisplayCard({
     points = "150 PTS",
     temperature = "12°C",
     isNext = false,
+    badgeText,
 }: DisplayCardProps) {
     return (
         <div
@@ -38,7 +40,7 @@ function DisplayCard({
             {/* Header Badges */}
             <div className="flex justify-between items-center w-full mb-2">
                 <div className={cn("px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase", isNext ? "bg-[#222] text-white" : "bg-transparent text-gray-600 border border-white/5")}>
-                    {isNext ? "NEXT" : "UPCOMING"}
+                    {badgeText || (isNext ? "NEXT" : "UPCOMING")}
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#222] text-xs font-bold text-white">
                     <Thermometer className="size-3 text-[#FF5722]" />
