@@ -87,7 +87,7 @@ export const signOut = async () => {
 export const resetPassword = async (email: string) => {
     try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: 'corre://auth/reset',
+            redirectTo: 'https://corre-app-web-drab.vercel.app/auth/reset',
         });
         if (error) throw error;
     } catch (error) {

@@ -19,7 +19,7 @@ const linking: LinkingOptions<ReactNavigation.RootParamList> = {
     prefixes: [
         Linking.createURL('/'),
         'corre://',
-        'https://corre.app',
+        'https://corre-app-web-drab.vercel.app',
         'https://*.supabase.co/auth/v1/callback',
     ],
     config: {

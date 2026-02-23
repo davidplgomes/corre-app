@@ -149,7 +149,7 @@ class AuthApiClass {
         return apiClient.query<void>('auth.resetPassword', async () => {
             const supabase = apiClient.getSupabaseClient();
             const { error } = await supabase.auth.resetPasswordForEmail(request.email, {
-                redirectTo: 'corre://auth/reset',
+                redirectTo: 'https://corre-app-web-drab.vercel.app/auth/reset',
             });
 
             if (error) {
