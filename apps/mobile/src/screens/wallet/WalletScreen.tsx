@@ -49,7 +49,7 @@ const XPLevelCard = ({ xpProgress }: { xpProgress: XPProgress }) => {
 
     return (
         <LinearGradient
-            colors={levelColors[xpProgress.level] as [string, string]}
+            colors={levelColors[xpProgress.level as keyof typeof levelColors] as [string, string]}
             style={styles.xpCard}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -57,7 +57,7 @@ const XPLevelCard = ({ xpProgress }: { xpProgress: XPProgress }) => {
             <View style={styles.xpHeader}>
                 <View style={styles.xpLevelBadge}>
                     <Ionicons
-                        name={levelIcons[xpProgress.level] as any}
+                        name={levelIcons[xpProgress.level as keyof typeof levelIcons] as any}
                         size={24}
                         color="#FFF"
                     />
@@ -171,8 +171,8 @@ const TransactionItem = ({ transaction }: { transaction: PointTransaction }) => 
                     {transaction.source_type.charAt(0).toUpperCase() + transaction.source_type.slice(1)}
                 </Text>
                 <Text style={styles.transactionDate}>
-                    {formatDate(transaction.earned_at)}
-                    {!isExpired && !isConsumed && ` • Expires ${formatDate(transaction.expires_at)}`}
+                    {formatDate(transaction.earned_at as string)}
+                    {!isExpired && !isConsumed && transaction.expires_at && ` • Expires ${formatDate(transaction.expires_at as string)}`}
                 </Text>
             </View>
             <View style={styles.transactionPoints}>

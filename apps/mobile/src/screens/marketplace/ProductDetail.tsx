@@ -139,7 +139,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
             <ImageBackground
-                source={require('../../../assets/run_bg_club.png')}
+                source={require('../../../assets/run_bg_club.jpg')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >

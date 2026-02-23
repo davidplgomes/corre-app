@@ -37,12 +37,26 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
     const { user } = useAuth();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
+    const [plansLoading, setPlansLoading] = useState(true);
     const [plans, setPlans] = useState<StripeProductDisplay[]>([]);
     const [showComparison, setShowComparison] = useState(false);
 
     // Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
     const slideAnim = React.useRef(new Animated.Value(50)).current;
+    const skeletonAnim = React.useRef(new Animated.Value(0.3)).current;
+
+    // Skeleton pulse animation
+    useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.sequence([
+                Animated.timing(skeletonAnim, { toValue: 0.7, duration: 800, useNativeDriver: true }),
+                Animated.timing(skeletonAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+            ])
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, []);
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -73,6 +87,8 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
             } catch (error) {
                 console.error('Error fetching plans:', error);
                 Alert.alert(t('common.error'), t('subscription.failedToLoad', 'Failed to load plans'));
+            } finally {
+                setPlansLoading(false);
             }
         };
         fetchPlans();
@@ -144,6 +160,34 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
             </View>
             <Text style={styles.featureText}>{text}</Text>
         </View>
+    );
+
+    const renderSkeletonCard = (index: number) => (
+        <Animated.View
+            key={`skeleton-${index}`}
+            style={[
+                styles.cardContainer,
+                { opacity: skeletonAnim, borderColor: 'rgba(255,255,255,0.1)' }
+            ]}
+        >
+            <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                    <View style={{ width: 80, height: 14, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, marginBottom: 12 }} />
+                    <View style={{ width: 140, height: 36, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6, marginBottom: 8 }} />
+                    <View style={{ width: 200, height: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 4 }} />
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.featuresList}>
+                    {[1, 2, 3, 4].map(i => (
+                        <View key={i} style={{ flexDirection: 'row', marginBottom: 12, alignItems: 'center' }}>
+                            <View style={{ width: 16, height: 16, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 8, marginRight: 8 }} />
+                            <View style={{ width: 160 + (i * 15), height: 14, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 4 }} />
+                        </View>
+                    ))}
+                </View>
+                <View style={{ height: 50, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 25, marginTop: 30 }} />
+            </View>
+        </Animated.View>
     );
 
     const renderCard = (plan: StripeProductDisplay, index: number) => {
@@ -307,14 +351,17 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                             pagingEnabled={false}
                             nestedScrollEnabled={true}
                         >
-                            {plans.length > 0 ? (
+                            {plansLoading ? (
+                                <>
+                                    {renderSkeletonCard(0)}
+                                    {renderSkeletonCard(1)}
+                                </>
+                            ) : plans.length > 0 ? (
                                 plans.map((plan, index) => renderCard(plan, index))
                             ) : (
-                                !loading && (
-                                    <View style={{ width: width - 40, alignItems: 'center', justifyContent: 'center', height: 200 }}>
-                                        <Text style={{ color: theme.colors.text.secondary }}>{t('subscription.noPlansAvailable')}</Text>
-                                    </View>
-                                )
+                                <View style={{ width: width - 40, alignItems: 'center', justifyContent: 'center', height: 200 }}>
+                                    <Text style={{ color: theme.colors.text.secondary }}>{t('subscription.noPlansAvailable')}</Text>
+                                </View>
                             )}
                         </ScrollView>
                     )}

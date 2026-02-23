@@ -25,8 +25,7 @@ module.exports = {
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     splash: {
-      image: './assets/splash.png',
-      resizeMode: 'contain',
+      resizeMode: 'cover',
       backgroundColor: '#000000'
     },
     assetBundlePatterns: [
@@ -35,6 +34,9 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.correapp.mobile',
+      splash: {
+        backgroundColor: '#000000'
+      },
       infoPlist: {
         NSCameraUsageDescription: 'This app needs camera access to scan QR codes for loyalty verification.',
         NSLocationWhenInUseUsageDescription: 'This app needs your location to verify check-ins at events.'
@@ -94,7 +96,8 @@ module.exports = {
           icon: './assets/notification-icon.png',
           color: '#FF8800'
         }
-      ]
+      ],
+      './plugins/withModularHeaders'
     ]
   }
 };

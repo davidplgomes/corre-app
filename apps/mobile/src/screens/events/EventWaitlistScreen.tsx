@@ -160,7 +160,7 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
                 .order('joined_at', { ascending: false });
 
             if (error) throw error;
-            setWaitlistEntries(data || []);
+            setWaitlistEntries((data as unknown as WaitlistEntry[]) || []);
         } catch (error) {
             console.error('Error loading waitlist:', error);
         } finally {

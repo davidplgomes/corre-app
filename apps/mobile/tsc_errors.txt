@@ -1,0 +1,13 @@
+
+> @corre/mobile@1.0.5 type-check
+> tsc --noEmit
+
+src/screens/wallet/WalletScreen.tsx(174,33): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+npm error Lifecycle script `type-check` failed with error:
+npm error code 2
+npm error path C:\Users\User01\Documents\GitHub\corre-app\apps\mobile
+npm error workspace @corre/mobile@1.0.5
+npm error location C:\Users\User01\Documents\GitHub\corre-app\apps\mobile
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc --noEmit

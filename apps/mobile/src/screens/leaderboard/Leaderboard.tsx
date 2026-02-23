@@ -193,7 +193,7 @@ export const Leaderboard: React.FC = () => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
             <ImageBackground
-                source={require('../../../assets/run-bg.png')}
+                source={require('../../../assets/run-bg.jpg')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >

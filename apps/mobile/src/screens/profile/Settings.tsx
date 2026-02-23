@@ -6,7 +6,8 @@ import {
     ScrollView,
     TouchableOpacity,
     StatusBar, Switch, Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,7 +18,7 @@ import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
-import { connectStrava, disconnectStravaComplete, isStravaConnected } from '../../services/supabase/strava';
+import { connectStrava, disconnectStravaComplete, getStravaConnection, StravaConnection } from '../../services/supabase/strava';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,8 +30,10 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const { t, i18n } = useTranslation();
     const { profile } = useAuth();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-    const [stravaConnected, setStravaConnected] = React.useState(false);
+    const [stravaConnection, setStravaConnection] = React.useState<StravaConnection | null>(null);
+    const stravaConnected = !!stravaConnection;
     const [stravaLoading, setStravaLoading] = React.useState(false);
+    const [refreshing, setRefreshing] = React.useState(false);
 
     const [privacyVisibility, setPrivacyVisibility] = React.useState<PrivacyVisibility>('friends');
 
@@ -49,9 +52,24 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     );
 
     const checkStravaConnection = async () => {
-        const connected = await isStravaConnected();
-        setStravaConnected(connected);
+        const connection = await getStravaConnection();
+        setStravaConnection(connection);
     };
+
+    const onRefresh = useCallback(async () => {
+        if (!profile?.id) return;
+        setRefreshing(true);
+        try {
+            await Promise.all([
+                checkStravaConnection(),
+                getPrivacySetting(profile.id).then(setPrivacyVisibility)
+            ]);
+        } catch (error) {
+            console.error('Error refreshing settings:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [profile?.id]);
 
     const handleStravaToggle = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -70,7 +88,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             onPress: async () => {
                                 const success = await disconnectStravaComplete();
                                 if (success) {
-                                    setStravaConnected(false);
+                                    setStravaConnection(null);
                                     Alert.alert(t('common.success'), t('settings.stravaDisconnected', 'Strava disconnected successfully'));
                                 } else {
                                     Alert.alert(t('common.error'), t('settings.stravaDisconnectError', 'Failed to disconnect Strava'));
@@ -83,7 +101,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
             } else {
                 const result = await connectStrava();
                 if (result.success) {
-                    setStravaConnected(true);
+                    await checkStravaConnection(); // Reload to capture the athlete name
                     Alert.alert(t('common.success'), t('settings.stravaConnected', 'Strava connected successfully! Your activities will sync automatically.'));
                 } else {
                     Alert.alert(t('common.error'), result.error || t('settings.stravaConnectError', 'Failed to connect Strava'));
@@ -155,6 +173,14 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                     style={styles.scrollView}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={theme.colors.brand.primary}
+                            colors={[theme.colors.brand.primary]}
+                        />
+                    }
                 >
                     {/* Header */}
                     <View style={styles.header}>
@@ -167,7 +193,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                         />
                         <View>
                             <Text style={styles.headerLabel}>{t('settings.title').toUpperCase()}</Text>
-                            <Text style={styles.headerTitle}>{t('settings.preferences')}</Text>
+                            <Text style={styles.headerTitle}>{t('settings.preferences').toUpperCase()}</Text>
                         </View>
                     </View>
 
@@ -205,7 +231,7 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                                 <Text style={styles.settingLabel}>Strava</Text>
                                 <Text style={styles.settingDescription}>
                                     {stravaConnected
-                                        ? t('settings.stravaConnectedStatus', 'Connected - Tap to disconnect')
+                                        ? t('settings.stravaConnectedStatusName', `Connected as ${stravaConnection?.athlete_name || 'Athlete'}\nTap to disconnect`)
                                         : t('settings.stravaDisconnectedStatus', 'Tap to connect your account')}
                                 </Text>
                             </View>
@@ -364,24 +390,25 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing[6],
-        paddingTop: theme.spacing[2],
-        paddingBottom: theme.spacing[6],
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 24,
     },
     backButton: {
         marginRight: theme.spacing[4],
     },
     headerLabel: {
-        fontSize: theme.typography.size.caption,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: theme.colors.text.tertiary,
-        letterSpacing: theme.typography.letterSpacing.widest,
-        marginBottom: theme.spacing[1],
+        fontSize: 10,
+        fontWeight: '900' as any,
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: theme.typography.size.displaySM,
-        fontWeight: theme.typography.weight.bold as any,
-        color: theme.colors.text.primary,
+        fontSize: 28,
+        fontWeight: '900' as any,
+        fontStyle: 'italic',
+        color: '#FFF',
     },
 
     // Section
@@ -468,25 +495,25 @@ const styles = StyleSheet.create({
         color: theme.colors.text.tertiary,
     },
     connectionBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: `${theme.colors.brand.primary}1A`, // 10% opacity orange
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+        borderColor: `${theme.colors.brand.primary}33`, // 20% opacity orange
     },
     connectionBadgeActive: {
-        backgroundColor: theme.colors.success,
-        borderColor: theme.colors.success,
+        backgroundColor: theme.colors.brand.primary,
+        borderColor: theme.colors.brand.primary,
     },
     connectionBadgeText: {
         fontSize: 10,
         fontWeight: '700' as const,
-        color: theme.colors.text.tertiary,
+        color: theme.colors.brand.primary,
         letterSpacing: 0.5,
     },
     connectionBadgeTextActive: {
-        color: '#FFF',
+        color: '#000',
     },
     privacyOptions: {
         flexDirection: 'row',

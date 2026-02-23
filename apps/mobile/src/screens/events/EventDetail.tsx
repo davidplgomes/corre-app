@@ -152,7 +152,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
 
             {/* Background Image */}
             <ImageBackground
-                source={require('../../../assets/run-bg.png')}
+                source={require('../../../assets/run-bg.jpg')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >

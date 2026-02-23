@@ -1,0 +1,33 @@
+# Ignore web app
+/apps/web/
+
+# Ignore backend migrations and edge functions
+/supabase/
+
+# Ignore root and local dependencies (EAS builds in the cloud)
+node_modules/
+apps/mobile/node_modules/
+apps/web/node_modules/
+
+# Ignore git history
+.git/
+
+# Ignore general build artifacts
+dist/
+build/
+.next/
+web-build/
+apps/web/.next/
+
+# Ignore ide folders
+.vscode/
+.idea/
+
+# Ignore environmental variables
+.env
+.env.*
+!.env.example
+
+# Extras
+yarn-error.log
+npm-debug.log

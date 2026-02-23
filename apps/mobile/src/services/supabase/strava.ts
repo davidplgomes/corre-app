@@ -39,6 +39,8 @@ export interface StravaActivity {
 export interface StravaConnection {
     id: string;
     strava_athlete_id: number;
+    athlete_name?: string;
+    athlete_profile_picture?: string;
     created_at: string;
 }
 
@@ -204,7 +206,7 @@ export const getStravaConnection = async (): Promise<StravaConnection | null> =>
     try {
         const { data, error } = await supabase
             .from('strava_connections')
-            .select('id, strava_athlete_id, created_at')
+            .select('id, strava_athlete_id, athlete_name, athlete_profile_picture, created_at')
             .maybeSingle();
 
         if (error) throw error;

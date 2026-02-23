@@ -34,19 +34,19 @@ export const Onboarding: React.FC<OnboardingProps> = ({ navigation }) => {
             title: t('onboarding.slide1Title'),
             description: t('onboarding.slide1Desc'),
             // Using a placeholder or existing image.
-            image: require('../../../assets/run_bg_club.png'),
+            image: require('../../../assets/run_bg_club.jpg'),
         },
         {
             id: '2',
             title: t('onboarding.slide2Title'),
             description: t('onboarding.slide2Desc'),
-            image: require('../../../assets/run_bg_club.png'), // Ideally different images
+            image: require('../../../assets/run_bg_club.jpg'), // Ideally different images
         },
         {
             id: '3',
             title: t('onboarding.slide3Title'),
             description: t('onboarding.slide3Desc'),
-            image: require('../../../assets/run_bg_club.png'),
+            image: require('../../../assets/run_bg_club.jpg'),
         },
     ];
 

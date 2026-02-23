@@ -120,7 +120,7 @@ export const StravaConnect: React.FC<StravaConnectProps> = ({ navigation }) => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
             <ImageBackground
-                source={require('../../../assets/run_bg_club.png')}
+                source={require('../../../assets/run_bg_club.jpg')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >

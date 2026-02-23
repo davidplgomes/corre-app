@@ -83,6 +83,10 @@ Deno.serve(async (req: Request) => {
                 {
                     user_id: userId,
                     strava_athlete_id: tokenData.athlete.id,
+                    athlete_name: (tokenData.athlete.firstname || tokenData.athlete.lastname)
+                        ? `${tokenData.athlete.firstname || ''} ${tokenData.athlete.lastname || ''}`.trim()
+                        : 'Strava Athlete',
+                    athlete_profile_picture: tokenData.athlete.profile,
                     access_token: tokenData.access_token,
                     refresh_token: tokenData.refresh_token,
                     expires_at: new Date(tokenData.expires_at * 1000).toISOString(),
@@ -163,6 +167,8 @@ Deno.serve(async (req: Request) => {
                 {
                     user_id: user.id,
                     strava_athlete_id: tokenData.athlete.id,
+                    athlete_name: `${tokenData.athlete.firstname || ''} ${tokenData.athlete.lastname || ''}`.trim() || 'Strava Athlete',
+                    athlete_profile_picture: tokenData.athlete.profile,
                     access_token: tokenData.access_token,
                     refresh_token: tokenData.refresh_token,
                     expires_at: new Date(tokenData.expires_at * 1000).toISOString(),

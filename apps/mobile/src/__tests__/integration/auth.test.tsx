@@ -49,7 +49,7 @@ describe('Integration: Authentication Flow', () => {
         const result = await apiClient.query('test', jest.fn());
 
         expect(result.status).toBe('success');
-        expect(result.data.user).toEqual(mockUser);
+        expect((result.data as any).user).toEqual(mockUser);
     });
 
     it('should handle authentication error', async () => {
@@ -62,6 +62,6 @@ describe('Integration: Authentication Flow', () => {
         const result = await apiClient.query('login', jest.fn());
 
         expect(result.status).toBe('error');
-        expect(result.error.message).toBe('Invalid credentials');
+        expect((result.error as any).message).toBe('Invalid credentials');
     });
 });

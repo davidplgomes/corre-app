@@ -75,7 +75,7 @@ export const MarketplaceHome: React.FC<MarketplaceHomeProps> = ({ navigation }) 
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setListings(data || []);
+            setListings((data as unknown as Listing[]) || []);
         } catch (error) {
             console.error('Error fetching listings:', error);
         } finally {
