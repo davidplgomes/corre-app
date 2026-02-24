@@ -45,7 +45,8 @@
       "Bash(npx supabase db query:*)",
       "Bash(supabase functions list:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(ls:*)"
     ]
   },
   "enabledMcpjsonServers": [

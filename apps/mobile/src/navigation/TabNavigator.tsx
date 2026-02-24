@@ -92,7 +92,7 @@ export type ProfileStackParamList = {
     RunHistory: undefined;
     RunTracker: undefined;
     Achievements: undefined;
-    RunMap: undefined;
+    RunMap: { run: any } | undefined;
     Friends: undefined;
     UserProfile: { userId: string };
     SubscriptionScreen: undefined;

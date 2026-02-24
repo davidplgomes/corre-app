@@ -59,7 +59,9 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
         distance: run?.distance || '5.2',
         time: run?.time || '28:45',
         pace: run?.pace || "5'31\"",
-        calories: run?.calories || '320'
+        calories: run?.calories || '320',
+        name: run?.name || t('events.morningRun').toUpperCase(),
+        source: run?.source || 'manual'
     });
 
     return (
@@ -116,11 +118,16 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                     <View style={styles.glassContent}>
                         <View style={styles.cardHeader}>
                             <View>
-                                <Text style={styles.cardTitle}>{t('events.morningRun').toUpperCase()}</Text>
+                                <Text style={styles.cardTitle} numberOfLines={1}>{selectedRun.name.toUpperCase()}</Text>
                                 <View style={styles.tagRow}>
                                     <View style={[styles.tag, { backgroundColor: theme.colors.brand.primary }]}>
                                         <Text style={styles.tagText}>{t('profile.completed').toUpperCase()}</Text>
                                     </View>
+                                    {selectedRun.source === 'strava' && (
+                                        <View style={[styles.tag, { backgroundColor: '#FC4C02', marginLeft: 6 }]}>
+                                            <Text style={styles.tagText}>STRAVA</Text>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
                             {/* Logo stamp or brand element could go here */}

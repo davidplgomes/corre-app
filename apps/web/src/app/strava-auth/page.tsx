@@ -79,7 +79,7 @@ function StravaAuthContent() {
             <div style={styles.container}>
                 <div style={styles.card}>
                     <div style={styles.logo}>
-                        <img src="/logo_clean.png" alt="Corre" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+                        <img src="/logo_transparent.png" alt="Corre" style={{ width: 120, height: 120, objectFit: 'contain' }} />
                     </div>
                     <h1 style={styles.title}>Open in Corre App</h1>
                     <p style={styles.message}>
