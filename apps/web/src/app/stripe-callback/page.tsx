@@ -119,7 +119,7 @@ function StripeCallbackContent() {
             <div style={styles.container}>
                 <div style={styles.card}>
                     <div style={styles.logo}>
-                        <img src="/logo_transparent.png" alt="Corre" style={{ width: 80, height: 80 }} />
+                        <img src="/logo_clean.png" alt="Corre" style={{ width: 120, height: 120, objectFit: 'contain' }} />
                     </div>
                     <h1 style={styles.title}>Open in Corre App</h1>
                     <p style={styles.message}>
@@ -186,6 +186,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     logo: {
         marginBottom: 24,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     iconContainer: {
         marginBottom: 24,
