@@ -9,17 +9,20 @@ import {
     RefreshControl,
     StatusBar,
     Alert,
+    ImageBackground,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner, Button, BackButton } from '../../components/common';
+import { BackButton } from '../../components/common';
 import { getCartItems, removeFromCart, updateCartQuantity, clearCart } from '../../services/supabase/wallet';
 import { getAvailablePoints } from '../../services/supabase/wallet';
 import { calculateMaxPointsDiscount } from '../../services/payments';
-import { CartItem } from '../../types';
+import { TrashIcon } from '../../components/common/TabIcons';
 
 interface CartScreenProps {
     navigation: any;
@@ -57,9 +60,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                 getAvailablePoints(user.id),
             ]);
 
-            // Filter out items where product details couldn't be loaded
             const validItems = items.filter(item => item.item !== null);
-
             setCartItems(validItems);
             setAvailablePoints(points);
         } catch (error) {
@@ -76,14 +77,17 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     }, [loadCart]);
 
     const onRefresh = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
         loadCart();
     }, [loadCart]);
 
     const handleRemoveItem = async (cartItemId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
             await removeFromCart(cartItemId);
             setCartItems(prev => prev.filter(item => item.id !== cartItemId));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
             console.error('Error removing item:', error);
             Alert.alert(t('common.error'), t('cart.removeFailed', 'Failed to remove item'));
@@ -91,6 +95,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     };
 
     const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
+        Haptics.selectionAsync();
         try {
             await updateCartQuantity(cartItemId, newQuantity);
             if (newQuantity <= 0) {
@@ -108,9 +113,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     };
 
     const handleClearCart = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         Alert.alert(
             t('cart.clearCart', 'Clear Cart'),
-            t('cart.clearConfirm', 'Are you sure you want to remove all items?'),
+            t('cart.clearConfirm', 'Remove all items from cart?'),
             [
                 { text: t('common.cancel', 'Cancel'), style: 'cancel' },
                 {
@@ -121,6 +127,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                         try {
                             await clearCart(user.id);
                             setCartItems([]);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         } catch (error) {
                             console.error('Error clearing cart:', error);
                         }
@@ -132,268 +139,338 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
     const subtotal = cartItems.reduce((sum, item) => sum + (item.item?.price || 0) * item.quantity, 0);
     const maxPointsDiscount = calculateMaxPointsDiscount(
-        subtotal * 100, // Convert to cents
+        subtotal * 100,
         profile?.membershipTier || 'free',
         availablePoints
     );
     const pointsDiscount = Math.min(pointsToUse, maxPointsDiscount) / 100;
     const total = subtotal - pointsDiscount;
-
     const canUsePoints = profile?.membershipTier !== 'free';
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <LoadingSpinner />
+                <ActivityIndicator size="large" color={theme.colors.brand.primary} />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.jpg')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <BackButton style={styles.backButton} />
-                <Text style={styles.headerTitle}>{t('cart.title', 'Cart')}</Text>
-                {cartItems.length > 0 && (
-                    <TouchableOpacity onPress={handleClearCart} style={styles.clearButton}>
-                        <Text style={styles.clearText}>{t('cart.clear', 'Clear')}</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <BackButton onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.goBack();
+                            }} />
+                            <View style={styles.headerTitles}>
+                                <Text style={styles.headerLabel}>{t('cart.shopping', 'SHOPPING')}</Text>
+                                <Text style={styles.headerTitle}>{t('cart.title', 'CART')}</Text>
+                            </View>
+                        </View>
+                        {cartItems.length > 0 && (
+                            <TouchableOpacity onPress={handleClearCart} style={styles.clearButton}>
+                                <Text style={styles.clearText}>{t('cart.clear', 'Clear')}</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
-            {cartItems.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <Ionicons name="cart-outline" size={64} color="#666" />
-                    <Text style={styles.emptyTitle}>{t('cart.emptyTitle', 'Your cart is empty')}</Text>
-                    <Text style={styles.emptySubtitle}>
-                        {t('cart.emptySubtitle', 'Browse the marketplace to find amazing deals!')}
-                    </Text>
-                    <Button
-                        title={t('cart.browseShop', 'Browse Shop')}
-                        onPress={() => navigation.navigate('Marketplace')}
-                        style={styles.browseButton}
-                    />
-                </View>
-            ) : (
-                <>
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor={theme.colors.brand.primary}
-                            />
-                        }
-                    >
-                        {/* Cart Items */}
-                        {cartItems.map((item) => (
-                            <View key={item.id} style={styles.cartItem}>
-                                <View style={styles.itemImage}>
-                                    {item.item?.image_url ? (
-                                        <Image source={{ uri: item.item.image_url }} style={styles.image} />
-                                    ) : (
-                                        <Ionicons name="image-outline" size={32} color="#666" />
-                                    )}
-                                </View>
-                                <View style={styles.itemDetails}>
-                                    <Text style={styles.itemTitle} numberOfLines={2}>
-                                        {item.item?.title || 'Unknown Item'}
-                                    </Text>
-                                    <Text style={styles.itemPrice}>
-                                        €{(item.item?.price || 0).toFixed(2)}
+                    {cartItems.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <View style={styles.emptyIconContainer}>
+                                <Text style={styles.emptyIcon}>🛒</Text>
+                            </View>
+                            <Text style={styles.emptyTitle}>{t('cart.emptyTitle', 'Your cart is empty')}</Text>
+                            <Text style={styles.emptySubtitle}>
+                                {t('cart.emptySubtitle', 'Browse the marketplace to find amazing deals!')}
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.browseButton}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    navigation.navigate('Marketplace');
+                                }}
+                            >
+                                <Text style={styles.browseButtonText}>{t('cart.browseShop', 'BROWSE SHOP')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <>
+                            <ScrollView
+                                style={styles.scrollView}
+                                contentContainerStyle={styles.scrollContent}
+                                showsVerticalScrollIndicator={false}
+                                refreshControl={
+                                    <RefreshControl
+                                        refreshing={refreshing}
+                                        onRefresh={onRefresh}
+                                        tintColor="#FFF"
+                                    />
+                                }
+                            >
+                                {/* Items Count */}
+                                <View style={styles.itemsHeader}>
+                                    <Text style={styles.itemsCount}>
+                                        {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
                                     </Text>
                                 </View>
-                                <View style={styles.quantityControls}>
-                                    <TouchableOpacity
-                                        style={styles.quantityButton}
-                                        onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                    >
-                                        <Ionicons name="remove" size={18} color="#FFF" />
-                                    </TouchableOpacity>
-                                    <Text style={styles.quantityText}>{item.quantity}</Text>
-                                    <TouchableOpacity
-                                        style={styles.quantityButton}
-                                        onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                                    >
-                                        <Ionicons name="add" size={18} color="#FFF" />
-                                    </TouchableOpacity>
+
+                                {/* Cart Items */}
+                                {cartItems.map((item) => (
+                                    <BlurView key={item.id} intensity={20} tint="dark" style={styles.cartItem}>
+                                        <View style={styles.cartItemContent}>
+                                            <View style={styles.itemImage}>
+                                                {item.item?.image_url ? (
+                                                    <Image source={{ uri: item.item.image_url }} style={styles.image} />
+                                                ) : (
+                                                    <Text style={styles.imagePlaceholder}>📦</Text>
+                                                )}
+                                            </View>
+                                            <View style={styles.itemDetails}>
+                                                <Text style={styles.itemTitle} numberOfLines={2}>
+                                                    {item.item?.title || 'Unknown Item'}
+                                                </Text>
+                                                <Text style={styles.itemPrice}>
+                                                    €{(item.item?.price || 0).toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.itemActions}>
+                                                <View style={styles.quantityControls}>
+                                                    <TouchableOpacity
+                                                        style={styles.quantityButton}
+                                                        onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                                    >
+                                                        <Text style={styles.quantityButtonText}>−</Text>
+                                                    </TouchableOpacity>
+                                                    <Text style={styles.quantityText}>{item.quantity}</Text>
+                                                    <TouchableOpacity
+                                                        style={styles.quantityButton}
+                                                        onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                                    >
+                                                        <Text style={styles.quantityButtonText}>+</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                                <TouchableOpacity
+                                                    style={styles.removeButton}
+                                                    onPress={() => handleRemoveItem(item.id)}
+                                                >
+                                                    <TrashIcon size={18} color="#FF4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    </BlurView>
+                                ))}
+
+                                {/* Points Section */}
+                                {canUsePoints && availablePoints > 0 && (
+                                    <BlurView intensity={20} tint="dark" style={styles.pointsSection}>
+                                        <View style={styles.pointsHeader}>
+                                            <Text style={styles.pointsIcon}>💰</Text>
+                                            <View>
+                                                <Text style={styles.pointsTitle}>{t('cart.usePoints', 'Use Points')}</Text>
+                                                <Text style={styles.pointsAvailable}>
+                                                    {availablePoints.toLocaleString()} pts available
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.pointsControls}>
+                                            <TouchableOpacity
+                                                style={styles.pointsButton}
+                                                onPress={() => setPointsToUse(Math.max(0, pointsToUse - 10))}
+                                            >
+                                                <Text style={styles.pointsButtonText}>−</Text>
+                                            </TouchableOpacity>
+                                            <Text style={styles.pointsValue}>{pointsToUse}</Text>
+                                            <TouchableOpacity
+                                                style={styles.pointsButton}
+                                                onPress={() => setPointsToUse(Math.min(maxPointsDiscount, pointsToUse + 10))}
+                                            >
+                                                <Text style={styles.pointsButtonText}>+</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.maxButton}
+                                                onPress={() => {
+                                                    Haptics.selectionAsync();
+                                                    setPointsToUse(maxPointsDiscount);
+                                                }}
+                                            >
+                                                <Text style={styles.maxButtonText}>MAX</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </BlurView>
+                                )}
+
+                                {!canUsePoints && (
+                                    <BlurView intensity={15} tint="dark" style={styles.upgradeSection}>
+                                        <Text style={styles.upgradeLock}>🔒</Text>
+                                        <Text style={styles.upgradeText}>
+                                            {t('cart.upgradeMessage', 'Upgrade to Pro to use points!')}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                Haptics.selectionAsync();
+                                                navigation.navigate('SubscriptionScreen');
+                                            }}
+                                        >
+                                            <Text style={styles.upgradeLink}>{t('cart.upgradeNow', 'Upgrade')}</Text>
+                                        </TouchableOpacity>
+                                    </BlurView>
+                                )}
+                            </ScrollView>
+
+                            {/* Bottom Summary */}
+                            <BlurView intensity={40} tint="dark" style={styles.bottomSection}>
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>{t('cart.subtotal', 'Subtotal')}</Text>
+                                    <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
+                                </View>
+                                {pointsToUse > 0 && (
+                                    <View style={styles.summaryRow}>
+                                        <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points')}</Text>
+                                        <Text style={styles.discountValue}>-€{pointsDiscount.toFixed(2)}</Text>
+                                    </View>
+                                )}
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
+                                    <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
                                 </View>
                                 <TouchableOpacity
-                                    style={styles.removeButton}
-                                    onPress={() => handleRemoveItem(item.id)}
+                                    style={styles.checkoutButton}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        navigation.navigate('Checkout', {
+                                            cartItems,
+                                            subtotal,
+                                            pointsToUse,
+                                            total
+                                        });
+                                    }}
                                 >
-                                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                                    <Text style={styles.checkoutButtonText}>
+                                        {t('cart.proceedToCheckout', 'CHECKOUT')}
+                                    </Text>
                                 </TouchableOpacity>
-                            </View>
-                        ))}
-
-                        {/* Points Discount Section */}
-                        {canUsePoints && availablePoints > 0 && (
-                            <View style={styles.pointsSection}>
-                                <View style={styles.pointsHeader}>
-                                    <Ionicons name="wallet" size={20} color={theme.colors.brand.primary} />
-                                    <Text style={styles.pointsTitle}>{t('cart.usePoints', 'Use Points')}</Text>
-                                </View>
-                                <Text style={styles.pointsAvailable}>
-                                    {t('cart.pointsAvailable', 'You have {{count}} points available').replace('{{count}}', String(availablePoints))}
-                                </Text>
-                                <Text style={styles.pointsMax}>
-                                    {t('cart.maxDiscount', 'Max discount: {{count}} points (20% of order)').replace('{{count}}', String(maxPointsDiscount))}
-                                </Text>
-                                <View style={styles.pointsInput}>
-                                    <TouchableOpacity
-                                        style={styles.pointsButton}
-                                        onPress={() => setPointsToUse(Math.max(0, pointsToUse - 10))}
-                                    >
-                                        <Ionicons name="remove" size={20} color="#FFF" />
-                                    </TouchableOpacity>
-                                    <Text style={styles.pointsValue}>{pointsToUse}</Text>
-                                    <TouchableOpacity
-                                        style={styles.pointsButton}
-                                        onPress={() => setPointsToUse(Math.min(maxPointsDiscount, pointsToUse + 10))}
-                                    >
-                                        <Ionicons name="add" size={20} color="#FFF" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.maxButton}
-                                        onPress={() => setPointsToUse(maxPointsDiscount)}
-                                    >
-                                        <Text style={styles.maxButtonText}>MAX</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
-
-                        {!canUsePoints && (
-                            <View style={styles.upgradeSection}>
-                                <Ionicons name="lock-closed" size={24} color="#888" />
-                                <Text style={styles.upgradeText}>
-                                    {t('cart.upgradeMessage', 'Upgrade to Pro or Club to use points for discounts!')}
-                                </Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('SubscriptionScreen')}>
-                                    <Text style={styles.upgradeLink}>{t('cart.upgradeNow', 'Upgrade Now')}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </ScrollView>
-
-                    {/* Bottom Summary */}
-                    <View style={styles.bottomSection}>
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>{t('cart.subtotal', 'Subtotal')}</Text>
-                            <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
-                        </View>
-                        {pointsToUse > 0 && (
-                            <View style={styles.summaryRow}>
-                                <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
-                                <Text style={styles.discountValue}>-€{pointsDiscount.toFixed(2)}</Text>
-                            </View>
-                        )}
-                        <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
-                            <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
-                        </View>
-                        <Button
-                            title={t('cart.proceedToCheckout', 'Proceed to Checkout')}
-                            onPress={() => navigation.navigate('Checkout', {
-                                cartItems,
-                                subtotal,
-                                pointsToUse,
-                                total
-                            })}
-                            style={styles.checkoutButton}
-                        />
-                    </View>
-                </>
-            )}
-        </SafeAreaView>
+                            </BlurView>
+                        </>
+                    )}
+                </SafeAreaView>
+            </ImageBackground>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: '#000',
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: '#000',
         justifyContent: 'center',
         alignItems: 'center',
     },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    safeArea: {
+        flex: 1,
+    },
+
+    // Header
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 16,
     },
-    backButton: {
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitles: {
+        marginLeft: 8,
+    },
+    headerLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: '#FFF',
     },
     clearButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,68,68,0.15)',
     },
     clearText: {
-        color: '#EF4444',
-        fontSize: 14,
-        fontWeight: '500',
+        color: '#FF4444',
+        fontSize: 13,
+        fontWeight: '700',
     },
+
+    // Scroll
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 200,
+        padding: 20,
+        paddingBottom: 220,
     },
-
-    // Empty State
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
+    itemsHeader: {
+        marginBottom: 16,
     },
-    emptyTitle: {
-        fontSize: 20,
+    itemsCount: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.5)',
         fontWeight: '600',
-        color: '#FFF',
-        marginTop: 16,
-    },
-    emptySubtitle: {
-        fontSize: 14,
-        color: '#888',
-        marginTop: 8,
-        textAlign: 'center',
-    },
-    browseButton: {
-        marginTop: 24,
+        letterSpacing: 0.5,
     },
 
     // Cart Item
     cartItem: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    cartItemContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
-        borderRadius: 12,
         padding: 12,
-        marginBottom: 12,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     itemImage: {
         width: 70,
         height: 70,
-        borderRadius: 8,
-        backgroundColor: '#2A2A2A',
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -402,20 +479,28 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
+    imagePlaceholder: {
+        fontSize: 28,
+    },
     itemDetails: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 14,
     },
     itemTitle: {
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#FFF',
+        marginBottom: 6,
     },
     itemPrice: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 17,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
-        marginTop: 4,
+    },
+    itemActions: {
+        alignItems: 'flex-end',
+        gap: 10,
     },
     quantityControls: {
         flexDirection: 'row',
@@ -426,104 +511,166 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: '#333',
+        backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    quantityText: {
-        fontSize: 14,
+    quantityButtonText: {
+        color: '#FFF',
+        fontSize: 16,
         fontWeight: '600',
+    },
+    quantityText: {
+        fontSize: 15,
+        fontWeight: '700',
         color: '#FFF',
         minWidth: 24,
         textAlign: 'center',
     },
     removeButton: {
-        padding: 8,
-        marginLeft: 8,
+        padding: 6,
     },
 
     // Points Section
     pointsSection: {
-        backgroundColor: '#1A1A1A',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 16,
+        overflow: 'hidden',
         marginTop: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,107,53,0.3)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     pointsHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
+        gap: 12,
+        marginBottom: 14,
+    },
+    pointsIcon: {
+        fontSize: 24,
     },
     pointsTitle: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
         color: '#FFF',
     },
     pointsAvailable: {
-        fontSize: 14,
-        color: '#888',
-    },
-    pointsMax: {
         fontSize: 12,
-        color: '#666',
-        marginTop: 4,
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 2,
     },
-    pointsInput: {
+    pointsControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 12,
         gap: 12,
     },
     pointsButton: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#333',
+        backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    pointsValue: {
+    pointsButtonText: {
+        color: '#FFF',
         fontSize: 20,
-        fontWeight: '700',
+        fontWeight: '500',
+    },
+    pointsValue: {
+        fontSize: 22,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
         minWidth: 60,
         textAlign: 'center',
     },
     maxButton: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 14,
         paddingVertical: 8,
         backgroundColor: theme.colors.brand.primary,
         borderRadius: 8,
         marginLeft: 'auto',
     },
     maxButtonText: {
-        color: '#FFF',
+        color: '#000',
         fontSize: 12,
-        fontWeight: '700',
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
 
     // Upgrade Section
     upgradeSection: {
-        backgroundColor: '#1A1A1A',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 14,
+        overflow: 'hidden',
         marginTop: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 16,
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 12,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    upgradeLock: {
+        fontSize: 20,
     },
     upgradeText: {
-        fontSize: 14,
-        color: '#888',
-        textAlign: 'center',
-        marginTop: 8,
+        flex: 1,
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.6)',
     },
     upgradeLink: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '700',
         color: theme.colors.brand.primary,
-        marginTop: 8,
+    },
+
+    // Empty State
+    emptyState: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    emptyIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    emptyIcon: {
+        fontSize: 44,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#FFF',
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.5)',
+        textAlign: 'center',
+        marginBottom: 28,
+    },
+    browseButton: {
+        backgroundColor: theme.colors.brand.primary,
+        paddingHorizontal: 28,
+        paddingVertical: 14,
+        borderRadius: 12,
+    },
+    browseButtonText: {
+        color: '#000',
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 1,
     },
 
     // Bottom Section
@@ -532,9 +679,9 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#1A1A1A',
-        padding: 16,
-        paddingBottom: 34,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 100,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.1)',
     },
@@ -545,20 +692,21 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 14,
-        color: '#888',
+        color: 'rgba(255,255,255,0.5)',
     },
     summaryValue: {
         fontSize: 14,
         color: '#FFF',
+        fontWeight: '600',
     },
     discountLabel: {
         fontSize: 14,
-        color: '#10B981',
+        color: theme.colors.success,
     },
     discountValue: {
         fontSize: 14,
-        color: '#10B981',
-        fontWeight: '600',
+        color: theme.colors.success,
+        fontWeight: '700',
     },
     totalRow: {
         flexDirection: 'row',
@@ -569,17 +717,28 @@ const styles = StyleSheet.create({
         borderTopColor: 'rgba(255,255,255,0.1)',
     },
     totalLabel: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '700',
         color: '#FFF',
     },
     totalValue: {
-        fontSize: 20,
-        fontWeight: '700',
+        fontSize: 22,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
     },
     checkoutButton: {
+        backgroundColor: theme.colors.brand.primary,
+        paddingVertical: 16,
+        borderRadius: 14,
+        alignItems: 'center',
         marginTop: 16,
+    },
+    checkoutButtonText: {
+        color: '#000',
+        fontSize: 15,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
 });
 

@@ -7,40 +7,36 @@ import {
     TouchableOpacity,
     RefreshControl,
     StatusBar,
+    ImageBackground,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoadingSpinner, BackButton } from '../../components/common';
+import { BackButton } from '../../components/common';
 import { getOrderHistory } from '../../services/supabase/wallet';
 import { Order } from '../../types';
+import { ChevronRightIcon } from '../../components/common/TabIcons';
 
 interface OrderHistoryScreenProps {
     navigation: any;
 }
 
-const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
-    const statusConfig = {
-        pending: { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', label: 'Pending' },
-        paid: { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', label: 'Paid' },
-        processing: { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Processing' },
-        shipped: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Shipped' },
-        delivered: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Delivered' },
-        cancelled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled' },
-    };
-
-    const config = statusConfig[status];
-
-    return (
-        <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
-            <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
-        </View>
-    );
+const STATUS_CONFIG: Record<string, { color: string; label: string; emoji: string }> = {
+    pending: { color: '#F59E0B', label: 'PENDING', emoji: '⏳' },
+    paid: { color: '#3B82F6', label: 'PAID', emoji: '✓' },
+    processing: { color: '#8B5CF6', label: 'PROCESSING', emoji: '⚙️' },
+    shipped: { color: '#6366F1', label: 'SHIPPED', emoji: '📦' },
+    delivered: { color: '#10B981', label: 'DELIVERED', emoji: '✅' },
+    cancelled: { color: '#EF4444', label: 'CANCELLED', emoji: '✕' },
 };
 
 const OrderCard = ({ order, onPress }: { order: Order; onPress: () => void }) => {
+    const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -50,37 +46,50 @@ const OrderCard = ({ order, onPress }: { order: Order; onPress: () => void }) =>
     };
 
     return (
-        <TouchableOpacity style={styles.orderCard} onPress={onPress}>
-            <View style={styles.orderHeader}>
-                <View>
-                    <Text style={styles.orderNumber}>Order #{order.id.slice(0, 8)}</Text>
-                    <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
-                </View>
-                <OrderStatusBadge status={order.status} />
-            </View>
-
-            <View style={styles.orderDetails}>
-                <View style={styles.orderRow}>
-                    <Text style={styles.orderLabel}>Items</Text>
-                    <Text style={styles.orderValue}>{order.items?.length || 0}</Text>
-                </View>
-                <View style={styles.orderRow}>
-                    <Text style={styles.orderLabel}>Total</Text>
-                    <Text style={styles.orderTotal}>€{Number(order.total_amount).toFixed(2)}</Text>
-                </View>
-                {order.points_used > 0 && (
-                    <View style={styles.orderRow}>
-                        <Text style={styles.pointsLabel}>Points Used</Text>
-                        <Text style={styles.pointsValue}>{order.points_used}</Text>
+        <BlurView intensity={20} tint="dark" style={styles.orderCard}>
+            <TouchableOpacity
+                style={styles.orderCardContent}
+                onPress={onPress}
+                activeOpacity={0.8}
+            >
+                {/* Header */}
+                <View style={styles.orderHeader}>
+                    <View>
+                        <Text style={styles.orderNumber}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+                        <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
                     </View>
-                )}
-            </View>
+                    <View style={[styles.statusBadge, { backgroundColor: `${config.color}20` }]}>
+                        <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+                    </View>
+                </View>
 
-            <View style={styles.orderFooter}>
-                <Text style={styles.viewDetailsText}>View Details</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.brand.primary} />
-            </View>
-        </TouchableOpacity>
+                {/* Details */}
+                <View style={styles.orderDetails}>
+                    <View style={styles.detailRow}>
+                        <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Items</Text>
+                            <Text style={styles.detailValue}>{order.items?.length || 0}</Text>
+                        </View>
+                        <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>Total</Text>
+                            <Text style={styles.detailValueHighlight}>€{Number(order.total_amount).toFixed(2)}</Text>
+                        </View>
+                        {order.points_used > 0 && (
+                            <View style={styles.detailItem}>
+                                <Text style={styles.detailLabel}>Points</Text>
+                                <Text style={styles.detailValueSuccess}>-{order.points_used}</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.orderFooter}>
+                    <Text style={styles.viewDetailsText}>View Details</Text>
+                    <ChevronRightIcon size={16} color={theme.colors.brand.primary} />
+                </View>
+            </TouchableOpacity>
+        </BlurView>
     );
 };
 
@@ -110,90 +119,294 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
     }, [loadOrders]);
 
     const onRefresh = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
         loadOrders();
     }, [loadOrders]);
 
+    const stats = {
+        total: orders.length,
+        delivered: orders.filter(o => o.status === 'delivered').length,
+        pending: orders.filter(o => ['pending', 'paid', 'processing', 'shipped'].includes(o.status)).length,
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <LoadingSpinner />
+                <ActivityIndicator size="large" color={theme.colors.brand.primary} />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.jpg')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <BackButton style={styles.backButton} />
-                <Text style={styles.headerTitle}>Order History</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <BackButton onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.goBack();
+                            }} />
+                            <View style={styles.headerTitles}>
+                                <Text style={styles.headerLabel}>YOUR</Text>
+                                <Text style={styles.headerTitle}>ORDERS</Text>
+                            </View>
+                        </View>
+                    </View>
 
-            {orders.length === 0 ? (
-                <View style={styles.emptyState}>
-                    <Ionicons name="receipt-outline" size={64} color="#666" />
-                    <Text style={styles.emptyTitle}>No orders yet</Text>
-                    <Text style={styles.emptySubtitle}>
-                        Your order history will appear here after your first purchase.
-                    </Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={orders}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <OrderCard
-                            order={item}
-                            onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+                    {/* Stats */}
+                    {orders.length > 0 && (
+                        <View style={styles.statsContainer}>
+                            <BlurView intensity={20} tint="dark" style={styles.statPill}>
+                                <Text style={styles.statValue}>{stats.total}</Text>
+                                <Text style={styles.statLabel}>Total</Text>
+                            </BlurView>
+                            <BlurView intensity={20} tint="dark" style={styles.statPill}>
+                                <Text style={[styles.statValue, { color: theme.colors.success }]}>{stats.delivered}</Text>
+                                <Text style={styles.statLabel}>Delivered</Text>
+                            </BlurView>
+                            <BlurView intensity={20} tint="dark" style={styles.statPill}>
+                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stats.pending}</Text>
+                                <Text style={styles.statLabel}>Active</Text>
+                            </BlurView>
+                        </View>
+                    )}
+
+                    {orders.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <View style={styles.emptyIconContainer}>
+                                <Text style={styles.emptyIcon}>📦</Text>
+                            </View>
+                            <Text style={styles.emptyTitle}>No orders yet</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Your order history will appear here after your first purchase.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.browseButton}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    navigation.navigate('Marketplace');
+                                }}
+                            >
+                                <Text style={styles.browseButtonText}>BROWSE SHOP</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={orders}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <OrderCard
+                                    order={item}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        navigation.navigate('OrderDetail', { orderId: item.id });
+                                    }}
+                                />
+                            )}
+                            contentContainerStyle={styles.listContent}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={onRefresh}
+                                    tintColor="#FFF"
+                                />
+                            }
+                            showsVerticalScrollIndicator={false}
                         />
                     )}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor={theme.colors.brand.primary}
-                        />
-                    }
-                    showsVerticalScrollIndicator={false}
-                />
-            )}
-        </SafeAreaView>
+                </SafeAreaView>
+            </ImageBackground>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: '#000',
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: '#000',
         justifyContent: 'center',
         alignItems: 'center',
     },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    safeArea: {
+        flex: 1,
+    },
+
+    // Header
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 16,
     },
-    backButton: {
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitles: {
+        marginLeft: 8,
+    },
+    headerLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: '#FFF',
     },
+
+    // Stats
+    statsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        gap: 10,
+    },
+    statPill: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        overflow: 'hidden',
+        gap: 6,
+    },
+    statValue: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: '#FFF',
+    },
+    statLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+    },
+
+    // List
     listContent: {
-        padding: 16,
+        paddingHorizontal: 20,
         paddingBottom: 100,
+        gap: 12,
+    },
+
+    // Order Card
+    orderCard: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    orderCardContent: {
+        padding: 16,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    orderHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 14,
+    },
+    orderNumber: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#FFF',
+        letterSpacing: 0.5,
+    },
+    orderDate: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.5)',
+        marginTop: 4,
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 6,
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    orderDetails: {
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.08)',
+        paddingTop: 14,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        gap: 20,
+    },
+    detailItem: {
+        flex: 1,
+    },
+    detailLabel: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.4)',
+        marginBottom: 4,
+        fontWeight: '600',
+    },
+    detailValue: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFF',
+    },
+    detailValueHighlight: {
+        fontSize: 17,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        color: theme.colors.brand.primary,
+    },
+    detailValueSuccess: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: theme.colors.success,
+    },
+    orderFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        marginTop: 14,
+        paddingTop: 14,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.08)',
+    },
+    viewDetailsText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: theme.colors.brand.primary,
+        marginRight: 4,
     },
 
     // Empty State
@@ -201,99 +414,45 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 32,
+        padding: 40,
     },
-    emptyTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#FFF',
-        marginTop: 16,
-    },
-    emptySubtitle: {
-        fontSize: 14,
-        color: '#888',
-        marginTop: 8,
-        textAlign: 'center',
-    },
-
-    // Order Card
-    orderCard: {
-        backgroundColor: '#1A1A1A',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
+    emptyIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-    orderHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16,
+    emptyIcon: {
+        fontSize: 44,
     },
-    orderNumber: {
-        fontSize: 16,
-        fontWeight: '600',
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: '800',
         color: '#FFF',
-    },
-    orderDate: {
-        fontSize: 12,
-        color: '#888',
-        marginTop: 4,
-    },
-    statusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    orderDetails: {
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
-        paddingTop: 12,
-    },
-    orderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         marginBottom: 8,
     },
-    orderLabel: {
+    emptySubtitle: {
         fontSize: 14,
-        color: '#888',
+        color: 'rgba(255,255,255,0.5)',
+        textAlign: 'center',
+        marginBottom: 28,
     },
-    orderValue: {
+    browseButton: {
+        backgroundColor: theme.colors.brand.primary,
+        paddingHorizontal: 28,
+        paddingVertical: 14,
+        borderRadius: 12,
+    },
+    browseButtonText: {
+        color: '#000',
         fontSize: 14,
-        color: '#FFF',
-    },
-    orderTotal: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: theme.colors.brand.primary,
-    },
-    pointsLabel: {
-        fontSize: 12,
-        color: '#10B981',
-    },
-    pointsValue: {
-        fontSize: 12,
-        color: '#10B981',
-    },
-    orderFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
-    },
-    viewDetailsText: {
-        fontSize: 14,
-        color: theme.colors.brand.primary,
-        marginRight: 4,
+        fontWeight: '800',
+        letterSpacing: 1,
     },
 });
 

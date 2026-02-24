@@ -9,14 +9,18 @@ import {
     ScrollView,
     Alert,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    ImageBackground,
+    StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
-import { uploadAvatar } from '../../services/supabase/storage'; // Reuse similar logic, or create new
 import { PlusIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,20 +29,19 @@ type CreateListingProps = {
     navigation: any;
 };
 
-// Simplified category selection for MVP
 const CATEGORIES = [
-    { label: 'Tênis', value: 'shoes' },
-    { label: 'Roupas', value: 'clothing' },
-    { label: 'Acessórios', value: 'accessories' },
-    { label: 'Eletrônicos', value: 'electronics' },
-    { label: 'Outros', value: 'other' },
+    { label: 'Shoes', value: 'shoes', emoji: '👟' },
+    { label: 'Clothing', value: 'clothing', emoji: '👕' },
+    { label: 'Accessories', value: 'accessories', emoji: '⌚' },
+    { label: 'Electronics', value: 'electronics', emoji: '📱' },
+    { label: 'Other', value: 'other', emoji: '📦' },
 ];
 
 const CONDITIONS = [
-    { label: 'Novo', value: 'new' },
-    { label: 'Como Novo', value: 'like_new' },
-    { label: 'Usado (Bom)', value: 'good' },
-    { label: 'Usado (Justo)', value: 'fair' },
+    { label: 'New', value: 'new', desc: 'With tags' },
+    { label: 'Like New', value: 'like_new', desc: 'Barely used' },
+    { label: 'Good', value: 'good', desc: 'Well maintained' },
+    { label: 'Fair', value: 'fair', desc: 'Shows wear' },
 ];
 
 export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
@@ -47,14 +50,15 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
-    const [category, setCategory] = useState({ label: '', value: '' });
-    const [condition, setCondition] = useState({ label: '', value: '' });
+    const [category, setCategory] = useState({ label: '', value: '', emoji: '' });
+    const [condition, setCondition] = useState({ label: '', value: '', desc: '' });
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const pickImage = async () => {
+        Haptics.selectionAsync();
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
@@ -62,16 +66,22 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
         if (!result.canceled) {
             setImage(result.assets[0].uri);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
     };
 
     const handleCreate = async () => {
         if (!user) return;
         if (!title || !price || !category.value || !condition.value || !image) {
-            Alert.alert(t('marketplace.requiredFields', 'Campos obrigatórios'), t('marketplace.fillAllFieldsPhoto', 'Por favor preencha todos os campos e adicione uma foto.'));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(
+                t('marketplace.requiredFields', 'Required Fields'),
+                t('marketplace.fillAllFieldsPhoto', 'Please fill all fields and add a photo.')
+            );
             return;
         }
 
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setLoading(true);
         try {
             // 1. Check if user is a seller
@@ -83,11 +93,11 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
             if (!sellerAccount || !sellerAccount.charges_enabled) {
                 Alert.alert(
-                    t('seller.setupRequired', 'Configuração Necessária'),
-                    t('seller.needSetup', 'Você precisa configurar sua conta de recebimento antes de vender.'),
+                    t('seller.setupRequired', 'Setup Required'),
+                    t('seller.needSetup', 'You need to set up your payment account before selling.'),
                     [
-                        { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
-                        { text: t('seller.setupNow', 'Configurar Agora'), onPress: () => navigation.navigate('SellerOnboarding') }
+                        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+                        { text: t('seller.setupNow', 'Setup Now'), onPress: () => navigation.navigate('SellerOnboarding') }
                     ]
                 );
                 setLoading(false);
@@ -95,20 +105,16 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
             }
 
             // 2. Upload Image
-            // We'll reuse logic or just do direct upload here for simplicity
-            // For now, assume we have a bucket 'marketplace-images'
             const fileExt = image.split('.').pop();
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-            const formData = new FormData();
 
-            // React Native specific form data for file upload
             const fileData = {
                 uri: image,
                 name: fileName,
                 type: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`
             } as any;
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('marketplace-images')
                 .upload(fileName, fileData, { upsert: false });
 
@@ -136,129 +142,201 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
             if (insertError) throw insertError;
 
-            Alert.alert(t('common.success'), t('marketplace.listingPublished', 'Seu anúncio foi publicado!'));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(t('common.success'), t('marketplace.listingPublished', 'Your listing is now live!'));
             navigation.goBack();
 
         } catch (error: any) {
             console.error('Create listing error:', error);
-            Alert.alert(t('common.error'), error.message || t('marketplace.createListingFailed', 'Falha ao criar anúncio'));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(t('common.error'), error.message || t('marketplace.createListingFailed', 'Failed to create listing'));
         } finally {
             setLoading(false);
         }
     };
 
+    const formatPrice = (value: string) => {
+        const cleaned = value.replace(/[^0-9]/g, '');
+        if (!cleaned) return '';
+        const number = parseInt(cleaned, 10) / 100;
+        return number.toFixed(2).replace('.', ',');
+    };
+
     return (
         <View style={styles.container}>
-            <SafeAreaView style={{ flex: 1 }}>
-                <View style={styles.header}>
-                    <BackButton style={styles.backButton} />
-                    <Text style={styles.headerTitle}>{t('marketplace.sellItem').toUpperCase()}</Text>
-                    <View style={{ width: 24 }} />
-                </View>
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.jpg')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
 
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={{ flex: 1 }}
-                >
-                    <ScrollView contentContainerStyle={styles.content}>
-                        {/* Image Picker */}
-                        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                            {image ? (
-                                <Image source={{ uri: image }} style={styles.previewImage} />
-                            ) : (
-                                <View style={styles.placeholderContainer}>
-                                    <PlusIcon size={32} color="rgba(255,255,255,0.5)" />
-                                    <Text style={styles.placeholderText}>{t('marketplace.addPhoto')}</Text>
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <BackButton onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.goBack();
+                            }} />
+                            <View style={styles.headerTitles}>
+                                <Text style={styles.headerLabel}>{t('marketplace.newListing', 'NEW LISTING')}</Text>
+                                <Text style={styles.headerTitle}>{t('marketplace.sellItem', 'SELL ITEM')}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1 }}
+                    >
+                        <ScrollView
+                            contentContainerStyle={styles.content}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {/* Image Picker Card */}
+                            <BlurView intensity={20} tint="dark" style={styles.imageCard}>
+                                <TouchableOpacity
+                                    style={styles.imagePicker}
+                                    onPress={pickImage}
+                                    activeOpacity={0.8}
+                                >
+                                    {image ? (
+                                        <Image source={{ uri: image }} style={styles.previewImage} />
+                                    ) : (
+                                        <View style={styles.placeholderContainer}>
+                                            <View style={styles.plusCircle}>
+                                                <PlusIcon size={24} color="#FFF" />
+                                            </View>
+                                            <Text style={styles.placeholderText}>{t('marketplace.addPhoto', 'Add Photo')}</Text>
+                                            <Text style={styles.placeholderHint}>Tap to upload</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </BlurView>
+
+                            {/* Form Card */}
+                            <BlurView intensity={20} tint="dark" style={styles.formCard}>
+                                {/* Title */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>{t('marketplace.itemTitle', 'TITLE')}</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder={t('marketplace.titlePlaceholder', 'What are you selling?')}
+                                        placeholderTextColor="rgba(255,255,255,0.3)"
+                                        value={title}
+                                        onChangeText={setTitle}
+                                    />
                                 </View>
+
+                                {/* Price */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>{t('marketplace.price', 'PRICE')}</Text>
+                                    <View style={styles.priceInputContainer}>
+                                        <Text style={styles.currencySymbol}>R$</Text>
+                                        <TextInput
+                                            style={styles.priceInput}
+                                            placeholder="0,00"
+                                            placeholderTextColor="rgba(255,255,255,0.3)"
+                                            keyboardType="numeric"
+                                            value={price}
+                                            onChangeText={(text) => setPrice(formatPrice(text))}
+                                        />
+                                    </View>
+                                </View>
+
+                                {/* Category */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>{t('marketplace.category', 'CATEGORY')}</Text>
+                                    <View style={styles.chipsContainer}>
+                                        {CATEGORIES.map(cat => (
+                                            <TouchableOpacity
+                                                key={cat.value}
+                                                style={[
+                                                    styles.chip,
+                                                    category.value === cat.value && styles.chipSelected
+                                                ]}
+                                                onPress={() => {
+                                                    Haptics.selectionAsync();
+                                                    setCategory(cat);
+                                                }}
+                                            >
+                                                <Text style={styles.chipEmoji}>{cat.emoji}</Text>
+                                                <Text style={[
+                                                    styles.chipText,
+                                                    category.value === cat.value && styles.chipTextSelected
+                                                ]}>
+                                                    {t(`marketplace.categories.${cat.value}`, cat.label)}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* Condition */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>{t('marketplace.condition', 'CONDITION')}</Text>
+                                    <View style={styles.conditionsContainer}>
+                                        {CONDITIONS.map(cond => (
+                                            <TouchableOpacity
+                                                key={cond.value}
+                                                style={[
+                                                    styles.conditionCard,
+                                                    condition.value === cond.value && styles.conditionCardSelected
+                                                ]}
+                                                onPress={() => {
+                                                    Haptics.selectionAsync();
+                                                    setCondition(cond);
+                                                }}
+                                            >
+                                                <Text style={[
+                                                    styles.conditionLabel,
+                                                    condition.value === cond.value && styles.conditionLabelSelected
+                                                ]}>
+                                                    {t(`marketplace.conditions.${cond.value}`, cond.label)}
+                                                </Text>
+                                                <Text style={styles.conditionDesc}>{cond.desc}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* Description */}
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>{t('marketplace.description', 'DESCRIPTION')} <Text style={styles.optionalLabel}>(Optional)</Text></Text>
+                                    <TextInput
+                                        style={[styles.input, styles.textArea]}
+                                        placeholder={t('marketplace.descriptionPlaceholder', 'Add details about your item...')}
+                                        placeholderTextColor="rgba(255,255,255,0.3)"
+                                        multiline
+                                        numberOfLines={4}
+                                        value={description}
+                                        onChangeText={setDescription}
+                                    />
+                                </View>
+                            </BlurView>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
+
+                    {/* Footer */}
+                    <BlurView intensity={30} tint="dark" style={styles.footer}>
+                        <TouchableOpacity
+                            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                            onPress={handleCreate}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#000" />
+                            ) : (
+                                <Text style={styles.submitButtonText}>
+                                    {t('marketplace.publish', 'PUBLISH LISTING')}
+                                </Text>
                             )}
                         </TouchableOpacity>
-
-                        {/* Form */}
-                        <View style={styles.form}>
-                            <Text style={styles.label}>{t('marketplace.itemTitle').toUpperCase()}</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder={t('marketplace.titlePlaceholder')}
-                                placeholderTextColor="rgba(255,255,255,0.3)"
-                                value={title}
-                                onChangeText={setTitle}
-                            />
-
-                            <Text style={styles.label}>{t('marketplace.price').toUpperCase()}</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="0,00"
-                                placeholderTextColor="rgba(255,255,255,0.3)"
-                                keyboardType="numeric"
-                                value={price}
-                                onChangeText={setPrice}
-                            />
-
-                            <Text style={styles.label}>{t('marketplace.category').toUpperCase()}</Text>
-                            <View style={styles.chipsContainer}>
-                                {CATEGORIES.map(cat => (
-                                    <TouchableOpacity
-                                        key={cat.value}
-                                        style={[
-                                            styles.chip,
-                                            category.value === cat.value && styles.chipSelected
-                                        ]}
-                                        onPress={() => setCategory(cat)}
-                                    >
-                                        <Text style={[
-                                            styles.chipText,
-                                            category.value === cat.value && styles.chipTextSelected
-                                        ]}>{t(`marketplace.categories.${cat.value}`)}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.label}>{t('marketplace.condition').toUpperCase()}</Text>
-                            <View style={styles.chipsContainer}>
-                                {CONDITIONS.map(cond => (
-                                    <TouchableOpacity
-                                        key={cond.value}
-                                        style={[
-                                            styles.chip,
-                                            condition.value === cond.value && styles.chipSelected
-                                        ]}
-                                        onPress={() => setCondition(cond)}
-                                    >
-                                        <Text style={[
-                                            styles.chipText,
-                                            condition.value === cond.value && styles.chipTextSelected
-                                        ]}>{t(`marketplace.conditions.${cond.value}`)}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.label}>{t('marketplace.description').toUpperCase()}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder={t('marketplace.descriptionPlaceholder')}
-                                placeholderTextColor="rgba(255,255,255,0.3)"
-                                multiline
-                                numberOfLines={4}
-                                value={description}
-                                onChangeText={setDescription}
-                            />
-                        </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={[styles.submitButton, loading && { opacity: 0.7 }]}
-                        onPress={handleCreate}
-                        disabled={loading}
-                    >
-                        <Text style={styles.submitButtonText}>
-                            {loading ? t('common.loading').toUpperCase() : t('marketplace.publish').toUpperCase()}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
+                    </BlurView>
+                </SafeAreaView>
+            </ImageBackground>
         </View>
     );
 };
@@ -268,37 +346,66 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    safeArea: {
+        flex: 1,
+    },
+
+    // Header
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        paddingTop: 10,
+        paddingBottom: 16,
     },
-    backButton: {
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitles: {
+        marginLeft: 8,
+    },
+    headerLabel: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 2,
     },
     headerTitle: {
+        fontSize: 20,
+        fontWeight: '900',
+        fontStyle: 'italic',
         color: '#FFF',
-        fontWeight: '800',
-        fontSize: 16,
-        letterSpacing: 1,
     },
+
+    // Content
     content: {
         padding: 20,
-        paddingBottom: 100,
+        paddingBottom: 140,
+        gap: 16,
     },
-    imagePicker: {
-        width: '100%',
-        height: 200,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+
+    // Image Card
+    imageCard: {
         borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        borderStyle: 'dashed',
-        marginBottom: 24,
+    },
+    imagePicker: {
+        height: 200,
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     previewImage: {
         width: '100%',
@@ -309,80 +416,184 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
+        gap: 8,
+    },
+    plusCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.2)',
+        borderStyle: 'dashed',
+        marginBottom: 8,
     },
     placeholderText: {
-        color: 'rgba(255,255,255,0.5)',
-        fontWeight: '600',
+        color: '#FFF',
+        fontWeight: '700',
+        fontSize: 14,
     },
-    form: {
-        gap: 20,
+    placeholderHint: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 12,
+    },
+
+    // Form Card
+    formCard: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    inputGroup: {
+        marginBottom: 20,
     },
     label: {
-        color: 'rgba(255,255,255,0.5)',
-        fontWeight: '700',
-        fontSize: 10,
+        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '800',
+        fontSize: 11,
         letterSpacing: 1,
-        marginBottom: -8,
+        marginBottom: 10,
+    },
+    optionalLabel: {
+        fontWeight: '500',
+        color: 'rgba(255,255,255,0.3)',
+        letterSpacing: 0,
     },
     input: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(255,255,255,0.08)',
         padding: 16,
         borderRadius: 12,
         color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     textArea: {
-        height: 120,
+        height: 100,
         textAlignVertical: 'top',
     },
+    priceInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 16,
+    },
+    currencySymbol: {
+        color: theme.colors.brand.primary,
+        fontSize: 18,
+        fontWeight: '900',
+        marginRight: 8,
+    },
+    priceInput: {
+        flex: 1,
+        color: '#FFF',
+        fontSize: 24,
+        fontWeight: '900',
+        fontStyle: 'italic',
+        paddingVertical: 14,
+    },
+
+    // Category Chips
     chipsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
     },
     chip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        gap: 6,
     },
     chipSelected: {
         backgroundColor: theme.colors.brand.primary,
         borderColor: theme.colors.brand.primary,
     },
+    chipEmoji: {
+        fontSize: 14,
+    },
     chipText: {
-        color: 'rgba(255,255,255,0.6)',
-        fontWeight: '600',
+        color: 'rgba(255,255,255,0.7)',
+        fontWeight: '700',
         fontSize: 12,
     },
     chipTextSelected: {
         color: '#000',
         fontWeight: '800',
     },
+
+    // Condition Cards
+    conditionsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    conditionCard: {
+        width: '48%',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    conditionCardSelected: {
+        backgroundColor: 'rgba(204, 255, 0, 0.15)',
+        borderColor: theme.colors.brand.primary,
+    },
+    conditionLabel: {
+        color: '#FFF',
+        fontWeight: '700',
+        fontSize: 13,
+        marginBottom: 2,
+    },
+    conditionLabelSelected: {
+        color: theme.colors.brand.primary,
+    },
+    conditionDesc: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 11,
+    },
+
+    // Footer
     footer: {
-        padding: 20,
-        paddingBottom: 100, // Clear TabBar (80px) + Safety
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 100,
         borderTopWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: '#000', // Ensure opacity covers content behind
     },
     submitButton: {
         backgroundColor: theme.colors.brand.primary,
-        paddingVertical: 12, // Reduced from 16
-        paddingHorizontal: 32, // Added horizontal padding
-        borderRadius: 24, // More rounded like chips/pill
+        paddingVertical: 16,
+        borderRadius: 14,
         alignItems: 'center',
-        alignSelf: 'center', // Center it instead of full width
-        minWidth: 200,
+    },
+    submitButtonDisabled: {
+        opacity: 0.7,
     },
     submitButtonText: {
-        color: '#FFF', // White text
-        fontWeight: '800',
-        fontSize: 14, // Reduced from 16
+        color: '#000',
+        fontWeight: '900',
+        fontSize: 15,
         letterSpacing: 1,
-        textTransform: 'uppercase',
     },
 });
