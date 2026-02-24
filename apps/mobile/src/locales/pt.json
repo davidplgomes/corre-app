@@ -169,6 +169,10 @@
     "runs": "Corridas",
     "streetRun": "Corrida de Rua",
     "morningRun": "Corrida Matinal",
+    "lunchRun": "Corrida na Hora do Almoço",
+    "afternoonRun": "Corrida à Tarde",
+    "eveningRun": "Corrida de Fim de Tarde",
+    "nightRun": "Corrida Noturna",
     "meetingPoint": "Ponto de Encontro",
     "upcoming": "Próximos",
     "checkedIn": "Check-in Realizado"

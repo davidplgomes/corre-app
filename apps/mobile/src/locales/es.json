@@ -169,6 +169,10 @@
     "runs": "Carreras",
     "streetRun": "Carrera Callejera",
     "morningRun": "Carrera Matutina",
+    "lunchRun": "Carrera de Almuerzo",
+    "afternoonRun": "Carrera Vespertina",
+    "eveningRun": "Carrera de Tarde",
+    "nightRun": "Carrera Nocturna",
     "meetingPoint": "Punto de Encuentro",
     "upcoming": "Próximos",
     "checkedIn": "Check-in Realizado"

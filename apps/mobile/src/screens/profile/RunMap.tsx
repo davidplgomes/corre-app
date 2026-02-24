@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -49,6 +49,54 @@ const INITIAL_REGION = {
     longitudeDelta: 0.015,
 };
 
+// Polyline Decoder for Strava
+const decodePolyline = (t: string, e: number = 5) => {
+    let n = 0, a = 0, r = 0, o = [];
+    for (let u = 0, l = t.length; u < l;) {
+        let h, c = 0, f = 0;
+        do {
+            h = t.charCodeAt(u++) - 63;
+            f |= (h & 31) << c;
+            c += 5;
+        } while (h >= 32);
+        let d = (f & 1) ? ~(f >> 1) : (f >> 1);
+        a += d;
+        c = 0;
+        f = 0;
+        do {
+            h = t.charCodeAt(u++) - 63;
+            f |= (h & 31) << c;
+            c += 5;
+        } while (h >= 32);
+        let g = (f & 1) ? ~(f >> 1) : (f >> 1);
+        r += g;
+        o.push({ latitude: a / Math.pow(10, e), longitude: r / Math.pow(10, e) });
+    }
+    return o;
+};
+
+// Helper to center the map on the route
+const getRegionForCoordinates = (points: { latitude: number, longitude: number }[]) => {
+    if (!points || points.length === 0) return INITIAL_REGION;
+
+    let minX = points[0].latitude, maxX = points[0].latitude;
+    let minY = points[0].longitude, maxY = points[0].longitude;
+
+    points.forEach((point) => {
+        minX = Math.min(minX, point.latitude);
+        maxX = Math.max(maxX, point.latitude);
+        minY = Math.min(minY, point.longitude);
+        maxY = Math.max(maxY, point.longitude);
+    });
+
+    return {
+        latitude: (minX + maxX) / 2,
+        longitude: (minY + maxY) / 2,
+        latitudeDelta: Math.max((maxX - minX) * 1.5, 0.015),
+        longitudeDelta: Math.max((maxY - minY) * 1.5, 0.015)
+    };
+};
+
 export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, route }) => {
     const { run } = route.params || {};
     const { t } = useTranslation();
@@ -61,8 +109,34 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
         pace: run?.pace || "5'31\"",
         calories: run?.calories || '320',
         name: run?.name || t('events.morningRun').toUpperCase(),
-        source: run?.source || 'manual'
+        source: run?.source || 'manual',
+        points: run?.points || 0
     });
+
+    const [actualRoute, setActualRoute] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (run?.source === 'strava' && typeof run?.route_data === 'string') {
+            try {
+                const decoded = decodePolyline(run.route_data);
+                if (decoded.length > 0) setActualRoute(decoded);
+            } catch (e) {
+                console.error('Failed to decode polyline', e);
+            }
+        } else if (run?.source === 'manual' && Array.isArray(run?.route_data) && run.route_data.length > 0) {
+            const mapped = run.route_data.map((pt: any) => ({
+                latitude: pt.lat || pt.latitude,
+                longitude: pt.lng || pt.longitude
+            }));
+            setActualRoute(mapped);
+        } else if (run?.source !== 'event') {
+            setActualRoute(RUN_ROUTE); // fallback
+        }
+    }, [run]);
+
+    const mapRegion = selectedRun.source === 'event' && run?.location_lat
+        ? { latitude: run.location_lat, longitude: run.location_lng, latitudeDelta: 0.015, longitudeDelta: 0.015 }
+        : getRegionForCoordinates(actualRoute.length > 0 ? actualRoute : RUN_ROUTE);
 
     return (
         <View style={styles.container}>
@@ -71,29 +145,42 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
             <MapView
                 style={styles.map}
                 provider={PROVIDER_DEFAULT}
-                initialRegion={INITIAL_REGION}
+                initialRegion={mapRegion}
+                region={mapRegion}
                 customMapStyle={mapStyle} // Dark map style
             >
-                {/* Route Line */}
-                <Polyline
-                    coordinates={RUN_ROUTE}
-                    strokeColor={theme.colors.brand.primary}
-                    strokeWidth={4}
-                />
+                {selectedRun.source === 'event' && run?.location_lat ? (
+                    <Marker coordinate={{ latitude: run.location_lat, longitude: run.location_lng }} title={selectedRun.name}>
+                        <View style={styles.markerContainer}>
+                            <View style={styles.eventMarker} />
+                        </View>
+                    </Marker>
+                ) : (
+                    actualRoute.length > 0 && (
+                        <>
+                            {/* Route Line */}
+                            <Polyline
+                                coordinates={actualRoute}
+                                strokeColor={theme.colors.brand.primary}
+                                strokeWidth={4}
+                            />
 
-                {/* Start Marker */}
-                <Marker coordinate={RUN_ROUTE[0]} title="Start">
-                    <View style={styles.markerContainer}>
-                        <View style={styles.startMarker} />
-                    </View>
-                </Marker>
+                            {/* Start Marker */}
+                            <Marker coordinate={actualRoute[0]} title="Start">
+                                <View style={styles.markerContainer}>
+                                    <View style={styles.startMarker} />
+                                </View>
+                            </Marker>
 
-                {/* End Marker */}
-                <Marker coordinate={RUN_ROUTE[RUN_ROUTE.length - 1]} title="End">
-                    <View style={styles.markerContainer}>
-                        <View style={styles.endMarker} />
-                    </View>
-                </Marker>
+                            {/* End Marker */}
+                            <Marker coordinate={actualRoute[actualRoute.length - 1]} title="End">
+                                <View style={styles.markerContainer}>
+                                    <View style={styles.endMarker} />
+                                </View>
+                            </Marker>
+                        </>
+                    )
+                )}
             </MapView>
 
             {/* Glass Wrapper for entire UIOverlay to ensure readability if map is light, though map is dark */}
@@ -117,15 +204,25 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                 <BlurView intensity={40} tint="dark" style={styles.runCard}>
                     <View style={styles.glassContent}>
                         <View style={styles.cardHeader}>
-                            <View>
+                            <View style={{ flex: 1, paddingRight: 10 }}>
                                 <Text style={styles.cardTitle} numberOfLines={1}>{selectedRun.name.toUpperCase()}</Text>
                                 <View style={styles.tagRow}>
                                     <View style={[styles.tag, { backgroundColor: theme.colors.brand.primary }]}>
                                         <Text style={styles.tagText}>{t('profile.completed').toUpperCase()}</Text>
                                     </View>
+                                    {selectedRun.points > 0 && (
+                                        <View style={[styles.tag, { backgroundColor: theme.colors.success, marginLeft: 6 }]}>
+                                            <Text style={styles.tagText}>+{selectedRun.points} PTS</Text>
+                                        </View>
+                                    )}
                                     {selectedRun.source === 'strava' && (
                                         <View style={[styles.tag, { backgroundColor: '#FC4C02', marginLeft: 6 }]}>
                                             <Text style={styles.tagText}>STRAVA</Text>
+                                        </View>
+                                    )}
+                                    {selectedRun.source === 'event' && (
+                                        <View style={[styles.tag, { backgroundColor: 'rgba(124, 58, 237, 1)', marginLeft: 6 }]}>
+                                            <Text style={styles.tagText}>{t('events.event', 'EVENT').toUpperCase()}</Text>
                                         </View>
                                     )}
                                 </View>
@@ -220,6 +317,14 @@ const styles = StyleSheet.create({
         height: 16,
         borderRadius: 8,
         backgroundColor: theme.colors.brand.primary,
+        borderWidth: 2,
+        borderColor: '#000',
+    },
+    eventMarker: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: 'rgba(124, 58, 237, 1)',
         borderWidth: 2,
         borderColor: '#000',
     },

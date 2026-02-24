@@ -169,6 +169,10 @@
     "runs": "Runs",
     "streetRun": "Street Run",
     "morningRun": "Morning Run",
+    "lunchRun": "Lunch Run",
+    "afternoonRun": "Afternoon Run",
+    "eveningRun": "Evening Run",
+    "nightRun": "Night Run",
     "meetingPoint": "Meeting Point",
     "upcoming": "Upcoming",
     "checkedIn": "Checked In"
