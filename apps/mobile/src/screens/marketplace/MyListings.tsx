@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,8 @@ import {
     Alert,
     Image,
     ActivityIndicator,
+    ImageBackground,
+    Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -20,6 +22,10 @@ import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
 import { getSellerListings, updateListingStatus, deleteListing } from '../../services/supabase/marketplace';
+import { PencilIcon, TrashIcon, CheckIcon } from '../../components/common/TabIcons';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 48 - 12) / 2; // padding + gap
 
 type MyListingsProps = {
     navigation: any;
@@ -47,12 +53,12 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [selectedListing, setSelectedListing] = useState<string | null>(null);
 
-    const filters: { key: StatusFilter; label: string }[] = [
-        { key: 'all', label: t('marketplace.filterAll', 'All') },
-        { key: 'active', label: t('marketplace.filterActive', 'Active') },
-        { key: 'sold', label: t('marketplace.filterSold', 'Sold') },
-        { key: 'removed', label: t('marketplace.filterRemoved', 'Archived') },
+    const filters: { key: StatusFilter; label: string; count: number }[] = [
+        { key: 'all', label: t('marketplace.filterAll', 'All'), count: listings.length },
+        { key: 'active', label: t('marketplace.filterActive', 'Active'), count: listings.filter(l => l.status === 'active').length },
+        { key: 'sold', label: t('marketplace.filterSold', 'Sold'), count: listings.filter(l => l.status === 'sold').length },
     ];
 
     const loadListings = useCallback(async () => {
@@ -87,21 +93,23 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     });
 
     const stats = {
-        total: listings.length,
-        active: listings.filter(l => l.status === 'active').length,
-        sold: listings.filter(l => l.status === 'sold').length,
+        totalEarnings: listings.filter(l => l.status === 'sold').reduce((sum, l) => sum + l.price_cents, 0),
+        activeCount: listings.filter(l => l.status === 'active').length,
+        soldCount: listings.filter(l => l.status === 'sold').length,
     };
 
     const handleEdit = (listing: Listing) => {
         Haptics.selectionAsync();
+        setSelectedListing(null);
         navigation.navigate('EditListing', { listingId: listing.id, listing });
     };
 
     const handleMarkSold = async (listing: Listing) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setSelectedListing(null);
         Alert.alert(
             t('marketplace.markSoldTitle', 'Mark as Sold'),
-            t('marketplace.markSoldMessage', 'This item will be marked as sold and removed from the marketplace.'),
+            t('marketplace.markSoldMessage', 'This item will be marked as sold.'),
             [
                 { text: t('common.cancel'), style: 'cancel' },
                 {
@@ -113,7 +121,6 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                             await loadListings();
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         } catch (error) {
-                            console.error('Error marking as sold:', error);
                             Alert.alert(t('common.error'), t('marketplace.errorUpdating', 'Failed to update listing'));
                         } finally {
                             setActionLoading(null);
@@ -126,9 +133,10 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
 
     const handleDelete = async (listing: Listing) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        setSelectedListing(null);
         Alert.alert(
             t('marketplace.deleteTitle', 'Delete Listing'),
-            t('marketplace.deleteMessage', 'Are you sure you want to delete this listing? This action cannot be undone.'),
+            t('marketplace.deleteMessage', 'Are you sure? This cannot be undone.'),
             [
                 { text: t('common.cancel'), style: 'cancel' },
                 {
@@ -141,7 +149,6 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                             setListings(prev => prev.filter(l => l.id !== listing.id));
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         } catch (error) {
-                            console.error('Error deleting listing:', error);
                             Alert.alert(t('common.error'), t('marketplace.errorDeleting', 'Failed to delete listing'));
                         } finally {
                             setActionLoading(null);
@@ -154,13 +161,13 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
 
     const handleReactivate = async (listing: Listing) => {
         Haptics.selectionAsync();
+        setSelectedListing(null);
         setActionLoading(listing.id);
         try {
             await updateListingStatus(listing.id, 'active');
             await loadListings();
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch (error) {
-            console.error('Error reactivating:', error);
             Alert.alert(t('common.error'), t('marketplace.errorUpdating', 'Failed to update listing'));
         } finally {
             setActionLoading(null);
@@ -171,95 +178,100 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
         return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusConfig = (status: string) => {
         switch (status) {
-            case 'active': return theme.colors.success;
-            case 'sold': return theme.colors.brand.primary;
-            case 'reserved': return '#FFC107';
-            case 'removed': return 'rgba(255,255,255,0.3)';
-            default: return 'rgba(255,255,255,0.5)';
+            case 'active': return { color: theme.colors.success, label: 'LIVE' };
+            case 'sold': return { color: theme.colors.brand.primary, label: 'SOLD' };
+            case 'reserved': return { color: '#FFC107', label: 'RESERVED' };
+            case 'removed': return { color: 'rgba(255,255,255,0.3)', label: 'ARCHIVED' };
+            default: return { color: 'rgba(255,255,255,0.5)', label: status.toUpperCase() };
         }
     };
 
-    const renderItem = ({ item }: { item: Listing }) => {
+    const renderItem = ({ item, index }: { item: Listing; index: number }) => {
         const isLoading = actionLoading === item.id;
+        const isSelected = selectedListing === item.id;
+        const statusConfig = getStatusConfig(item.status);
 
         return (
-            <BlurView intensity={15} tint="dark" style={styles.listingCard}>
+            <BlurView intensity={20} tint="dark" style={[styles.productCard, index % 2 === 0 && { marginRight: 12 }]}>
                 <TouchableOpacity
-                    style={styles.listingContent}
-                    onPress={() => handleEdit(item)}
-                    disabled={isLoading}
+                    style={styles.cardInternal}
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        setSelectedListing(isSelected ? null : item.id);
+                    }}
+                    onLongPress={() => handleEdit(item)}
                     activeOpacity={0.8}
+                    disabled={isLoading}
                 >
                     {/* Image */}
                     <View style={styles.imageContainer}>
                         {item.images && item.images[0] ? (
-                            <Image source={{ uri: item.images[0] }} style={styles.listingImage} />
+                            <Image source={{ uri: item.images[0] }} style={styles.productImage} resizeMode="cover" />
                         ) : (
                             <View style={styles.imagePlaceholder}>
-                                <Text style={styles.placeholderText}>📷</Text>
+                                <Text style={styles.placeholderEmoji}>📦</Text>
                             </View>
                         )}
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-                            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+
+                        {/* Status Badge */}
+                        <View style={[styles.statusBadge, { backgroundColor: statusConfig.color }]}>
+                            <Text style={styles.statusText}>{statusConfig.label}</Text>
                         </View>
+
+                        {/* Loading Overlay */}
+                        {isLoading && (
+                            <View style={styles.imageOverlay}>
+                                <ActivityIndicator color="#FFF" />
+                            </View>
+                        )}
                     </View>
 
                     {/* Info */}
-                    <View style={styles.listingInfo}>
-                        <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
-                        <Text style={styles.listingPrice}>{formatPrice(item.price_cents)}</Text>
-                        <Text style={styles.listingMeta}>
-                            {item.category} • {item.condition}
-                        </Text>
+                    <View style={styles.productInfo}>
+                        <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={styles.productPrice}>{formatPrice(item.price_cents)}</Text>
+                        <Text style={styles.productMeta}>{item.category}</Text>
                     </View>
 
-                    {/* Loading Overlay */}
-                    {isLoading && (
-                        <View style={styles.loadingOverlay}>
-                            <ActivityIndicator color="#FFF" />
+                    {/* Quick Actions (shown when selected) */}
+                    {isSelected && !isLoading && (
+                        <View style={styles.quickActions}>
+                            <TouchableOpacity
+                                style={styles.quickAction}
+                                onPress={() => handleEdit(item)}
+                            >
+                                <PencilIcon size={16} color="#FFF" />
+                            </TouchableOpacity>
+
+                            {item.status === 'active' && (
+                                <TouchableOpacity
+                                    style={[styles.quickAction, styles.quickActionSuccess]}
+                                    onPress={() => handleMarkSold(item)}
+                                >
+                                    <CheckIcon size={16} color="#FFF" />
+                                </TouchableOpacity>
+                            )}
+
+                            {item.status === 'removed' && (
+                                <TouchableOpacity
+                                    style={[styles.quickAction, styles.quickActionSuccess]}
+                                    onPress={() => handleReactivate(item)}
+                                >
+                                    <Text style={styles.quickActionText}>↻</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            <TouchableOpacity
+                                style={[styles.quickAction, styles.quickActionDanger]}
+                                onPress={() => handleDelete(item)}
+                            >
+                                <TrashIcon size={16} color="#FFF" />
+                            </TouchableOpacity>
                         </View>
                     )}
                 </TouchableOpacity>
-
-                {/* Actions */}
-                <View style={styles.actionsRow}>
-                    {item.status === 'active' && (
-                        <>
-                            <TouchableOpacity
-                                style={styles.actionButton}
-                                onPress={() => handleEdit(item)}
-                                disabled={isLoading}
-                            >
-                                <Text style={styles.actionText}>{t('common.edit', 'Edit')}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.actionButton, styles.soldButton]}
-                                onPress={() => handleMarkSold(item)}
-                                disabled={isLoading}
-                            >
-                                <Text style={[styles.actionText, styles.soldText]}>{t('marketplace.markSold', 'Mark Sold')}</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
-                    {item.status === 'removed' && (
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.reactivateButton]}
-                            onPress={() => handleReactivate(item)}
-                            disabled={isLoading}
-                        >
-                            <Text style={[styles.actionText, styles.reactivateText]}>{t('marketplace.reactivate', 'Reactivate')}</Text>
-                        </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.deleteButton]}
-                        onPress={() => handleDelete(item)}
-                        disabled={isLoading}
-                    >
-                        <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete', 'Delete')}</Text>
-                    </TouchableOpacity>
-                </View>
             </BlurView>
         );
     };
@@ -275,118 +287,137 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-            <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <BackButton onPress={() => {
-                        Haptics.selectionAsync();
-                        navigation.goBack();
-                    }} />
-                    <View>
-                        <Text style={styles.headerLabel}>{t('marketplace.myListings', 'MY LISTINGS').toUpperCase()}</Text>
-                        <Text style={styles.headerTitle}>{t('marketplace.inventory', 'INVENTORY')}</Text>
+            <ImageBackground
+                source={require('../../../assets/run_bg_club.jpg')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+            >
+                <View style={styles.overlay} />
+
+                <SafeAreaView style={styles.safeArea} edges={['top']}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <BackButton onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.goBack();
+                            }} />
+                            <View style={styles.headerTitles}>
+                                <Text style={styles.headerLabel}>{t('marketplace.myListings', 'MY LISTINGS').toUpperCase()}</Text>
+                                <Text style={styles.headerTitle}>{t('marketplace.inventory', 'INVENTORY')}</Text>
+                            </View>
+                        </View>
+
+                        {/* Earnings Summary */}
+                        <View style={styles.earningsContainer}>
+                            <Text style={styles.earningsLabel}>{t('marketplace.earnings', 'EARNINGS')}</Text>
+                            <Text style={styles.earningsValue}>{formatPrice(stats.totalEarnings)}</Text>
+                        </View>
                     </View>
-                </View>
 
-                {/* Stats */}
-                <View style={styles.statsRow}>
-                    <BlurView intensity={20} tint="dark" style={styles.statCard}>
-                        <Text style={styles.statValue}>{stats.total}</Text>
-                        <Text style={styles.statLabel}>{t('marketplace.total', 'TOTAL')}</Text>
-                    </BlurView>
-                    <BlurView intensity={20} tint="dark" style={styles.statCard}>
-                        <Text style={[styles.statValue, { color: theme.colors.success }]}>{stats.active}</Text>
-                        <Text style={styles.statLabel}>{t('marketplace.active', 'ACTIVE')}</Text>
-                    </BlurView>
-                    <BlurView intensity={20} tint="dark" style={styles.statCard}>
-                        <Text style={[styles.statValue, { color: theme.colors.brand.primary }]}>{stats.sold}</Text>
-                        <Text style={styles.statLabel}>{t('marketplace.sold', 'SOLD')}</Text>
-                    </BlurView>
-                </View>
+                    {/* Stats Pills */}
+                    <View style={styles.statsContainer}>
+                        <BlurView intensity={20} tint="dark" style={styles.statPill}>
+                            <Text style={styles.statValue}>{stats.activeCount}</Text>
+                            <Text style={styles.statLabel}>{t('marketplace.active', 'Active')}</Text>
+                        </BlurView>
+                        <BlurView intensity={20} tint="dark" style={styles.statPill}>
+                            <Text style={[styles.statValue, { color: theme.colors.brand.primary }]}>{stats.soldCount}</Text>
+                            <Text style={styles.statLabel}>{t('marketplace.sold', 'Sold')}</Text>
+                        </BlurView>
+                    </View>
 
-                {/* Filters */}
-                <View style={styles.filtersContainer}>
-                    <FlatList
-                        horizontal
-                        data={filters}
-                        keyExtractor={(item) => item.key}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.filtersList}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterPill,
-                                    activeFilter === item.key && styles.filterPillActive
-                                ]}
-                                onPress={() => {
-                                    Haptics.selectionAsync();
-                                    setActiveFilter(item.key);
-                                }}
-                            >
-                                <Text style={[
-                                    styles.filterText,
-                                    activeFilter === item.key && styles.filterTextActive
-                                ]}>
-                                    {item.label.toUpperCase()}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                    />
-                </View>
-
-                {/* Listings */}
-                <FlatList
-                    data={filteredListings}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            tintColor="#FFF"
-                        />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyIcon}>📦</Text>
-                            <Text style={styles.emptyTitle}>
-                                {activeFilter === 'all'
-                                    ? t('marketplace.noListings', 'No listings yet')
-                                    : t('marketplace.noListingsFilter', 'No listings with this status')}
-                            </Text>
-                            <Text style={styles.emptySubtitle}>
-                                {t('marketplace.createFirst', 'Create your first listing to start selling')}
-                            </Text>
-                            {activeFilter === 'all' && (
+                    {/* Filter Toggle */}
+                    <View style={styles.filterContainer}>
+                        <BlurView intensity={20} tint="dark" style={styles.filterWrapper}>
+                            {filters.map((filter) => (
                                 <TouchableOpacity
-                                    style={styles.createButton}
+                                    key={filter.key}
+                                    style={[
+                                        styles.filterOption,
+                                        activeFilter === filter.key && styles.filterOptionActive
+                                    ]}
                                     onPress={() => {
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                        navigation.navigate('CreateListing');
+                                        Haptics.selectionAsync();
+                                        setActiveFilter(filter.key);
                                     }}
                                 >
-                                    <Text style={styles.createButtonText}>+ {t('marketplace.createListing', 'Create Listing')}</Text>
+                                    <Text style={[
+                                        styles.filterText,
+                                        activeFilter === filter.key && styles.filterTextActive
+                                    ]}>
+                                        {filter.label.toUpperCase()}
+                                    </Text>
+                                    {filter.count > 0 && (
+                                        <View style={[
+                                            styles.filterBadge,
+                                            activeFilter === filter.key && styles.filterBadgeActive
+                                        ]}>
+                                            <Text style={styles.filterBadgeText}>{filter.count}</Text>
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
-                            )}
-                        </View>
-                    }
-                />
+                            ))}
+                        </BlurView>
+                    </View>
 
-                {/* FAB */}
-                {listings.length > 0 && (
-                    <TouchableOpacity
-                        style={styles.fab}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            navigation.navigate('CreateListing');
-                        }}
-                    >
-                        <Text style={styles.fabText}>+ {t('common.new', 'NEW')}</Text>
-                    </TouchableOpacity>
-                )}
-            </SafeAreaView>
+                    {/* Listings Grid */}
+                    <FlatList
+                        data={filteredListings}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderItem}
+                        numColumns={2}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor="#FFF"
+                            />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <View style={styles.emptyIconContainer}>
+                                    <Text style={styles.emptyIcon}>📦</Text>
+                                </View>
+                                <Text style={styles.emptyTitle}>
+                                    {activeFilter === 'all'
+                                        ? t('marketplace.noListings', 'No listings yet')
+                                        : t('marketplace.noListingsFilter', 'No items here')}
+                                </Text>
+                                <Text style={styles.emptySubtitle}>
+                                    {t('marketplace.createFirst', 'Start selling to the community')}
+                                </Text>
+                                {activeFilter === 'all' && (
+                                    <TouchableOpacity
+                                        style={styles.emptyButton}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            navigation.navigate('CreateListing');
+                                        }}
+                                    >
+                                        <Text style={styles.emptyButtonText}>+ {t('marketplace.createListing', 'CREATE LISTING')}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        }
+                    />
+
+                    {/* FAB */}
+                    {listings.length > 0 && (
+                        <TouchableOpacity
+                            style={styles.fab}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                navigation.navigate('CreateListing');
+                            }}
+                        >
+                            <Text style={styles.fabIcon}>+</Text>
+                        </TouchableOpacity>
+                    )}
+                </SafeAreaView>
+            </ImageBackground>
         </View>
     );
 };
@@ -402,15 +433,34 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    backgroundImage: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
     safeArea: {
         flex: 1,
     },
+
+    // Header
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
         paddingHorizontal: 20,
         paddingTop: 10,
         paddingBottom: 20,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitles: {
+        marginLeft: 8,
     },
     headerLabel: {
         fontSize: 10,
@@ -420,192 +470,245 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: '900',
         fontStyle: 'italic',
         color: '#FFF',
     },
-    statsRow: {
+    earningsContainer: {
+        alignItems: 'flex-end',
+    },
+    earningsLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    earningsValue: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: theme.colors.brand.primary,
+    },
+
+    // Stats
+    statsContainer: {
         flexDirection: 'row',
         paddingHorizontal: 20,
-        marginBottom: 20,
+        marginBottom: 16,
         gap: 12,
     },
-    statCard: {
-        flex: 1,
-        borderRadius: 12,
-        overflow: 'hidden',
+    statPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        padding: 16,
-        alignItems: 'center',
+        overflow: 'hidden',
+        gap: 8,
     },
     statValue: {
-        fontSize: 24,
+        fontSize: 18,
         fontWeight: '900',
         color: '#FFF',
     },
     statLabel: {
-        fontSize: 10,
-        fontWeight: '700',
+        fontSize: 11,
+        fontWeight: '600',
         color: 'rgba(255,255,255,0.5)',
-        letterSpacing: 1,
-        marginTop: 4,
+        letterSpacing: 0.5,
     },
-    filtersContainer: {
-        marginBottom: 16,
-    },
-    filtersList: {
+
+    // Filters
+    filterContainer: {
         paddingHorizontal: 20,
-        gap: 8,
+        marginBottom: 20,
     },
-    filterPill: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
+    filterWrapper: {
+        flexDirection: 'row',
+        borderRadius: 24,
+        padding: 4,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        marginRight: 8,
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
     },
-    filterPillActive: {
-        backgroundColor: theme.colors.brand.primary,
-        borderColor: theme.colors.brand.primary,
+    filterOption: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 20,
+        gap: 6,
+    },
+    filterOptionActive: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     filterText: {
         fontSize: 11,
         fontWeight: '700',
-        color: 'rgba(255,255,255,0.6)',
+        color: 'rgba(255,255,255,0.5)',
         letterSpacing: 1,
     },
     filterTextActive: {
         color: '#FFF',
+        fontWeight: '900',
     },
+    filterBadge: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    filterBadgeActive: {
+        backgroundColor: theme.colors.brand.primary,
+    },
+    filterBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#FFF',
+    },
+
+    // List
     listContent: {
         paddingHorizontal: 20,
         paddingBottom: 120,
     },
-    listingCard: {
+
+    // Product Card (matching MarketplaceScreen)
+    productCard: {
+        width: CARD_WIDTH,
         borderRadius: 16,
         overflow: 'hidden',
-        marginBottom: 16,
+        marginBottom: 12,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
-    listingContent: {
-        flexDirection: 'row',
-        padding: 12,
+    cardInternal: {
         backgroundColor: 'rgba(0,0,0,0.3)',
     },
     imageContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 8,
-        overflow: 'hidden',
+        height: 140,
+        backgroundColor: 'rgba(255,255,255,0.05)',
         position: 'relative',
     },
-    listingImage: {
+    productImage: {
         width: '100%',
         height: '100%',
     },
     imagePlaceholder: {
         width: '100%',
         height: '100%',
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    placeholderEmoji: {
+        fontSize: 32,
+        opacity: 0.5,
+    },
+    imageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    placeholderText: {
-        fontSize: 24,
-    },
     statusBadge: {
         position: 'absolute',
-        top: 4,
-        left: 4,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
+        top: 8,
+        left: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderRadius: 4,
     },
     statusText: {
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: '900',
         color: '#FFF',
         letterSpacing: 0.5,
     },
-    listingInfo: {
-        flex: 1,
-        marginLeft: 12,
-        justifyContent: 'center',
+    productInfo: {
+        padding: 12,
     },
-    listingTitle: {
-        fontSize: 14,
+    productTitle: {
+        fontSize: 13,
         fontWeight: '700',
         color: '#FFF',
         marginBottom: 4,
+        letterSpacing: 0.3,
     },
-    listingPrice: {
+    productPrice: {
         fontSize: 16,
         fontWeight: '900',
+        fontStyle: 'italic',
         color: theme.colors.brand.primary,
         marginBottom: 4,
     },
-    listingMeta: {
-        fontSize: 11,
+    productMeta: {
+        fontSize: 10,
         color: 'rgba(255,255,255,0.5)',
         textTransform: 'capitalize',
+        fontWeight: '600',
     },
-    loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+
+    // Quick Actions
+    quickActions: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        flexDirection: 'row',
+        gap: 6,
+    },
+    quickAction: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
-    actionsRow: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
+    quickActionSuccess: {
+        backgroundColor: theme.colors.success,
+        borderColor: theme.colors.success,
     },
-    actionButton: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
+    quickActionDanger: {
+        backgroundColor: '#FF4444',
+        borderColor: '#FF4444',
     },
-    actionText: {
-        fontSize: 12,
+    quickActionText: {
+        fontSize: 14,
         fontWeight: '700',
-        color: 'rgba(255,255,255,0.7)',
+        color: '#FFF',
     },
-    soldButton: {
-        borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255,255,255,0.1)',
-    },
-    soldText: {
-        color: theme.colors.success,
-    },
-    reactivateButton: {},
-    reactivateText: {
-        color: theme.colors.brand.primary,
-    },
-    deleteButton: {
-        borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255,255,255,0.1)',
-    },
-    deleteText: {
-        color: '#FF4444',
-    },
+
+    // Empty State
     emptyState: {
         alignItems: 'center',
         paddingVertical: 60,
         paddingHorizontal: 40,
     },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
     emptyIcon: {
-        fontSize: 48,
-        marginBottom: 16,
+        fontSize: 36,
     },
     emptyTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#FFF',
         marginBottom: 8,
         textAlign: 'center',
@@ -616,35 +719,40 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 24,
     },
-    createButton: {
+    emptyButton: {
         backgroundColor: theme.colors.brand.primary,
         paddingHorizontal: 24,
         paddingVertical: 14,
         borderRadius: 12,
     },
-    createButtonText: {
-        fontSize: 14,
-        fontWeight: '700',
+    emptyButtonText: {
+        fontSize: 13,
+        fontWeight: '800',
         color: '#FFF',
+        letterSpacing: 1,
     },
+
+    // FAB
     fab: {
         position: 'absolute',
         bottom: 100,
         right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: theme.colors.brand.primary,
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
         shadowColor: theme.colors.brand.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 8,
         elevation: 8,
     },
-    fabText: {
-        fontSize: 14,
-        fontWeight: '900',
+    fabIcon: {
+        fontSize: 28,
+        fontWeight: '300',
         color: '#FFF',
-        letterSpacing: 1,
+        marginTop: -2,
     },
 });

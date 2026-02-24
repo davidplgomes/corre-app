@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
-import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon } from '../../components/common/TabIcons';
+import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon, ShoppingBagIcon } from '../../components/common/TabIcons';
 
 type ProfileProps = {
     navigation: any;
@@ -56,6 +56,15 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 navigation.navigate('Wallet');
             },
             badge: stats.currentPoints || null,
+        },
+        {
+            id: 'myItems',
+            label: t('profile.myItems', 'My Items'),
+            icon: <ShoppingBagIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('MyListings');
+            },
         },
         {
             id: 'notifications',

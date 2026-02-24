@@ -22,6 +22,7 @@ import { theme } from '../../constants/theme';
 import { BackButton, Button, Input } from '../../components/common';
 import { updateListing, getListingById } from '../../services/supabase/marketplace';
 import { supabase } from '../../services/supabase/client';
+import { useAuth } from '../../contexts/AuthContext';
 
 type EditListingProps = {
     navigation: any;
@@ -50,6 +51,7 @@ const CONDITIONS = [
 
 export const EditListing: React.FC<EditListingProps> = ({ navigation, route }) => {
     const { t } = useTranslation();
+    const { user } = useAuth();
     const { listingId, listing: initialListing } = route.params;
 
     const [loading, setLoading] = useState(!initialListing);
@@ -113,7 +115,7 @@ export const EditListing: React.FC<EditListingProps> = ({ navigation, route }) =
             try {
                 // Upload image to storage
                 const uri = result.assets[0].uri;
-                const filename = `listing_${listingId}_${Date.now()}.jpg`;
+                const filename = `${user?.id}/${listingId}_${Date.now()}.jpg`;
                 const response = await fetch(uri);
                 const blob = await response.blob();
 
@@ -121,26 +123,13 @@ export const EditListing: React.FC<EditListingProps> = ({ navigation, route }) =
                     .from('marketplace-images')
                     .upload(filename, blob, { contentType: 'image/jpeg' });
 
-                if (error) {
-                    // Try avatars bucket as fallback
-                    const { data: fallbackData, error: fallbackError } = await supabase.storage
-                        .from('avatars')
-                        .upload(`marketplace/${filename}`, blob, { contentType: 'image/jpeg' });
+                if (error) throw error;
 
-                    if (fallbackError) throw fallbackError;
+                const { data: urlData } = supabase.storage
+                    .from('marketplace-images')
+                    .getPublicUrl(filename);
 
-                    const { data: urlData } = supabase.storage
-                        .from('avatars')
-                        .getPublicUrl(`marketplace/${filename}`);
-
-                    setImages(prev => [...prev, urlData.publicUrl]);
-                } else {
-                    const { data: urlData } = supabase.storage
-                        .from('marketplace-images')
-                        .getPublicUrl(filename);
-
-                    setImages(prev => [...prev, urlData.publicUrl]);
-                }
+                setImages(prev => [...prev, urlData.publicUrl]);
 
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {

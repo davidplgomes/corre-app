@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
-    Image,
     Alert,
     ActivityIndicator,
-    Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
 import { VerifiedIcon } from '../../components/common/TabIcons';
@@ -21,73 +21,89 @@ type SellerOnboardingProps = {
     navigation: any;
 };
 
+type OnboardingStatus = 'loading' | 'not_created' | 'pending' | 'active';
+
 export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { session } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<'pending' | 'active'>('pending');
+    const [status, setStatus] = useState<OnboardingStatus>('loading');
 
-    const handleOnboarding = async () => {
+    // Check status on mount and when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            checkOnboardingStatus();
+        }, [])
+    );
+
+    const checkOnboardingStatus = async () => {
+        if (!session?.access_token) return;
+
         setLoading(true);
         try {
-            // 1. Call Edge Function to get Onboarding Link
-            // Since we don't have this function yet, we'll simulate the "Link Creation" 
-            // In production: Create Stripe account via API, get account link, open in browser.
+            const { data, error } = await supabase.functions.invoke('stripe-connect-onboarding', {
+                body: { action: 'status' },
+            });
 
-            Alert.alert(
-                t('seller.demoMode', 'Modo de Demonstração'),
-                t('seller.demoDescription', 'Em produção, isso redirecionaria para o Stripe Connect Onboarding.\n\nPara fins de teste, vamos ativar sua conta agora.'),
-                [
-                    { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
-                    { text: t('seller.simulateActivation', 'Simular Ativação'), onPress: simulateActivation }
-                ]
-            );
+            if (error) throw error;
 
-        } catch (error: any) {
-            console.error('Onboarding error:', error);
-            Alert.alert(t('common.error'), t('seller.onboardingFailed', 'Falha ao iniciar onboarding'));
+            if (data.status === 'active' && data.charges_enabled) {
+                setStatus('active');
+                // Account is ready, go back to previous screen
+                Alert.alert(
+                    t('common.success'),
+                    t('seller.accountReady', 'Your seller account is ready! You can now create listings.'),
+                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+            } else if (data.status === 'pending') {
+                setStatus('pending');
+            } else {
+                setStatus('not_created');
+            }
+        } catch (error) {
+            console.error('Error checking status:', error);
+            setStatus('not_created');
         } finally {
             setLoading(false);
         }
     };
 
-    const simulateActivation = async () => {
-        if (!user) return;
+    const handleOnboarding = async () => {
+        if (!session?.access_token) {
+            Alert.alert(t('common.error'), t('common.pleaseLogin', 'Please log in to continue'));
+            return;
+        }
+
         setLoading(true);
         try {
-            // Check if seller account exists
-            const { data: existing } = await supabase
-                .from('seller_accounts')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
+            // Call edge function to create Stripe Connect account and get onboarding URL
+            const { data, error } = await supabase.functions.invoke('stripe-connect-onboarding', {
+                body: { action: status === 'pending' ? 'refresh' : 'create' },
+            });
 
-            if (existing) {
-                await supabase
-                    .from('seller_accounts')
-                    .update({
-                        charges_enabled: true,
-                        payouts_enabled: true,
-                        onboarding_complete: true
-                    })
-                    .eq('user_id', user.id);
+            if (error) throw error;
+
+            if (data.url) {
+                // Open Stripe onboarding in browser
+                const result = await WebBrowser.openAuthSessionAsync(
+                    data.url,
+                    'corre://stripe-connect-return'
+                );
+
+                if (result.type === 'success' || result.type === 'dismiss') {
+                    // Check status after returning from onboarding
+                    await checkOnboardingStatus();
+                }
             } else {
-                await supabase
-                    .from('seller_accounts')
-                    .insert({
-                        user_id: user.id,
-                        stripe_account_id: `acct_simulated_${Date.now()}`,
-                        charges_enabled: true,
-                        payouts_enabled: true,
-                        onboarding_complete: true
-                    });
+                throw new Error('No onboarding URL returned');
             }
 
-            Alert.alert(t('common.success'), t('seller.accountActivated', 'Sua conta de vendedor foi ativada.'));
-            navigation.goBack();
-        } catch (error) {
-            console.error(error);
-            Alert.alert(t('common.error'), t('seller.activationFailed', 'Falha ao ativar conta simulada'));
+        } catch (error: any) {
+            console.error('Onboarding error:', error);
+            Alert.alert(
+                t('common.error'),
+                t('seller.onboardingFailed', 'Failed to start onboarding. Please try again.')
+            );
         } finally {
             setLoading(false);
         }
@@ -123,16 +139,26 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
 
                 <View style={styles.footer}>
                     <TouchableOpacity
-                        style={styles.button}
+                        style={[styles.button, (loading || status === 'loading') && styles.buttonDisabled]}
                         onPress={handleOnboarding}
-                        disabled={loading}
+                        disabled={loading || status === 'loading'}
                     >
-                        {loading ? (
+                        {loading || status === 'loading' ? (
                             <ActivityIndicator color="#000" />
                         ) : (
-                            <Text style={styles.buttonText}>{t('seller.connectAccount', 'CONECTAR CONTA').toUpperCase()}</Text>
+                            <Text style={styles.buttonText}>
+                                {status === 'pending'
+                                    ? t('seller.continueSetup', 'CONTINUE SETUP').toUpperCase()
+                                    : t('seller.connectAccount', 'CONNECT ACCOUNT').toUpperCase()
+                                }
+                            </Text>
                         )}
                     </TouchableOpacity>
+                    {status === 'pending' && (
+                        <Text style={styles.pendingHint}>
+                            {t('seller.pendingHint', 'Your setup is incomplete. Tap above to continue.')}
+                        </Text>
+                    )}
                 </View>
             </SafeAreaView>
         </View>
@@ -225,5 +251,14 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontSize: 16,
         letterSpacing: 1,
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+    },
+    pendingHint: {
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 12,
     },
 });

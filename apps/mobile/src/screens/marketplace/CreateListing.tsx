@@ -109,13 +109,13 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
             } as any;
 
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('avatars') // Using avatars bucket temporary if marketplace-images doesn't exist, strictly this is wrong but works for demo if bucket public
+                .from('marketplace-images')
                 .upload(fileName, fileData, { upsert: false });
 
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
+                .from('marketplace-images')
                 .getPublicUrl(fileName);
 
             // 3. Create Listing
