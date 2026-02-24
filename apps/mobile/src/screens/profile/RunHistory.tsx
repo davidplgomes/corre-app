@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
-import { ClockIcon, ChevronRightIcon } from '../../components/common/TabIcons';
+import { ClockIcon, ChevronRightIcon, TrendingUpIcon, TrophyIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { getUserRuns, formatPace as formatRunPace, formatDuration as formatRunDuration } from '../../services/supabase/runs';
 import { getUserCheckIns } from '../../services/supabase/checkins';
@@ -268,6 +268,38 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                                 <Text style={styles.headerTitle}>ACTIVITIES</Text>
                             </View>
                         </View>
+                    </View>
+
+                    {/* Quick Actions - Stats & Records */}
+                    <View style={styles.quickActionsRow}>
+                        <TouchableOpacity
+                            style={styles.quickActionButton}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('RunningStats');
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={20} tint="dark" style={styles.quickActionBlur}>
+                                <TrendingUpIcon size={18} color={theme.colors.brand.primary} />
+                                <Text style={styles.quickActionText}>{t('profile.statistics', 'STATISTICS')}</Text>
+                                <ChevronRightIcon size={14} color="rgba(255,255,255,0.4)" />
+                            </BlurView>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.quickActionButton}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('PersonalRecords');
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <BlurView intensity={20} tint="dark" style={styles.quickActionBlur}>
+                                <TrophyIcon size={18} color="#FFD700" />
+                                <Text style={styles.quickActionText}>{t('profile.personalRecords', 'RECORDS')}</Text>
+                                <ChevronRightIcon size={14} color="rgba(255,255,255,0.4)" />
+                            </BlurView>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Stats Row */}
@@ -615,5 +647,34 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '700',
         color: STRAVA_ORANGE,
+    },
+
+    // Quick Actions
+    quickActionsRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 12,
+        gap: 10,
+    },
+    quickActionButton: {
+        flex: 1,
+    },
+    quickActionBlur: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+        overflow: 'hidden',
+        gap: 8,
+    },
+    quickActionText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#FFF',
+        letterSpacing: 0.5,
     },
 });

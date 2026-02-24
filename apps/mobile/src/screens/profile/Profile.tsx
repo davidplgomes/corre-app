@@ -48,16 +48,6 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
     const menuItems = [
         {
-            id: 'wallet',
-            label: t('profile.wallet'),
-            icon: <CardIcon size={20} color="#FFF" />,
-            onPress: () => {
-                Haptics.selectionAsync();
-                navigation.navigate('Wallet');
-            },
-            badge: stats.currentPoints || null,
-        },
-        {
             id: 'myItems',
             label: t('profile.myItems', 'My Items'),
             icon: <ShoppingBagIcon size={20} color="#FFF" />,
@@ -65,6 +55,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('MyListings');
             },
+            badge: null,
         },
         {
             id: 'notifications',

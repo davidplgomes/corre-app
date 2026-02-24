@@ -129,82 +129,210 @@ Deno.serve(async (req: Request) => {
             }
 
             case "payment_intent.succeeded": {
-                // One-time payment for marketplace purchases
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
-                const userId = paymentIntent.metadata.user_id;
+                const paymentType = paymentIntent.metadata.type;
 
-                if (!userId) {
-                    console.warn("payment_intent.succeeded without user_id in metadata");
-                    break;
-                }
+                if (paymentType === "marketplace_order") {
+                    // ─── Marketplace Purchase (Connect Destination Charge) ───
+                    const { data: mktOrder } = await supabase
+                        .from("marketplace_orders")
+                        .select("id, listing_id, buyer_id, seller_id")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
 
-                // Find the order by payment intent ID
-                const { data: order } = await supabase
-                    .from("orders")
-                    .select("id, user_id, total_amount")
-                    .eq("stripe_payment_intent_id", paymentIntent.id)
-                    .single();
+                    if (mktOrder) {
+                        await supabase
+                            .from("marketplace_orders")
+                            .update({
+                                status: "paid",
+                                paid_at: new Date().toISOString(),
+                            })
+                            .eq("id", mktOrder.id);
 
-                if (order) {
-                    // Mark order as paid
-                    await supabase
-                        .from("orders")
-                        .update({
-                            status: "paid",
-                            paid_at: new Date().toISOString(),
-                        })
-                        .eq("id", order.id);
+                        // Mark the listing as sold
+                        await supabase
+                            .from("marketplace_listings")
+                            .update({
+                                status: "sold",
+                                updated_at: new Date().toISOString(),
+                            })
+                            .eq("id", mktOrder.listing_id);
 
-                    console.log(`Order ${order.id} marked as paid via webhook`);
+                        console.log(`Marketplace order ${mktOrder.id} paid, listing ${mktOrder.listing_id} marked sold`);
+                    } else {
+                        console.warn(`No marketplace_order found for payment_intent: ${paymentIntent.id}`);
+                    }
                 } else {
-                    console.warn(`No order found for payment_intent: ${paymentIntent.id}`);
+                    // ─── Shop Purchase (Platform Direct Charge) ───
+                    const userId = paymentIntent.metadata.user_id;
+                    if (!userId) {
+                        console.warn("payment_intent.succeeded without user_id in metadata");
+                        break;
+                    }
+
+                    const { data: order } = await supabase
+                        .from("orders")
+                        .select("id, user_id, total_amount")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
+
+                    if (order) {
+                        await supabase
+                            .from("orders")
+                            .update({
+                                status: "paid",
+                                paid_at: new Date().toISOString(),
+                            })
+                            .eq("id", order.id);
+
+                        console.log(`Shop order ${order.id} marked as paid via webhook`);
+                    } else {
+                        console.warn(`No shop order found for payment_intent: ${paymentIntent.id}`);
+                    }
                 }
                 break;
             }
 
             case "payment_intent.payment_failed": {
-                // Payment failed for marketplace purchase
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
-                const userId = paymentIntent.metadata.user_id;
+                const paymentType = paymentIntent.metadata.type;
+                const failureMsg = paymentIntent.last_payment_error?.message || "Payment failed";
 
-                if (!userId) {
-                    console.warn("payment_intent.payment_failed without user_id in metadata");
+                if (paymentType === "marketplace_order") {
+                    // ─── Marketplace Payment Failed ───
+                    const { data: mktOrder } = await supabase
+                        .from("marketplace_orders")
+                        .select("id, listing_id")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
+
+                    if (mktOrder) {
+                        await supabase
+                            .from("marketplace_orders")
+                            .update({
+                                status: "payment_failed",
+                                failure_reason: failureMsg,
+                            })
+                            .eq("id", mktOrder.id);
+
+                        console.log(`Marketplace order ${mktOrder.id} marked as failed: ${failureMsg}`);
+                    } else {
+                        console.warn(`No marketplace_order found for failed payment_intent: ${paymentIntent.id}`);
+                    }
+                } else {
+                    // ─── Shop Payment Failed ───
+                    const userId = paymentIntent.metadata.user_id;
+                    if (!userId) {
+                        console.warn("payment_intent.payment_failed without user_id in metadata");
+                        break;
+                    }
+
+                    const { data: order } = await supabase
+                        .from("orders")
+                        .select("id, user_id, points_used")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
+
+                    if (order) {
+                        await supabase
+                            .from("orders")
+                            .update({
+                                status: "payment_failed",
+                                failure_reason: failureMsg,
+                            })
+                            .eq("id", order.id);
+
+                        // Refund points if they were used
+                        if (order.points_used && order.points_used > 0) {
+                            await supabase.rpc("add_points_with_ttl", {
+                                p_user_id: order.user_id,
+                                p_points: order.points_used,
+                                p_source_type: "purchase_refund",
+                                p_source_id: order.id,
+                                p_description: "Refund: Payment failed",
+                            });
+                            console.log(`Shop order ${order.id} failed, ${order.points_used} points refunded`);
+                        } else {
+                            console.log(`Shop order ${order.id} marked as failed (no points to refund)`);
+                        }
+                    } else {
+                        console.warn(`No shop order found for failed payment_intent: ${paymentIntent.id}`);
+                    }
+                }
+                break;
+            }
+
+            case "charge.refunded": {
+                const charge = event.data.object as Stripe.Charge;
+                const piId = charge.payment_intent as string;
+                if (!piId) break;
+
+                // Try shop orders first
+                const { data: shopOrder } = await supabase
+                    .from("orders")
+                    .select("id")
+                    .eq("stripe_payment_intent_id", piId)
+                    .single();
+
+                if (shopOrder) {
+                    await supabase
+                        .from("orders")
+                        .update({ status: "refunded" })
+                        .eq("id", shopOrder.id);
+                    console.log(`Shop order ${shopOrder.id} marked as refunded`);
                     break;
                 }
 
-                // Find the order by payment intent ID
-                const { data: order } = await supabase
-                    .from("orders")
-                    .select("id, user_id, points_used")
-                    .eq("stripe_payment_intent_id", paymentIntent.id)
+                // Try marketplace orders
+                const { data: mktOrder } = await supabase
+                    .from("marketplace_orders")
+                    .select("id")
+                    .eq("stripe_payment_intent_id", piId)
                     .single();
 
-                if (order) {
-                    // Mark order as failed
+                if (mktOrder) {
+                    await supabase
+                        .from("marketplace_orders")
+                        .update({ status: "refunded" })
+                        .eq("id", mktOrder.id);
+                    console.log(`Marketplace order ${mktOrder.id} marked as refunded`);
+                }
+                break;
+            }
+
+            case "charge.dispute.created": {
+                const dispute = event.data.object as Stripe.Dispute;
+                const piId = dispute.payment_intent as string;
+                if (!piId) break;
+
+                // Flag the order for admin review
+                const { data: shopOrder } = await supabase
+                    .from("orders")
+                    .select("id")
+                    .eq("stripe_payment_intent_id", piId)
+                    .single();
+
+                if (shopOrder) {
                     await supabase
                         .from("orders")
-                        .update({
-                            status: "payment_failed",
-                            failure_reason: paymentIntent.last_payment_error?.message || "Payment failed",
-                        })
-                        .eq("id", order.id);
+                        .update({ status: "disputed" })
+                        .eq("id", shopOrder.id);
+                    console.log(`Shop order ${shopOrder.id} flagged as disputed`);
+                    break;
+                }
 
-                    // Refund points if they were used
-                    if (order.points_used && order.points_used > 0) {
-                        await supabase.rpc("add_points_with_ttl", {
-                            p_user_id: order.user_id,
-                            p_points: order.points_used,
-                            p_source_type: "purchase_refund",
-                            p_source_id: order.id,
-                            p_description: "Refund: Payment failed",
-                        });
+                const { data: mktOrder } = await supabase
+                    .from("marketplace_orders")
+                    .select("id")
+                    .eq("stripe_payment_intent_id", piId)
+                    .single();
 
-                        console.log(`Order ${order.id} marked as failed, ${order.points_used} points refunded`);
-                    } else {
-                        console.log(`Order ${order.id} marked as failed (no points to refund)`);
-                    }
-                } else {
-                    console.warn(`No order found for failed payment_intent: ${paymentIntent.id}`);
+                if (mktOrder) {
+                    await supabase
+                        .from("marketplace_orders")
+                        .update({ status: "disputed" })
+                        .eq("id", mktOrder.id);
+                    console.log(`Marketplace order ${mktOrder.id} flagged as disputed`);
                 }
                 break;
             }

@@ -1,13 +1,13 @@
 // Edge Function to create Payment Intent for Marketplace Orders
 // Deploy: `supabase functions deploy create-marketplace-payment`
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@13.0.0?target=deno'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@14.14.0?target=deno";
 
-console.log("Marketplace Payment Function Up!")
+console.log("Marketplace Payment Function Up!");
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
     // CORS
     if (req.method === 'OPTIONS') {
         return new Response('ok', {

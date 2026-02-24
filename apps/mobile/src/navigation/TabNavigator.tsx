@@ -41,6 +41,10 @@ import { NotificationsScreen } from '../screens/notifications/NotificationsScree
 import { EventWaitlistScreen } from '../screens/events/EventWaitlistScreen';
 import { PartnerCouponScreen } from '../screens/loyalty/PartnerCouponScreen';
 import { ReferralScreen } from '../screens/referral/ReferralScreen';
+import { RunningStats, PersonalRecords, GoalsScreen } from '../screens/stats';
+import { RewardsHistory } from '../screens/wallet/RewardsHistory';
+import { HelpSupport } from '../screens/support/HelpSupport';
+import { EventResults } from '../screens/events/EventResults';
 import { CalendarIcon, TrophyIcon, CardIcon, PersonIcon, ShoppingBagIcon, FeedIcon, HomeIcon } from '../components/common/TabIcons';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../constants/theme';
@@ -54,6 +58,7 @@ export type EventsStackParamList = {
     EventParticipants: { eventId: string; eventTitle: string };
     UserProfile: { userId: string };
     EventWaitlist: undefined;
+    EventResults: { eventId: string; eventTitle?: string };
 };
 
 export type FeedStackParamList = {
@@ -68,6 +73,9 @@ export type LoyaltyStackParamList = {
     MerchantScanner: undefined;
     Coupons: undefined;
     PartnerCoupons: { partnerId?: string };
+    Wallet: undefined;
+    RewardsHistory: undefined;
+    RunHistory: undefined;
 };
 
 export type MarketplaceStackParamList = {
@@ -101,6 +109,12 @@ export type ProfileStackParamList = {
     GuestPass: undefined;
     WelcomeKit: undefined;
     Referral: undefined;
+    // Stats & Goals
+    RunningStats: undefined;
+    PersonalRecords: undefined;
+    Goals: undefined;
+    RewardsHistory: undefined;
+    HelpSupport: undefined;
     // Seller Dashboard
     MyListings: undefined;
     CreateListing: undefined;
@@ -135,6 +149,7 @@ const EventsStackNavigator: React.FC = () => (
         <EventsStack.Screen name="EventParticipants" component={EventParticipants} />
         <EventsStack.Screen name="UserProfile" component={UserProfile} />
         <EventsStack.Screen name="EventWaitlist" component={EventWaitlistScreen} />
+        <EventsStack.Screen name="EventResults" component={EventResults} />
     </EventsStack.Navigator>
 );
 
@@ -155,6 +170,9 @@ const LoyaltyStackNavigator: React.FC = () => (
         <LoyaltyStack.Screen name="MerchantScanner" component={MerchantScanner} />
         <LoyaltyStack.Screen name="Coupons" component={Coupons} />
         <LoyaltyStack.Screen name="PartnerCoupons" component={PartnerCouponScreen} />
+        <LoyaltyStack.Screen name="Wallet" component={WalletScreen} />
+        <LoyaltyStack.Screen name="RewardsHistory" component={RewardsHistory} />
+        <LoyaltyStack.Screen name="RunHistory" component={RunHistory} />
     </LoyaltyStack.Navigator>
 );
 
@@ -194,6 +212,12 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="GuestPass" component={GuestPassScreen} />
         <ProfileStack.Screen name="WelcomeKit" component={WelcomeKitScreen} />
         <ProfileStack.Screen name="Referral" component={ReferralScreen} />
+        {/* Stats & Goals */}
+        <ProfileStack.Screen name="RunningStats" component={RunningStats} />
+        <ProfileStack.Screen name="PersonalRecords" component={PersonalRecords} />
+        <ProfileStack.Screen name="Goals" component={GoalsScreen} />
+        <ProfileStack.Screen name="RewardsHistory" component={RewardsHistory} />
+        <ProfileStack.Screen name="HelpSupport" component={HelpSupport} />
         {/* Seller Dashboard */}
         <ProfileStack.Screen name="MyListings" component={MyListings} />
         <ProfileStack.Screen name="CreateListing" component={CreateListing} />

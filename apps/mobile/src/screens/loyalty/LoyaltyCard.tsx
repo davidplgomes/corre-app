@@ -24,7 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { theme, tierColors, levelColors } from '../../constants/theme';
 import { DigitalCard } from '../../components/loyalty/DigitalCard';
-import { QRCodeIcon, GiftIcon, ClockIcon } from '../../components/common/TabIcons';
+import { QRCodeIcon, GiftIcon, ClockIcon, CardIcon } from '../../components/common/TabIcons';
 
 type LoyaltyCardProps = {
     navigation: any;
@@ -210,15 +210,15 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
 
                         <TouchableOpacity
                             style={styles.actionWrapper}
-                            onPress={() => navigation.navigate('RunHistory')}
+                            onPress={() => navigation.navigate('Wallet')}
                             activeOpacity={0.8}
                         >
                             <BlurView intensity={20} tint="dark" style={styles.actionBlur}>
                                 <View style={styles.actionContent}>
                                     <View style={styles.actionIconContainer}>
-                                        <ClockIcon size={24} color="#FFF" />
+                                        <CardIcon size={24} color="#FFF" />
                                     </View>
-                                    <Text style={styles.actionLabel}>{t('loyalty.history').toUpperCase()}</Text>
+                                    <Text style={styles.actionLabel}>{t('profile.wallet', 'WALLET').toUpperCase()}</Text>
                                 </View>
                             </BlurView>
                         </TouchableOpacity>

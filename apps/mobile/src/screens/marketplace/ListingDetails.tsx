@@ -41,7 +41,7 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
         const fetchListing = async () => {
             try {
                 const { data, error } = await supabase
-                    .from('marketplace_items')
+                    .from('marketplace_listings')
                     .select('*, seller:users!seller_id(id, full_name, avatar_url, membership_tier)')
                     .eq('id', id)
                     .single();

@@ -14,11 +14,11 @@ import { PlanType } from '../../types/subscription.types';
 import { Skeleton } from '../../components/common';
 import {
     CalendarIcon,
-    TrophyIcon,
     CardIcon,
     ChevronRightIcon,
     MapIcon,
-    RunIcon
+    RunIcon,
+    FireIcon
 } from '../../components/common/TabIcons';
 import { TierBadge } from '../../components/profile';
 import { TierKey } from '../../constants/tiers';
@@ -314,9 +314,9 @@ export const HomeScreen = ({ navigation }: any) => {
                             onPress={() => navigation.navigate('Events')}
                         />
                         <QuickAction
-                            icon={TrophyIcon}
-                            label={t('leaderboard.title')}
-                            onPress={() => navigation.navigate('Feed', { screen: 'Leaderboard', params: { from: 'Home' }, initial: false })}
+                            icon={FireIcon}
+                            label={t('profile.goals', 'Goals')}
+                            onPress={() => navigation.navigate('Profile', { screen: 'Goals', initial: false })}
                         />
                     </View>
 

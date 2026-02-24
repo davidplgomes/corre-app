@@ -720,3 +720,68 @@ export const CheckIcon: React.FC<IconProps> = ({
         />
     </Svg>
 );
+
+// Share Icon
+export const ShareIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Circle cx="18" cy="5" r="3" stroke={color} strokeWidth="1.5" />
+        <Circle cx="6" cy="12" r="3" stroke={color} strokeWidth="1.5" />
+        <Circle cx="18" cy="19" r="3" stroke={color} strokeWidth="1.5" />
+        <Path
+            d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+// Fire Icon (Streak)
+export const FireIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M12 2c.5 2.5 2 4.5 2 7a4 4 0 11-8 0c0-2.5 2-5.5 3-7 .5 1.5 1.5 2.5 2 3 .5-1.5 1-3 1-3z"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        <Path
+            d="M12 22c4.5 0 7-2.5 7-7 0-3.5-2.5-6-4-7.5-.5 2-1.5 3.5-3 5-1.5-1.5-2.5-3-3-5-1.5 1.5-4 4-4 7.5 0 4.5 2.5 7 7 7z"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+// Trending Up Icon
+export const TrendingUpIcon: React.FC<IconProps> = ({
+    size = 24,
+    color = '#FFFFFF',
+}) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M23 6l-9.5 9.5-5-5L1 18"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        <Path
+            d="M17 6h6v6"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);

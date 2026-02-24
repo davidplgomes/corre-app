@@ -289,7 +289,15 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
 
                 {/* Transaction History */}
                 <View style={styles.historySection}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Recent Activity</Text>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('RewardsHistory')}
+                            style={styles.viewAllButton}
+                        >
+                            <Text style={styles.viewAllText}>View All</Text>
+                        </TouchableOpacity>
+                    </View>
                     {transactions.length === 0 ? (
                         <View style={styles.emptyState}>
                             <Ionicons name="receipt-outline" size={48} color="#666" />
@@ -509,7 +517,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#FFF',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 16,
+    },
+    viewAllButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 8,
+    },
+    viewAllText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: theme.colors.brand.primary,
     },
     earnRow: {
         flexDirection: 'row',

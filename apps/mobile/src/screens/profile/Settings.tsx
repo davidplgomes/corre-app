@@ -342,6 +342,21 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                         </View>
                     </View>
 
+                    {/* Help & Support Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>{t('settings.helpSupport', 'HELP & SUPPORT').toUpperCase()}</Text>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                navigation.navigate('HelpSupport');
+                            }}
+                        >
+                            <Text style={styles.menuItemLabel}>{t('settings.helpCenter', 'Help Center')}</Text>
+                            <ChevronRightIcon size={20} color={theme.colors.text.tertiary} />
+                        </TouchableOpacity>
+                    </View>
+
                     {/* About Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>{t('settings.version').toUpperCase()}</Text>
