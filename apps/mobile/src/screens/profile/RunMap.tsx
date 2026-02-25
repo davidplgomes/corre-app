@@ -147,7 +147,7 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                 provider={PROVIDER_DEFAULT}
                 initialRegion={mapRegion}
                 region={mapRegion}
-                customMapStyle={mapStyle} // Dark map style
+                customMapStyle={mapStyle}
             >
                 {selectedRun.source === 'event' && run?.location_lat ? (
                     <Marker coordinate={{ latitude: run.location_lat, longitude: run.location_lng }} title={selectedRun.name}>
