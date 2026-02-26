@@ -139,7 +139,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
         }
     };
 
-    const renderItem = ({ item }: { item: ShopItem | MarketplaceItem }) => {
+    const renderItem = useCallback(({ item }: { item: ShopItem | MarketplaceItem }) => {
         const isShop = viewMode === 'shop';
         const priceLabel = isShop
             ? `${(item as ShopItem).points_price} pts`
@@ -181,7 +181,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                 </TouchableOpacity>
             </BlurView>
         );
-    };
+    }, [viewMode, navigation, t]);
 
     return (
         <View style={styles.container}>
@@ -240,6 +240,14 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                                 style={styles.createButtonFloat}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
+                                    if (!isPro) {
+                                        Alert.alert(
+                                            t('marketplace.proRequired', 'Recurso Exclusivo'),
+                                            t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
+                                        );
+                                        return;
+                                    }
                                     navigation.navigate('CreateListing');
                                 }}
                             >
@@ -278,6 +286,11 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                                     </Text>
                                 </View>
                             }
+                            // Performance optimizations
+                            removeClippedSubviews={true}
+                            initialNumToRender={6}
+                            maxToRenderPerBatch={6}
+                            windowSize={5}
                         />
                     )}
 
@@ -505,7 +518,7 @@ const styles = StyleSheet.create({
     },
     actionButtonsContainer: {
         position: 'absolute',
-        bottom: 180,
+        bottom: 120,
         alignSelf: 'center',
         flexDirection: 'row',
         gap: 12,

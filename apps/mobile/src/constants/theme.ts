@@ -201,9 +201,20 @@ export const theme = {
 export const tierColors = {
     free: {
         primary: '#9E9E9E',
-        label: 'STARTER',
+        label: 'FREE',
         gradient: ['#6B7280', '#4B5563'],
     },
+    pro: {
+        primary: '#FF5722',
+        label: 'PRO',
+        gradient: ['#FF5722', '#E64A19'],
+    },
+    club: {
+        primary: '#FFD700',
+        label: 'CLUB',
+        gradient: ['#FFD700', '#FFA500'],
+    },
+    // Legacy tiers (backward compatibility)
     basico: {
         primary: '#00C853',
         label: 'BÁSICO',

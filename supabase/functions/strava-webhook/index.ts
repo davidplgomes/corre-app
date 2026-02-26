@@ -169,6 +169,8 @@ interface StravaActivity {
     average_speed: number;
     max_speed: number;
     average_heartrate?: number;
+    start_latlng?: [number, number]; // [lat, lng]
+    end_latlng?: [number, number];
     map?: {
         summary_polyline?: string;
     };
@@ -321,6 +323,8 @@ async function syncActivity(
         max_speed: activity.max_speed,
         average_heartrate: activity.average_heartrate || null,
         map_polyline: activity.map?.summary_polyline || null,
+        start_lat: activity.start_latlng?.[0] || null,
+        start_lng: activity.start_latlng?.[1] || null,
         cached_until: cachedUntil,
         synced_at: new Date().toISOString(),
     };

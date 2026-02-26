@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -10,7 +10,8 @@ import {
     Alert,
     Dimensions,
     ActivityIndicator,
-    Animated
+    Animated,
+    Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,12 +19,14 @@ import { BlurView } from 'expo-blur';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { VerifiedIcon } from '../../components/common/TabIcons';
+import { VerifiedIcon, CardIcon, CalendarIcon, ChevronRightIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { FeatureComparisonTable } from '../../components/subscription/FeatureComparisonTable';
 import { SubscriptionsApi } from '../../api/endpoints/subscriptions.api';
 import { useStripe } from '@stripe/stripe-react-native';
-import { StripeProductDisplay } from '../../types/subscription.types';
+import { StripeProductDisplay, SubscriptionInfo } from '../../types/subscription.types';
+import { supabase } from '../../services/supabase/client';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -33,18 +36,29 @@ type SubscriptionScreenProps = {
 };
 
 export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, route }) => {
-    const { t } = useTranslation();
-    const { user } = useAuth();
+    const { t, i18n } = useTranslation();
+    const { user, profile, refreshProfile } = useAuth();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+    // State
     const [loading, setLoading] = useState(false);
     const [plansLoading, setPlansLoading] = useState(true);
     const [plans, setPlans] = useState<StripeProductDisplay[]>([]);
+    const [currentSubscription, setCurrentSubscription] = useState<SubscriptionInfo | null>(null);
     const [showComparison, setShowComparison] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
 
     // Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
     const slideAnim = React.useRef(new Animated.Value(50)).current;
     const skeletonAnim = React.useRef(new Animated.Value(0.3)).current;
+
+    // Check if user has active subscription
+    const isSubscribed = currentSubscription &&
+        ['active', 'trialing'].includes(currentSubscription.status) &&
+        !currentSubscription.cancelAtPeriodEnd;
+
+    const isCancelled = currentSubscription?.cancelAtPeriodEnd === true;
 
     // Skeleton pulse animation
     useEffect(() => {
@@ -58,41 +72,54 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         return () => pulse.stop();
     }, []);
 
-    useEffect(() => {
-        const fetchPlans = async () => {
-            try {
-                const response = await SubscriptionsApi.getProducts();
-                if (response.data) {
-                    setPlans(response.data);
-                } else {
-                    console.error('Failed to fetch plans:', response.error);
-                    Alert.alert(t('common.error'), t('subscription.failedToLoad', 'Failed to load subscription plans. Please try again later.'));
-                }
+    // Fetch data on focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchData();
+        }, [user?.id])
+    );
 
-                // Start Entry Animation
-                Animated.parallel([
-                    Animated.timing(fadeAnim, {
-                        toValue: 1,
-                        duration: 800,
-                        useNativeDriver: true,
-                    }),
-                    Animated.spring(slideAnim, {
-                        toValue: 0,
-                        friction: 8,
-                        tension: 40,
-                        useNativeDriver: true,
-                    }),
-                ]).start();
+    const fetchData = async () => {
+        if (!user?.id) return;
 
-            } catch (error) {
-                console.error('Error fetching plans:', error);
-                Alert.alert(t('common.error'), t('subscription.failedToLoad', 'Failed to load plans'));
-            } finally {
-                setPlansLoading(false);
+        try {
+            setPlansLoading(true);
+
+            // Fetch current subscription and plans in parallel
+            const [subResponse, plansResponse] = await Promise.all([
+                SubscriptionsApi.getCurrentSubscription(user.id),
+                SubscriptionsApi.getProducts()
+            ]);
+
+            if (subResponse.data) {
+                setCurrentSubscription(subResponse.data);
             }
-        };
-        fetchPlans();
-    }, []);
+
+            if (plansResponse.data) {
+                setPlans(plansResponse.data);
+            }
+
+            // Start Entry Animation
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(slideAnim, {
+                    toValue: 0,
+                    friction: 8,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+
+        } catch (error) {
+            console.error('Error fetching subscription data:', error);
+        } finally {
+            setPlansLoading(false);
+        }
+    };
 
     const handleSubscribe = async (plan: StripeProductDisplay) => {
         if (!user?.id) {
@@ -101,6 +128,8 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         }
 
         setLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
         try {
             // 1. Create subscription on backend -> get clientSecret
             const { data, error } = await SubscriptionsApi.createSubscription({
@@ -118,7 +147,7 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 defaultBillingDetails: {
                     email: user.email,
                 },
-                returnURL: 'correapp://stripe-redirect', // Ensure this is configured in creating configs
+                returnURL: 'correapp://stripe-redirect',
             });
 
             if (initError) {
@@ -130,20 +159,45 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
 
             if (paymentError) {
                 if (paymentError.code === 'Canceled') {
-                    // User cancelled, do nothing
                     return;
                 }
                 throw new Error(paymentError.message);
             }
 
-            // 4. Success!
+            // 4. Success! Wait for webhook to process
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Fallback: Update tier directly if webhook is delayed
+            if (user?.id) {
+                const { data: currentSub } = await supabase
+                    .from('subscriptions')
+                    .select('status')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (currentSub && ['active', 'trialing'].includes(currentSub.status)) {
+                    const tierName = plan.name.toLowerCase().includes('club') ? 'club' : 'pro';
+                    await supabase
+                        .from('users')
+                        .update({ membership_tier: tierName })
+                        .eq('id', user.id);
+                }
+            }
+
+            await refreshProfile();
+            await fetchData();
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert(
-                t('subscription.success', 'Success! 🎉'),
+                t('subscription.success', 'Welcome to the Club! 🎉'),
                 t('subscription.successMessage', { plan: plan.name, defaultValue: `You are now subscribed to ${plan.name}!\n\nYour subscription is now active.` }),
-                [{ text: t('common.ok', 'OK'), onPress: () => navigation.goBack() }]
+                [{ text: t('common.ok', 'OK') }]
             );
         } catch (error) {
             console.error('Subscription error:', error);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(
                 t('common.error'),
                 error instanceof Error ? error.message : t('subscription.failedToProcess', 'Failed to process subscription')
@@ -151,6 +205,67 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCancelSubscription = async () => {
+        if (!currentSubscription?.stripeSubscriptionId) return;
+
+        Alert.alert(
+            t('subscription.cancelTitle', 'Cancel Subscription?'),
+            t('subscription.cancelMessage', 'Your subscription will remain active until the end of the current billing period. You will lose access to premium features after that date.'),
+            [
+                { text: t('common.no', 'No'), style: 'cancel' },
+                {
+                    text: t('common.yes', 'Yes, Cancel'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        setCancelLoading(true);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+                        try {
+                            const response = await SubscriptionsApi.cancelSubscription(
+                                currentSubscription.stripeSubscriptionId!
+                            );
+
+                            if (response.error) {
+                                throw new Error(response.error.message);
+                            }
+
+                            await refreshProfile();
+                            await fetchData();
+
+                            Alert.alert(
+                                t('subscription.cancelled', 'Subscription Cancelled'),
+                                t('subscription.cancelledMessage', 'Your subscription has been cancelled. You will have access until the end of your billing period.')
+                            );
+                        } catch (error) {
+                            console.error('Cancel error:', error);
+                            Alert.alert(
+                                t('common.error'),
+                                error instanceof Error ? error.message : t('subscription.cancelFailed', 'Failed to cancel subscription')
+                            );
+                        } finally {
+                            setCancelLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleContactSupport = () => {
+        Haptics.selectionAsync();
+        Linking.openURL('mailto:support@correapp.com?subject=Subscription%20Support');
+    };
+
+    const formatDate = (dateString: string | null) => {
+        if (!dateString) return '—';
+        const date = new Date(dateString);
+        return date.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
     };
 
     const renderFeature = (text: string) => (
@@ -162,6 +277,188 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         </View>
     );
 
+    // ==================== ACTIVE SUBSCRIPTION VIEW ====================
+    const renderActiveSubscription = () => {
+        if (!currentSubscription) return null;
+
+        const planName = currentSubscription.planName || profile?.membershipTier || 'Pro';
+        const isClub = planName.toLowerCase().includes('club');
+        const isPro = planName.toLowerCase().includes('pro');
+        const accentColor = isClub ? '#FFD700' : theme.colors.brand.primary;
+
+        return (
+            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+                {/* Current Plan Card */}
+                <View style={[styles.currentPlanCard, { borderColor: accentColor }]}>
+                    {isClub ? (
+                        <LinearGradient
+                            colors={['rgba(255, 215, 0, 0.15)', 'rgba(0,0,0,0)']}
+                            style={StyleSheet.absoluteFill}
+                        />
+                    ) : (
+                        <LinearGradient
+                            colors={['rgba(255, 87, 34, 0.15)', 'rgba(0,0,0,0)']}
+                            style={StyleSheet.absoluteFill}
+                        />
+                    )}
+
+                    {/* Plan Badge */}
+                    <View style={styles.currentPlanHeader}>
+                        <LinearGradient
+                            colors={isClub ? ['#FFD700', '#FFA500'] : [theme.colors.brand.primary, theme.colors.brand.secondary]}
+                            style={styles.currentPlanBadge}
+                        >
+                            <Text style={[styles.currentPlanBadgeText, isClub && { color: '#000' }]}>
+                                {planName.toUpperCase()}
+                            </Text>
+                        </LinearGradient>
+
+                        {isCancelled && (
+                            <View style={styles.cancelledBadge}>
+                                <Text style={styles.cancelledBadgeText}>
+                                    {t('subscription.cancelling', 'CANCELLING')}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Status */}
+                    <View style={styles.statusSection}>
+                        <View style={styles.statusRow}>
+                            <View style={[styles.statusDot, { backgroundColor: isCancelled ? '#FFA500' : theme.colors.success }]} />
+                            <Text style={styles.statusText}>
+                                {isCancelled
+                                    ? t('subscription.activeUntil', 'Active until end of period')
+                                    : t('subscription.active', 'Active')
+                                }
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Plan Details */}
+                    <View style={styles.planDetails}>
+                        <View style={styles.detailRow}>
+                            <View style={styles.detailIcon}>
+                                <CalendarIcon size={18} color={theme.colors.text.secondary} />
+                            </View>
+                            <View style={styles.detailContent}>
+                                <Text style={styles.detailLabel}>
+                                    {isCancelled
+                                        ? t('subscription.accessUntil', 'Access until')
+                                        : t('subscription.nextBilling', 'Next billing date')
+                                    }
+                                </Text>
+                                <Text style={styles.detailValue}>
+                                    {formatDate(currentSubscription.currentPeriodEnd)}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                            <View style={styles.detailIcon}>
+                                <CardIcon size={18} color={theme.colors.text.secondary} />
+                            </View>
+                            <View style={styles.detailContent}>
+                                <Text style={styles.detailLabel}>{t('subscription.memberSince', 'Member since')}</Text>
+                                <Text style={styles.detailValue}>
+                                    {formatDate(currentSubscription.currentPeriodStart)}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Benefits Recap */}
+                    <View style={styles.benefitsSection}>
+                        <Text style={styles.benefitsTitle}>{t('subscription.yourBenefits', 'Your Benefits')}</Text>
+                        <View style={styles.benefitsList}>
+                            {renderFeature(t('subscription.benefit1', '10% discount at partner stores'))}
+                            {renderFeature(t('subscription.benefit2', 'Priority event registration'))}
+                            {renderFeature(t('subscription.benefit3', 'Monthly rewards'))}
+                            {isClub && renderFeature(t('subscription.benefit4', 'VIP event access'))}
+                            {isClub && renderFeature(t('subscription.benefit5', 'Guest passes'))}
+                        </View>
+                    </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.actionsSection}>
+                    {/* Upgrade to Club (if on Pro) */}
+                    {isPro && !isClub && plans.find(p => p.name.toLowerCase().includes('club')) && (
+                        <TouchableOpacity
+                            style={styles.upgradeButton}
+                            onPress={() => {
+                                const clubPlan = plans.find(p => p.name.toLowerCase().includes('club'));
+                                if (clubPlan) handleSubscribe(clubPlan);
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#FFD700', '#FFA500']}
+                                style={styles.upgradeButtonGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Text style={styles.upgradeButtonText}>
+                                    {t('subscription.upgradeToClub', 'Upgrade to Club')}
+                                </Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Support Button */}
+                    <TouchableOpacity
+                        style={styles.supportButton}
+                        onPress={handleContactSupport}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.supportButtonText}>
+                            {t('subscription.contactSupport', 'Contact Support')}
+                        </Text>
+                        <ChevronRightIcon size={16} color={theme.colors.text.secondary} />
+                    </TouchableOpacity>
+
+                    {/* Cancel Button */}
+                    {!isCancelled && (
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={handleCancelSubscription}
+                            disabled={cancelLoading}
+                            activeOpacity={0.7}
+                        >
+                            {cancelLoading ? (
+                                <ActivityIndicator size="small" color="#FF4444" />
+                            ) : (
+                                <Text style={styles.cancelButtonText}>
+                                    {t('subscription.cancelSubscription', 'Cancel Subscription')}
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Resubscribe if cancelled */}
+                    {isCancelled && (
+                        <TouchableOpacity
+                            style={[styles.resubscribeButton, { backgroundColor: accentColor }]}
+                            onPress={() => {
+                                // Find the matching plan and resubscribe
+                                const matchingPlan = plans.find(p =>
+                                    p.name.toLowerCase().includes(planName.toLowerCase())
+                                );
+                                if (matchingPlan) handleSubscribe(matchingPlan);
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={[styles.resubscribeButtonText, isClub && { color: '#000' }]}>
+                                {t('subscription.resubscribe', 'Resubscribe')}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </Animated.View>
+        );
+    };
+
+    // ==================== PLAN SELECTION VIEW ====================
     const renderSkeletonCard = (index: number) => (
         <Animated.View
             key={`skeleton-${index}`}
@@ -191,16 +488,13 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
     );
 
     const renderCard = (plan: StripeProductDisplay, index: number) => {
-        // Determine style based on plan metadata or name
-        // Use lowercase name matching for style assignment specific to Corre Brand
         const planNameLower = plan.name.toLowerCase();
         const isClub = planNameLower.includes('club') || planNameLower.includes('premium');
         const isPro = planNameLower.includes('pro');
 
         const borderColor = isClub ? '#FFD700' : (isPro ? theme.colors.brand.primary : 'rgba(255,255,255,0.1)');
 
-        // Construct display price
-        const priceFormatted = new Intl.NumberFormat('pt-BR', {
+        const priceFormatted = new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
             style: 'currency',
             currency: plan.currency.toUpperCase()
         }).format(plan.amount / 100);
@@ -217,7 +511,6 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                     }
                 ]}
             >
-                {/* Popular/Best Value Badge logic handled based on metadata if available, else static for Pro */}
                 {isPro && (
                     <View style={styles.badgeContainer}>
                         <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} style={styles.badge}>
@@ -233,7 +526,6 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                     </View>
                 )}
 
-                {/* Plan Background */}
                 {isClub ? (
                     <LinearGradient
                         colors={['rgba(255, 215, 0, 0.15)', 'rgba(0,0,0,0)']}
@@ -267,10 +559,6 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                             {
                                 backgroundColor: isClub ? '#FFD700' : (isPro ? theme.colors.brand.primary : theme.colors.gray[800]),
                                 shadowColor: isClub ? '#FFD700' : (isPro ? theme.colors.brand.primary : '#000'),
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.3,
-                                shadowRadius: 8,
-                                elevation: 5
                             }
                         ]}
                         activeOpacity={0.8}
@@ -285,6 +573,48 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         );
     };
 
+    const renderPlanSelection = () => (
+        <>
+            <TouchableOpacity
+                style={styles.comparisonToggle}
+                onPress={() => setShowComparison(!showComparison)}
+            >
+                <Text style={styles.comparisonToggleText}>
+                    {showComparison ? t('subscription.viewPlans') : t('subscription.compareFeatures')}
+                </Text>
+            </TouchableOpacity>
+
+            {showComparison ? (
+                <View style={styles.comparisonContainer}>
+                    <FeatureComparisonTable />
+                </View>
+            ) : (
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={width * 0.85 + 20}
+                    decelerationRate="fast"
+                    pagingEnabled={false}
+                    nestedScrollEnabled={true}
+                >
+                    {plansLoading ? (
+                        <>
+                            {renderSkeletonCard(0)}
+                            {renderSkeletonCard(1)}
+                        </>
+                    ) : plans.length > 0 ? (
+                        plans.map((plan, index) => renderCard(plan, index))
+                    ) : (
+                        <View style={{ width: width - 40, alignItems: 'center', justifyContent: 'center', height: 200 }}>
+                            <Text style={{ color: theme.colors.text.secondary }}>{t('subscription.noPlansAvailable')}</Text>
+                        </View>
+                    )}
+                </ScrollView>
+            )}
+        </>
+    );
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -294,14 +624,12 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         onPress={() => {
                             const from = route.params?.from;
                             if (from === 'Home') {
-                                // Hard reset the stack to just contain ProfileMain
                                 navigation.dispatch(
                                     CommonActions.reset({
                                         index: 0,
                                         routes: [{ name: 'ProfileMain' }],
                                     })
                                 );
-                                // Then switch to Home tab
                                 navigation.navigate('Home');
                             } else {
                                 navigation.navigate('ProfileMain');
@@ -309,27 +637,20 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         }}
                     />
                     <View>
-                        <Text style={styles.headerLabel}>{t('subscription.plans')}</Text>
-                        <Text style={styles.headerTitle}>{t('subscription.title')}</Text>
+                        <Text style={styles.headerLabel}>
+                            {isSubscribed ? t('subscription.manage', 'MANAGE') : t('subscription.plans')}
+                        </Text>
+                        <Text style={styles.headerTitle}>
+                            {isSubscribed ? t('subscription.yourPlan', 'Your Plan') : t('subscription.title')}
+                        </Text>
                     </View>
                 </View>
 
-                {/* Content ScrollView */}
                 <ScrollView
                     style={{ flex: 1 }}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isSubscribed ? 20 : 0 }}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Toggle Button for Comparison */}
-                    <TouchableOpacity
-                        style={styles.comparisonToggle}
-                        onPress={() => setShowComparison(!showComparison)}
-                    >
-                        <Text style={styles.comparisonToggleText}>
-                            {showComparison ? t('subscription.viewPlans') : t('subscription.compareFeatures')}
-                        </Text>
-                    </TouchableOpacity>
-
                     {loading && (
                         <View style={styles.loadingOverlay}>
                             <ActivityIndicator size="large" color={theme.colors.brand.primary} />
@@ -337,33 +658,14 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         </View>
                     )}
 
-                    {showComparison ? (
-                        <View style={styles.comparisonContainer}>
-                            <FeatureComparisonTable />
+                    {plansLoading ? (
+                        <View style={{ padding: 20 }}>
+                            {renderSkeletonCard(0)}
                         </View>
+                    ) : isSubscribed || isCancelled ? (
+                        renderActiveSubscription()
                     ) : (
-                        <ScrollView
-                            contentContainerStyle={styles.scrollContent}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            snapToInterval={width * 0.85 + 20}
-                            decelerationRate="fast"
-                            pagingEnabled={false}
-                            nestedScrollEnabled={true}
-                        >
-                            {plansLoading ? (
-                                <>
-                                    {renderSkeletonCard(0)}
-                                    {renderSkeletonCard(1)}
-                                </>
-                            ) : plans.length > 0 ? (
-                                plans.map((plan, index) => renderCard(plan, index))
-                            ) : (
-                                <View style={{ width: width - 40, alignItems: 'center', justifyContent: 'center', height: 200 }}>
-                                    <Text style={{ color: theme.colors.text.secondary }}>{t('subscription.noPlansAvailable')}</Text>
-                                </View>
-                            )}
-                        </ScrollView>
+                        renderPlanSelection()
                     )}
                 </ScrollView>
             </SafeAreaView>
@@ -399,9 +701,172 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: '#FFF',
     },
+
+    // Current Plan Styles
+    currentPlanCard: {
+        backgroundColor: theme.colors.background.elevated,
+        borderRadius: 24,
+        overflow: 'hidden',
+        borderWidth: 2,
+        marginBottom: 20,
+    },
+    currentPlanHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 20,
+        paddingBottom: 0,
+        gap: 12,
+    },
+    currentPlanBadge: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    currentPlanBadgeText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '900',
+        letterSpacing: 2,
+    },
+    cancelledBadge: {
+        backgroundColor: 'rgba(255, 165, 0, 0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
+    cancelledBadgeText: {
+        color: '#FFA500',
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    statusSection: {
+        padding: 20,
+        paddingTop: 16,
+    },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    statusText: {
+        color: theme.colors.text.secondary,
+        fontSize: 14,
+    },
+    planDetails: {
+        paddingHorizontal: 20,
+        gap: 16,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    detailIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    detailContent: {
+        flex: 1,
+    },
+    detailLabel: {
+        color: theme.colors.text.tertiary,
+        fontSize: 12,
+        marginBottom: 2,
+    },
+    detailValue: {
+        color: theme.colors.text.primary,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    benefitsSection: {
+        padding: 20,
+        paddingTop: 24,
+    },
+    benefitsTitle: {
+        color: theme.colors.text.secondary,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 12,
+    },
+    benefitsList: {
+        gap: 4,
+    },
+
+    // Actions Section
+    actionsSection: {
+        gap: 12,
+    },
+    upgradeButton: {
+        borderRadius: 25,
+        overflow: 'hidden',
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    upgradeButtonGradient: {
+        height: 54,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    upgradeButtonText: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    supportButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: theme.colors.background.elevated,
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.border.default,
+    },
+    supportButtonText: {
+        color: theme.colors.text.primary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    cancelButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+    },
+    cancelButtonText: {
+        color: '#FF4444',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    resubscribeButton: {
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    resubscribeButtonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+
+    // Plan Selection Styles (existing)
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom: 60, // Increased padding
+        paddingBottom: 60,
         alignItems: 'center',
     },
     cardContainer: {
@@ -409,19 +874,10 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background.elevated,
         borderRadius: 24,
         marginRight: 20,
-        // minHeight removed to allow content to dictate height
         overflow: 'hidden',
         position: 'relative',
         borderWidth: 1,
         borderColor: theme.colors.border.subtle,
-    },
-    clubContainer: {
-        borderColor: 'transparent',
-        transform: [{ scale: 1.02 }], // Slight pop
-    },
-    clubBorder: {
-        ...StyleSheet.absoluteFillObject,
-        opacity: 0.3,
     },
     cardContent: {
         padding: 30,
@@ -465,11 +921,6 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         alignItems: 'flex-start',
     },
-    featureBullet: {
-        color: theme.colors.success,
-        marginRight: 10,
-        fontSize: 16,
-    },
     featureText: {
         color: theme.colors.text.primary,
         fontSize: 14,
@@ -482,6 +933,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 30,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     subButtonText: {
         color: '#FFF',
@@ -526,7 +981,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    // Badge Styles
     badgeContainer: {
         position: 'absolute',
         top: 20,

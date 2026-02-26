@@ -46,7 +46,7 @@ const CONDITIONS = [
 
 export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
@@ -72,6 +72,15 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
     const handleCreate = async () => {
         if (!user) return;
+        const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
+        if (!isPro) {
+            Alert.alert(
+                t('marketplace.proRequired', 'Recurso Exclusivo'),
+                t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
+            );
+            return;
+        }
+
         if (!title || !price || !category.value || !condition.value || !image) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(

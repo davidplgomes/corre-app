@@ -47,7 +47,7 @@ type StatusFilter = 'all' | 'active' | 'sold' | 'removed';
 
 export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -175,7 +175,10 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     };
 
     const formatPrice = (cents: number) => {
-        return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+        return new Intl.NumberFormat('en-IE', {
+            style: 'currency',
+            currency: 'EUR',
+        }).format(cents / 100);
     };
 
     const getStatusConfig = (status: string) => {
@@ -394,6 +397,14 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                                         style={styles.emptyButton}
                                         onPress={() => {
                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
+                                            if (!isPro) {
+                                                Alert.alert(
+                                                    t('marketplace.proRequired', 'Recurso Exclusivo'),
+                                                    t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
+                                                );
+                                                return;
+                                            }
                                             navigation.navigate('CreateListing');
                                         }}
                                     >
@@ -410,6 +421,14 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                             style={styles.fab}
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
+                                if (!isPro) {
+                                    Alert.alert(
+                                        t('marketplace.proRequired', 'Recurso Exclusivo'),
+                                        t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
+                                    );
+                                    return;
+                                }
                                 navigation.navigate('CreateListing');
                             }}
                         >

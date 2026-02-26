@@ -37,7 +37,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
     const [guestEmail, setGuestEmail] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const isClubMember = profile?.membershipTier === 'baixa_pace';
+    const isClubMember = profile?.membershipTier === 'club';
 
     const loadData = useCallback(async () => {
         if (!user?.id) return;
@@ -157,15 +157,32 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                     </View>
 
                     {guestPass?.used_at ? (
-                        <View style={styles.passUsed}>
-                            <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-                            <View style={styles.passUsedInfo}>
-                                <Text style={styles.passUsedLabel}>Invited</Text>
-                                <Text style={styles.passUsedName}>{guestPass.guest_name}</Text>
-                                {guestPass.event && (
-                                    <Text style={styles.passUsedEvent}>{guestPass.event.title}</Text>
-                                )}
+                        <View style={styles.passUsedContainer}>
+                            <View style={styles.passUsed}>
+                                <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+                                <View style={styles.passUsedInfo}>
+                                    <Text style={styles.passUsedLabel}>Invited</Text>
+                                    <Text style={styles.passUsedName}>{guestPass.guest_name}</Text>
+                                    {guestPass.event && (
+                                        <Text style={styles.passUsedEvent}>{guestPass.event.title}</Text>
+                                    )}
+                                </View>
                             </View>
+                            {guestPass.verification_code && (
+                                <View style={styles.verificationCodeContainer}>
+                                    <Text style={styles.verificationLabel}>CHECK-IN CODE</Text>
+                                    <Text style={styles.verificationCode}>{guestPass.verification_code}</Text>
+                                    <Text style={styles.verificationHint}>
+                                        Show this code at the event entrance
+                                    </Text>
+                                    {guestPass.checked_in_at && (
+                                        <View style={styles.checkedInBadge}>
+                                            <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                                            <Text style={styles.checkedInText}>Checked in</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
                         </View>
                     ) : (
                         <View style={styles.passAvailable}>
@@ -223,7 +240,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                 presentationStyle="pageSheet"
                 onRequestClose={() => setShowInviteModal(false)}
             >
-                <View style={styles.modalContainer}>
+                <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Invite a Guest</Text>
                         <TouchableOpacity onPress={() => setShowInviteModal(false)}>
@@ -244,7 +261,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Guest Email (Optional)</Text>
+                            <Text style={styles.inputLabel}>Guest Email *</Text>
                             <TextInput
                                 style={styles.input}
                                 value={guestEmail}
@@ -254,6 +271,9 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
+                            <Text style={styles.inputHint}>
+                                The check-in code will be sent to this email
+                            </Text>
                         </View>
 
                         <View style={styles.inputGroup}>
@@ -291,10 +311,10 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                         <Button
                             title={submitting ? "Sending..." : "Send Guest Pass"}
                             onPress={handleUseGuestPass}
-                            disabled={submitting || !guestName.trim() || !selectedEvent}
+                            disabled={submitting || !guestName.trim() || !guestEmail.trim() || !selectedEvent}
                         />
                     </View>
-                </View>
+                </SafeAreaView>
             </Modal>
         </SafeAreaView>
     );
@@ -386,6 +406,50 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: 'rgba(255,255,255,0.8)',
         marginTop: 2,
+    },
+    passUsedContainer: {
+        gap: 16,
+    },
+    verificationCodeContainer: {
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    verificationLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.6)',
+        letterSpacing: 2,
+        marginBottom: 8,
+    },
+    verificationCode: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#FFF',
+        letterSpacing: 4,
+        fontFamily: 'monospace',
+    },
+    verificationHint: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.7)',
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    checkedInBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        marginTop: 12,
+        gap: 6,
+    },
+    checkedInText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#10B981',
     },
     passAvailable: {
         alignItems: 'center',
@@ -523,6 +587,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
+    },
+    inputHint: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 8,
+        fontStyle: 'italic',
     },
     eventOption: {
         flexDirection: 'row',

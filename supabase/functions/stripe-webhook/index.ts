@@ -75,15 +75,60 @@ Deno.serve(async (req: Request) => {
             case "customer.subscription.updated": {
                 const subscription = event.data.object as Stripe.Subscription;
 
-                await supabase
+                // Get the price ID to determine the correct tier
+                const priceId = subscription.items.data[0]?.price?.id;
+
+                const { data: sub } = await supabase
                     .from("subscriptions")
                     .update({
                         status: subscription.status,
                         cancel_at_period_end: subscription.cancel_at_period_end,
                         current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
                         current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                        plan_id: priceId, // Store the price ID for reference
                     })
-                    .eq("stripe_subscription_id", subscription.id);
+                    .eq("stripe_subscription_id", subscription.id)
+                    .select("user_id")
+                    .single();
+
+                if (sub?.user_id) {
+                    let newTier = "free";
+                    if (["active", "trialing"].includes(subscription.status)) {
+                        // Map price ID to tier - check product metadata or price ID naming
+                        const priceLower = priceId?.toLowerCase() || "";
+                        if (priceLower.includes("club")) {
+                            newTier = "club";
+                        } else if (priceLower.includes("pro")) {
+                            newTier = "pro";
+                        } else {
+                            // Fallback: check product name from Stripe
+                            const productId = subscription.items.data[0]?.price?.product;
+                            if (productId && typeof productId === "string") {
+                                try {
+                                    const product = await stripe.products.retrieve(productId);
+                                    const productName = product.name?.toLowerCase() || "";
+                                    if (productName.includes("club")) {
+                                        newTier = "club";
+                                    } else if (productName.includes("pro")) {
+                                        newTier = "pro";
+                                    } else {
+                                        newTier = "pro"; // Default paid tier
+                                    }
+                                } catch (e) {
+                                    console.warn("Could not fetch product, defaulting to pro:", e);
+                                    newTier = "pro";
+                                }
+                            } else {
+                                newTier = "pro"; // Default paid tier
+                            }
+                        }
+                    }
+                    await supabase
+                        .from("users")
+                        .update({ membership_tier: newTier })
+                        .eq("id", sub.user_id);
+                    console.log(`Updated user ${sub.user_id} tier to ${newTier} (price: ${priceId}) via subscription.updated`);
+                }
 
                 break;
             }
@@ -91,13 +136,23 @@ Deno.serve(async (req: Request) => {
             case "customer.subscription.deleted": {
                 const subscription = event.data.object as Stripe.Subscription;
 
-                await supabase
+                const { data: sub } = await supabase
                     .from("subscriptions")
                     .update({
                         status: "canceled",
                         cancel_at_period_end: false,
                     })
-                    .eq("stripe_subscription_id", subscription.id);
+                    .eq("stripe_subscription_id", subscription.id)
+                    .select("user_id")
+                    .single();
+
+                if (sub?.user_id) {
+                    await supabase
+                        .from("users")
+                        .update({ membership_tier: "free" })
+                        .eq("id", sub.user_id);
+                    console.log(`Updated user ${sub.user_id} tier to free via subscription.deleted`);
+                }
 
                 break;
             }

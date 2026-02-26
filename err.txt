@@ -1,0 +1,53 @@
+Initialising login role...
+Connecting to remote database...
+Do you want to push these migrations to the remote database?
+ • 002_rls_policies.sql
+ • 003_functions.sql
+ • 004_user_trigger.sql
+ • 20240116_create_features.sql
+ • 20240116_fix_marketplace_fk.sql
+ • 20240119_create_friendships.sql
+ • 20240122_add_bio_city.sql
+ • 20240122_add_instagram.sql
+ • 20240122_add_privacy_settings.sql
+ • 20240122_create_likes_comments.sql
+ • 20240122_enable_pg_cron.sql
+ • 20240123_add_avatar_storage_policies.sql
+ • 20240123_fix_avatar_policy.sql
+ • 20260126_create_runs_table.sql
+ • 20260126_loyalty_system.sql
+ • 20260126_marketplace_schema.sql
+ • 20260126_monthly_coupons.sql
+ • 20260126_postgis_checkin.sql
+ • 20260126_secure_runs.sql
+ • 20260126_strava_integration.sql
+ • 20260127_monetization_schema.sql
+ • 20260205_wallet_and_infrastructure.sql
+ • 20260206_referral_system.sql
+ • 20260207_referral_subscription_reward.sql
+ • 20260211_subscriptions_transactions_chats.sql
+ • 20260212_partner_coupons.sql
+ • 20260213_strava_compliance.sql
+ • 20260220_add_onboarding_completed.sql
+ • 20260223_strava_athlete_info.sql
+ • 20260224_marketplace_images_storage.sql
+ • 20260224_production_readiness.sql
+ • 20260225_fix_orders_and_payments.sql
+ • 20260225_marketplace_orders_webhook_columns.sql
+ • 20260225_seed_marketplace_listings.sql
+ • 20260225_seed_shop_items.sql
+ • 20260225_strava_start_coordinates.sql
+
+ [Y/n] y
+Applying migration 002_rls_policies.sql...
+ERROR: policy "Users can view own profile" for table "users" already exists (SQLSTATE 42710)
+At statement: 6                                                                             
+-- ============================================================================             
+-- USERS TABLE POLICIES                                                                     
+-- ============================================================================             
+                                                                                            
+-- Users can view their own profile                                                         
+CREATE POLICY "Users can view own profile"                                                  
+  ON public.users FOR SELECT                                                                
+  USING (auth.uid() = id)                                                                   
+Try rerunning the command with --debug to troubleshoot the error.

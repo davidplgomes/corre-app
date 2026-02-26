@@ -38,8 +38,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
     }
 
     const handleRedeem = async () => {
-        // 1. If Community Item -> Pay with Stripe
-        const isCommunity = !product.points_price && !product.points;
+        // Determine item type based on explicit properties
+        // Community items have price_cents (EUR), Shop items have points_price
+        const hasPointsPrice = (product.points_price !== undefined && product.points_price > 0) ||
+                               (product.points !== undefined && product.points > 0);
+        const isCommunity = !hasPointsPrice && product.price_cents !== undefined && product.price_cents > 0;
         const listingId = product.id;
 
         if (isCommunity) {

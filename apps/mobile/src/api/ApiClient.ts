@@ -59,8 +59,16 @@ class ApiClient {
             const duration = Date.now() - startTime;
 
             if (error) {
-                logger.error('API', `Edge function error: ${functionName}`, error, { duration });
-                return this.createErrorResponse(error.message, 'EDGE_FUNCTION_ERROR');
+                // Try to extract detailed error from response body
+                const errorDetails = data?.error || data?.message || error.message;
+                const errorCode = data?.code || 'EDGE_FUNCTION_ERROR';
+                logger.error('API', `Edge function error: ${functionName}`, error, {
+                    duration,
+                    responseData: data,
+                    details: errorDetails,
+                    code: errorCode
+                });
+                return this.createErrorResponse(errorDetails, errorCode);
             }
 
             logger.info('API', `Edge function success: ${functionName}`, { duration });

@@ -9,7 +9,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserJoinedEvents } from '../../services/supabase/events';
 import { getFeedPosts } from '../../services/supabase/feed';
 import { getWeatherForEvent, getCurrentLocationWeather, formatWeather } from '../../services/weather';
-import { SubscriptionsApi } from '../../api/endpoints/subscriptions.api';
 import { PlanType } from '../../types/subscription.types';
 import { Skeleton } from '../../components/common';
 import {
@@ -63,7 +62,15 @@ export const HomeScreen = ({ navigation }: any) => {
 
     const [nextRuns, setNextRuns] = useState<any[]>([]);
     const [latestPost, setLatestPost] = useState<any>(null);
-    const [userPlan, setUserPlan] = useState<PlanType>('free');
+
+    // Use membership tier directly from profile (synced with database)
+    // Map legacy tiers to current plan types for display
+    const rawTier = profile?.membershipTier || 'free';
+    const userPlan: PlanType = rawTier === 'club' || rawTier === 'baixa_pace' || rawTier === 'parceiros'
+        ? 'club'
+        : rawTier === 'pro' || rawTier === 'basico'
+            ? 'pro'
+            : 'free';
 
     const loadData = useCallback(async () => {
         try {
@@ -134,21 +141,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 setLatestPost(null);
             }
 
-            // Load user subscription plan
-            if (user?.id) {
-                try {
-                    const response = await SubscriptionsApi.getCurrentSubscription(user.id);
-                    if (response.data && response.data.planName) {
-                        const planName = response.data.planName.toLowerCase();
-                        setUserPlan(planName as PlanType);
-                    } else {
-                        setUserPlan('free');
-                    }
-                } catch (e) {
-                    console.error('Error loading user plan:', e);
-                    setUserPlan('free');
-                }
-            }
+            // User plan is now taken directly from profile.membershipTier
 
         } catch (error) {
             console.error('Error loading home data:', error);

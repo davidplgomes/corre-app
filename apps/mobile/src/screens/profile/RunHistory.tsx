@@ -43,7 +43,7 @@ type RunHistoryProps = {
 const STRAVA_ORANGE = '#FC4C02';
 const EVENT_PURPLE = '#7C3AED';
 
-const RunCard = ({ item, onPress, t }: { item: RunItem; onPress: () => void; t: any }) => {
+const RunCard = React.memo(({ item, onPress, t }: { item: RunItem; onPress: () => void; t: any }) => {
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         const day = date.getDate();
@@ -126,7 +126,7 @@ const RunCard = ({ item, onPress, t }: { item: RunItem; onPress: () => void; t: 
             </TouchableOpacity>
         </BlurView>
     );
-};
+});
 
 export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
     const [runs, setRuns] = useState<RunItem[]>([]);
@@ -188,7 +188,9 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                 points: activity.points_earned || 0,
                 source: 'strava' as const,
                 name: activity.name,
-                route_data: activity.map_polyline
+                route_data: activity.map_polyline,
+                location_lat: activity.start_lat || undefined,
+                location_lng: activity.start_lng || undefined
             }));
 
             const eventCheckIns: RunItem[] = checkInsData.map(checkIn => ({
@@ -378,6 +380,11 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                                     </BlurView>
                                 ) : null
                             }
+                            // Performance optimizations
+                            removeClippedSubviews={true}
+                            initialNumToRender={10}
+                            maxToRenderPerBatch={10}
+                            windowSize={5}
                         />
                     )}
                 </SafeAreaView>

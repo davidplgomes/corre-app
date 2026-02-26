@@ -29,6 +29,8 @@ export interface StravaActivity {
     moving_time_seconds: number;
     start_date: string;
     map_polyline: string | null;
+    start_lat: number | null;
+    start_lng: number | null;
     points_earned: number;
     // Compliance & gamification fields
     cached_until?: string;
@@ -254,7 +256,7 @@ export const getStravaActivitiesWithPoints = async (limit = 20): Promise<StravaA
     try {
         const { data, error } = await supabase
             .from('strava_activities')
-            .select('id, strava_id, name, activity_type, distance_meters, moving_time_seconds, start_date, map_polyline, points_earned, cached_until, points_awarded, points_transaction_id')
+            .select('id, strava_id, name, activity_type, distance_meters, moving_time_seconds, start_date, map_polyline, start_lat, start_lng, points_earned, cached_until, points_awarded, points_transaction_id')
             .order('start_date', { ascending: false })
             .limit(limit);
 

@@ -200,6 +200,11 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
                         />
                     }
                     showsVerticalScrollIndicator={false}
+                    // Performance optimizations
+                    removeClippedSubviews={true}
+                    initialNumToRender={8}
+                    maxToRenderPerBatch={8}
+                    windowSize={5}
                 />
             </SafeAreaView>
         </View>

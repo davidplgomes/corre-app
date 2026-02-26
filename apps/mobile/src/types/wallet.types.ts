@@ -109,12 +109,25 @@ export interface GuestPass {
     event_id: string | null;
     valid_month: string;
     used_at: string | null;
+    verification_code: string | null;
+    checked_in_at: string | null;
+    checked_in_by: string | null;
     created_at: string;
     // Joined data
     event?: {
         title: string;
         event_datetime: string;
     };
+}
+
+export interface GuestPassVerification {
+    valid: boolean;
+    message: string;
+    guest_name: string | null;
+    host_name: string | null;
+    event_title: string | null;
+    event_datetime: string | null;
+    already_checked_in: boolean;
 }
 
 export interface Notification {

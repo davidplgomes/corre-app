@@ -1,4 +1,4 @@
-export type MembershipTier = 'free' | 'basico' | 'baixa_pace' | 'parceiros';
+export type MembershipTier = 'free' | 'pro' | 'club' | 'basico' | 'baixa_pace' | 'parceiros';
 export type TierKey = MembershipTier; // Alias for backward compatibility
 
 export interface TierConfig {
@@ -21,6 +21,33 @@ export const MEMBERSHIP_TIERS: Record<MembershipTier, TierConfig> = {
       'Points tracking',
     ],
   },
+  pro: {
+    name: 'Pro',
+    discount: 0.10,
+    monthlyFee: 9.99,
+    color: '#FF5722',
+    benefits: [
+      '10% discount at partner stores',
+      'Access to all events',
+      'Priority event registration',
+      'Monthly rewards',
+    ],
+  },
+  club: {
+    name: 'Club',
+    discount: 0.20,
+    monthlyFee: 19.99,
+    color: '#FFD700',
+    benefits: [
+      '20% discount at partner stores',
+      'All Pro benefits',
+      'Welcome gift (shirt + gel + race number)',
+      'Exclusive training sessions',
+      'VIP event access',
+      'Guest passes',
+    ],
+  },
+  // Legacy tiers (for backward compatibility)
   basico: {
     name: 'Básico',
     discount: 0.10,

@@ -1,0 +1,20 @@
+Initialising login role...
+Connecting to remote database...
+Found local migration files to be inserted before the last migration on remote database.
+
+Rerun the command with --include-all flag to apply these migrations:
+supabase\migrations\002_rls_policies.sql              
+supabase\migrations\20240116_fix_marketplace_fk.sql   
+supabase\migrations\20240122_add_instagram.sql        
+supabase\migrations\20240122_add_privacy_settings.sql 
+supabase\migrations\20240122_create_likes_comments.sql
+supabase\migrations\20240122_enable_pg_cron.sql       
+supabase\migrations\20240123_fix_avatar_policy.sql    
+supabase\migrations\20260126_loyalty_system.sql       
+supabase\migrations\20260126_marketplace_schema.sql   
+supabase\migrations\20260126_monthly_coupons.sql      
+supabase\migrations\20260126_postgis_checkin.sql      
+supabase\migrations\20260126_secure_runs.sql          
+supabase\migrations\20260126_strava_integration.sql   
+supabase\migrations\20260224_production_readiness.sql 
+

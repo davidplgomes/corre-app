@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
     TouchableOpacity,
     StatusBar,
-    Platform,
     Image,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
@@ -20,27 +18,6 @@ import * as Haptics from 'expo-haptics';
 type RunMapProps = {
     navigation: any;
 };
-
-// Mock Data for a Run Route
-const RUN_ROUTE = [
-    { latitude: -23.5505, longitude: -46.6333 },
-    { latitude: -23.5515, longitude: -46.6343 },
-    { latitude: -23.5525, longitude: -46.6353 },
-    { latitude: -23.5535, longitude: -46.6363 },
-    { latitude: -23.5545, longitude: -46.6353 },
-    { latitude: -23.5555, longitude: -46.6343 },
-    { latitude: -23.5565, longitude: -46.6333 },
-    { latitude: -23.5575, longitude: -46.6323 },
-    { latitude: -23.5585, longitude: -46.6313 },
-    { latitude: -23.5575, longitude: -46.6303 },
-    { latitude: -23.5565, longitude: -46.6293 },
-    { latitude: -23.5555, longitude: -46.6283 },
-    { latitude: -23.5545, longitude: -46.6293 },
-    { latitude: -23.5535, longitude: -46.6303 },
-    { latitude: -23.5525, longitude: -46.6313 },
-    { latitude: -23.5515, longitude: -46.6323 },
-    { latitude: -23.5505, longitude: -46.6333 },
-];
 
 const INITIAL_REGION = {
     latitude: -23.5545,
@@ -97,6 +74,21 @@ const getRegionForCoordinates = (points: { latitude: number, longitude: number }
     };
 };
 
+// Helper to format pace value
+const formatPaceDisplay = (pace: any): string => {
+    if (!pace) return "0'00\"";
+    // If it's already formatted (contains ' or ")
+    if (typeof pace === 'string' && (pace.includes("'") || pace.includes('"') || pace.includes(':'))) {
+        return pace;
+    }
+    // If it's a number (seconds per km), format it
+    const paceNum = typeof pace === 'number' ? pace : parseFloat(pace);
+    if (isNaN(paceNum)) return "0'00\"";
+    const minutes = Math.floor(paceNum / 60);
+    const seconds = Math.floor(paceNum % 60);
+    return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+};
+
 export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, route }) => {
     const { run } = route.params || {};
     const { t } = useTranslation();
@@ -106,7 +98,7 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
         date: run?.date ? new Date(run.date).toLocaleDateString('pt-BR', { weekday: 'short', hour: '2-digit', minute: '2-digit' }).toUpperCase() : 'TODAY, 07:30',
         distance: run?.distance || '5.2',
         time: run?.time || '28:45',
-        pace: run?.pace || "5'31\"",
+        pace: formatPaceDisplay(run?.pace),
         calories: run?.calories || '320',
         name: run?.name || t('events.morningRun').toUpperCase(),
         source: run?.source || 'manual',
@@ -115,28 +107,63 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
 
     const [actualRoute, setActualRoute] = useState<any[]>([]);
 
-    useEffect(() => {
-        if (run?.source === 'strava' && typeof run?.route_data === 'string') {
-            try {
-                const decoded = decodePolyline(run.route_data);
-                if (decoded.length > 0) setActualRoute(decoded);
-            } catch (e) {
-                console.error('Failed to decode polyline', e);
-            }
-        } else if (run?.source === 'manual' && Array.isArray(run?.route_data) && run.route_data.length > 0) {
-            const mapped = run.route_data.map((pt: any) => ({
-                latitude: pt.lat || pt.latitude,
-                longitude: pt.lng || pt.longitude
-            }));
-            setActualRoute(mapped);
-        } else if (run?.source !== 'event') {
-            setActualRoute(RUN_ROUTE); // fallback
-        }
-    }, [run]);
+    // Simplify route to reduce memory usage (keep every Nth point)
+    const simplifyRoute = useCallback((points: any[], maxPoints = 200) => {
+        if (points.length <= maxPoints) return points;
+        const step = Math.ceil(points.length / maxPoints);
+        const simplified = points.filter((_, i) => i % step === 0 || i === points.length - 1);
+        console.log(`[RunMap] Simplified route from ${points.length} to ${simplified.length} points`);
+        return simplified;
+    }, []);
 
-    const mapRegion = selectedRun.source === 'event' && run?.location_lat
-        ? { latitude: run.location_lat, longitude: run.location_lng, latitudeDelta: 0.015, longitudeDelta: 0.015 }
-        : getRegionForCoordinates(actualRoute.length > 0 ? actualRoute : RUN_ROUTE);
+    useEffect(() => {
+        let mounted = true;
+
+        const processRoute = () => {
+            // For Strava activities with polyline data
+            if (run?.source === 'strava' && run?.route_data && typeof run.route_data === 'string' && run.route_data.length > 0) {
+                try {
+                    const decoded = decodePolyline(run.route_data);
+                    if (mounted && decoded.length > 0) {
+                        setActualRoute(simplifyRoute(decoded));
+                    }
+                } catch (e) {
+                    console.error('[RunMap] Failed to decode polyline:', e);
+                }
+            }
+            // For manual runs with GPS data
+            else if (run?.source === 'manual' && Array.isArray(run?.route_data) && run.route_data.length > 0) {
+                const mapped = run.route_data.map((pt: any) => ({
+                    latitude: pt.lat || pt.latitude,
+                    longitude: pt.lng || pt.longitude
+                }));
+                if (mounted) {
+                    setActualRoute(simplifyRoute(mapped));
+                }
+            }
+        };
+
+        processRoute();
+
+        // Cleanup on unmount
+        return () => {
+            mounted = false;
+            setActualRoute([]);
+        };
+    }, [run, simplifyRoute]);
+
+    // Memoize region to prevent re-renders causing marker blinking
+    const mapRegion = useMemo(() => {
+        // For activities with route data, center on the route
+        if (actualRoute.length > 0) {
+            return getRegionForCoordinates(actualRoute);
+        }
+        // For any activity with start coordinates (Strava, events), center on that location
+        if (run?.location_lat && run?.location_lng) {
+            return { latitude: run.location_lat, longitude: run.location_lng, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+        }
+        return INITIAL_REGION;
+    }, [run?.location_lat, run?.location_lng, actualRoute]);
 
     return (
         <View style={styles.container}>
@@ -146,44 +173,69 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                 style={styles.map}
                 provider={PROVIDER_DEFAULT}
                 initialRegion={mapRegion}
-                region={mapRegion}
                 customMapStyle={mapStyle}
+                rotateEnabled={false}
+                pitchEnabled={false}
             >
-                {selectedRun.source === 'event' && run?.location_lat ? (
-                    <Marker coordinate={{ latitude: run.location_lat, longitude: run.location_lng }} title={selectedRun.name}>
+                {/* Show route with start/end markers if we have route data */}
+                {actualRoute.length > 0 && (
+                    <>
+                        <Polyline
+                            key="route-line"
+                            coordinates={actualRoute}
+                            strokeColor={theme.colors.brand.primary}
+                            strokeWidth={4}
+                        />
+                        <Marker
+                            key="start-marker"
+                            coordinate={actualRoute[0]}
+                            title="Start"
+                            tracksViewChanges={false}
+                        >
+                            <View style={styles.markerContainer}>
+                                <View style={styles.startMarker} />
+                            </View>
+                        </Marker>
+                        <Marker
+                            key="end-marker"
+                            coordinate={actualRoute[actualRoute.length - 1]}
+                            title="End"
+                            tracksViewChanges={false}
+                        >
+                            <View style={styles.markerContainer}>
+                                <View style={styles.endMarker} />
+                            </View>
+                        </Marker>
+                    </>
+                )}
+
+                {/* Show location marker if no route but we have coordinates */}
+                {actualRoute.length === 0 && run?.location_lat && run?.location_lng && (
+                    <Marker
+                        key="location-marker"
+                        coordinate={{ latitude: run.location_lat, longitude: run.location_lng }}
+                        title={selectedRun.name}
+                        tracksViewChanges={false}
+                    >
                         <View style={styles.markerContainer}>
-                            <View style={styles.eventMarker} />
+                            <View style={selectedRun.source === 'event' ? styles.eventMarker : styles.startMarker} />
                         </View>
                     </Marker>
-                ) : (
-                    actualRoute.length > 0 && (
-                        <>
-                            {/* Route Line */}
-                            <Polyline
-                                coordinates={actualRoute}
-                                strokeColor={theme.colors.brand.primary}
-                                strokeWidth={4}
-                            />
-
-                            {/* Start Marker */}
-                            <Marker coordinate={actualRoute[0]} title="Start">
-                                <View style={styles.markerContainer}>
-                                    <View style={styles.startMarker} />
-                                </View>
-                            </Marker>
-
-                            {/* End Marker */}
-                            <Marker coordinate={actualRoute[actualRoute.length - 1]} title="End">
-                                <View style={styles.markerContainer}>
-                                    <View style={styles.endMarker} />
-                                </View>
-                            </Marker>
-                        </>
-                    )
                 )}
             </MapView>
 
-            {/* Glass Wrapper for entire UIOverlay to ensure readability if map is light, though map is dark */}
+            {/* No GPS Track Message - show when no route data (but may have location point) */}
+            {actualRoute.length === 0 && (
+                <View style={styles.noTrackOverlay}>
+                    <BlurView intensity={30} tint="dark" style={styles.noTrackBadge}>
+                        <Text style={styles.noTrackText}>
+                            {run?.location_lat
+                                ? t('runMap.noRouteTrack', 'Route not recorded')
+                                : t('runMap.noGpsTrack', 'No GPS data available')}
+                        </Text>
+                    </BlurView>
+                </View>
+            )}
 
             {/* Header Overlay */}
             <SafeAreaView style={styles.headerOverlay} edges={['top']}>
@@ -199,9 +251,9 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                 </View>
             </SafeAreaView>
 
-            {/* Bottom Card - HUD Style */}
+            {/* Bottom Card - Premium Glass Style */}
             <View style={styles.bottomCardContainer}>
-                <BlurView intensity={40} tint="dark" style={styles.runCard}>
+                <BlurView intensity={30} tint="dark" style={styles.runCard}>
                     <View style={styles.glassContent}>
                         <View style={styles.cardHeader}>
                             <View style={{ flex: 1, paddingRight: 10 }}>
@@ -211,18 +263,18 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
                                         <Text style={styles.tagText}>{t('profile.completed').toUpperCase()}</Text>
                                     </View>
                                     {selectedRun.points > 0 && (
-                                        <View style={[styles.tag, { backgroundColor: theme.colors.success, marginLeft: 6 }]}>
-                                            <Text style={styles.tagText}>+{selectedRun.points} PTS</Text>
+                                        <View style={[styles.tag, { backgroundColor: theme.colors.success }]}>
+                                            <Text style={styles.tagText}>+{selectedRun.points}</Text>
                                         </View>
                                     )}
                                     {selectedRun.source === 'strava' && (
-                                        <View style={[styles.tag, { backgroundColor: '#FC4C02', marginLeft: 6 }]}>
+                                        <View style={[styles.tag, { backgroundColor: '#FC4C02' }]}>
                                             <Text style={styles.tagText}>STRAVA</Text>
                                         </View>
                                     )}
                                     {selectedRun.source === 'event' && (
-                                        <View style={[styles.tag, { backgroundColor: 'rgba(124, 58, 237, 1)', marginLeft: 6 }]}>
-                                            <Text style={styles.tagText}>{t('events.event', 'EVENT').toUpperCase()}</Text>
+                                        <View style={[styles.tag, { backgroundColor: '#7C3AED' }]}>
+                                            <Text style={styles.tagText}>EVENT</Text>
                                         </View>
                                     )}
                                 </View>
@@ -239,18 +291,18 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
 
                         <View style={styles.statsRow}>
                             <View style={styles.statItem}>
-                                <Text style={styles.statLabel}>{t('profile.distance').toUpperCase()} (KM)</Text>
-                                <Text style={styles.statValue}>{selectedRun.distance}</Text>
+                                <Text style={styles.statLabel} numberOfLines={1}>KM</Text>
+                                <Text style={styles.statValue} numberOfLines={1}>{selectedRun.distance}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
-                                <Text style={styles.statLabel}>{t('profile.time').toUpperCase()}</Text>
-                                <Text style={styles.statValue}>{selectedRun.time}</Text>
+                                <Text style={styles.statLabel} numberOfLines={1}>TIME</Text>
+                                <Text style={styles.statValue} numberOfLines={1}>{selectedRun.time}</Text>
                             </View>
                             <View style={styles.statDivider} />
                             <View style={styles.statItem}>
-                                <Text style={styles.statLabel}>PACE</Text>
-                                <Text style={styles.statValue}>{selectedRun.pace}</Text>
+                                <Text style={styles.statLabel} numberOfLines={1}>PACE</Text>
+                                <Text style={styles.statValue} numberOfLines={1}>{selectedRun.pace}</Text>
                             </View>
                         </View>
                     </View>
@@ -330,92 +382,131 @@ const styles = StyleSheet.create({
     },
     bottomCardContainer: {
         position: 'absolute',
-        bottom: 100, // Increased to clear navbar
-        left: 20,
-        right: 20,
+        bottom: 120,
+        left: 16,
+        right: 16,
+        // Premium glass shadow
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 10,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 12,
     },
     runCard: {
         borderRadius: 24,
         overflow: 'hidden',
+        // Apple-style glass border
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.15)',
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     glassContent: {
-        padding: 24,
-        backgroundColor: 'rgba(0,0,0,0.6)', // Deep dark tint
+        padding: 20,
+        // Translucent glass effect (Apple style)
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 24,
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.15)',
     },
     cardTitle: {
-        fontSize: 24,
+        fontSize: 17,
         fontWeight: '900',
-        fontStyle: 'italic',
         color: '#FFF',
         includeFontPadding: false,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        letterSpacing: 0.5,
     },
     tagRow: {
         flexDirection: 'row',
-        marginTop: 8,
+        marginTop: 6,
+        flexWrap: 'wrap',
+        gap: 6,
     },
     tag: {
-        paddingHorizontal: 8,
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 4,
+        borderRadius: 8,
+        // Glass tag effect
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     tagText: {
         color: '#FFF',
         fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
     brandStamp: {
-        // Container for logo
+        marginLeft: 8,
+        opacity: 0.9,
     },
     brandLogo: {
-        width: 120, // Increased from 80
-        height: 36, // Increased from 24
+        width: 60,
+        height: 20,
     },
     statsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
     },
     statItem: {
-        alignItems: 'flex-start',
+        alignItems: 'center',
         flex: 1,
     },
     statLabel: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.5)',
+        color: 'rgba(255,255,255,0.6)',
         fontWeight: '700',
         letterSpacing: 1,
         marginBottom: 4,
     },
     statValue: {
-        fontSize: 24,
+        fontSize: 18,
         fontWeight: '900',
-        fontStyle: 'italic',
         color: '#FFF',
         includeFontPadding: false,
     },
     statDivider: {
         width: 1,
-        height: 30,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        marginHorizontal: 10,
-        marginBottom: 2,
+        height: 28,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        marginHorizontal: 8,
+    },
+    noTrackOverlay: {
+        position: 'absolute',
+        top: '40%',
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+    },
+    noTrackBadge: {
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        overflow: 'hidden',
+    },
+    noTrackText: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 13,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
 });
 

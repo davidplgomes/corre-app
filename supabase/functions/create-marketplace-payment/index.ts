@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
             price_cents, 
             status, 
             title, 
-            seller:seller_id(id, full_name), 
+            seller:seller_id(id, full_name, membership_tier), 
             seller_account:seller_accounts!inner(stripe_account_id, charges_enabled)
         `)
             .eq('id', listing_id)
@@ -58,6 +58,11 @@ Deno.serve(async (req: Request) => {
             throw new Error('You cannot buy your own item');
         }
 
+        // Server-side block for free-tier sellers
+        if (listing.seller.membership_tier === 'free') {
+            throw new Error('Seller must be a PRO member to sell on the marketplace');
+        }
+
         // Init Stripe
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
             apiVersion: '2023-10-16',
@@ -67,20 +72,18 @@ Deno.serve(async (req: Request) => {
         const amount = listing.price_cents;
         const application_fee_amount = Math.round(amount * 0.05);
 
-        // Create Payment Intent with Destination Charge (Direct Charge logic also possible, but Destination is safer for platform liability)
-        // Using `transfer_data` creates a Direct Charge on the Connected Account? No, that's `on_behalf_of`.
-        // Let's use separate charges and transfers or destination charges.
-        // Destination Charge: Charge on Platform, transfer remainder to Connect. Best for C2C.
+        // Create Payment Intent with Separate Charges (Escrow)
+        // We hold the money in the Platform account and assign a transfer_group.
+        // We will explicitly transfer the money via `stripe.transfers.create` later (when item is delivered).
+        const orderId = crypto.randomUUID();
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount,
-            currency: 'brl',
+            amount: amount, // amount is in cents (e.g., 5000 = €50.00)
+            currency: 'eur',
             automatic_payment_methods: { enabled: true },
-            application_fee_amount: application_fee_amount,
-            transfer_data: {
-                destination: listing.seller_account.stripe_account_id,
-            },
+            transfer_group: `order_${orderId}`,
             metadata: {
+                order_id: orderId,
                 listing_id: listing.id,
                 buyer_id: user.id,
                 seller_id: listing.seller.id,
@@ -90,6 +93,7 @@ Deno.serve(async (req: Request) => {
 
         // Create Order Record (Pending)
         const { error: orderError } = await supabase.from('marketplace_orders').insert({
+            id: orderId,
             listing_id: listing.id,
             buyer_id: user.id,
             seller_id: listing.seller.id,

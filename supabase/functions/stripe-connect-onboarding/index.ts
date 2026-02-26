@@ -135,7 +135,7 @@ Deno.serve(async (req: Request) => {
                 // Create new Stripe Connect Express account
                 const account = await stripe.accounts.create({
                     type: "express",
-                    country: "BR", // Brazil
+                    country: "IE", // Ireland
                     email: userData?.email || user.email,
                     capabilities: {
                         card_payments: { requested: true },

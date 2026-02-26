@@ -246,6 +246,11 @@ export const Leaderboard: React.FC = () => {
                                 </View>
                             ) : null
                         }
+                        // Performance optimizations
+                        removeClippedSubviews={true}
+                        initialNumToRender={15}
+                        maxToRenderPerBatch={10}
+                        windowSize={5}
                     />
                 </SafeAreaView>
             </ImageBackground>

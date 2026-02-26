@@ -30,7 +30,7 @@ type ListingDetailsProps = {
 export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigation }) => {
     const { id } = route.params;
     const { user, profile } = useAuth();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
 
     const [listing, setListing] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -127,9 +127,10 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
     if (!listing) return null;
 
     const formatPrice = (cents: number) => {
-        return new Intl.NumberFormat('pt-BR', {
+        const locale = i18n.language === 'en' ? 'en-US' : (i18n.language === 'es' ? 'es-ES' : 'pt-BR');
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
-            currency: 'BRL',
+            currency: 'EUR',
         }).format(cents / 100);
     };
 

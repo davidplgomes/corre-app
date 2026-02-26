@@ -7,6 +7,7 @@ import {
     CartItem,
     Order,
     GuestPass,
+    GuestPassVerification,
     Notification
 } from '../../types';
 
@@ -458,7 +459,8 @@ export async function getCurrentGuestPass(userId: string): Promise<GuestPass | n
 }
 
 /**
- * Create or use guest pass
+ * Create or use guest pass (secure version with tier verification)
+ * Automatically sends email to guest if email is provided
  */
 export async function useGuestPass(
     userId: string,
@@ -466,30 +468,72 @@ export async function useGuestPass(
     guestEmail: string,
     eventId: string
 ): Promise<GuestPass> {
-    const now = new Date();
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-
-    const { data, error } = await supabase
-        .from('guest_passes')
-        .upsert({
-            user_id: userId,
-            valid_month: currentMonth,
-            guest_name: guestName,
-            guest_email: guestEmail,
-            event_id: eventId,
-            used_at: new Date().toISOString(),
-        }, {
-            onConflict: 'user_id,valid_month',
-        })
-        .select()
-        .single();
+    // Use secure database function that verifies tier and generates code
+    const { data, error } = await supabase.rpc('use_guest_pass_secure', {
+        p_user_id: userId,
+        p_guest_name: guestName,
+        p_guest_email: guestEmail || null,
+        p_event_id: eventId,
+    });
 
     if (error) {
         console.error('Error using guest pass:', error);
+        throw new Error(error.message || 'Failed to use guest pass');
+    }
+
+    // RPC returns array, get first item
+    const result = Array.isArray(data) ? data[0] : data;
+
+    // Fetch the full guest pass record
+    const { data: passData, error: fetchError } = await supabase
+        .from('guest_passes')
+        .select(`
+            *,
+            event:event_id (title, event_datetime)
+        `)
+        .eq('id', result.id)
+        .single();
+
+    if (fetchError) {
+        console.error('Error fetching guest pass:', fetchError);
+        throw fetchError;
+    }
+
+    // Send email to guest if email was provided
+    if (guestEmail) {
+        try {
+            await supabase.functions.invoke('send-guest-pass-email', {
+                body: { guestPassId: result.id }
+            });
+        } catch (emailError) {
+            // Don't fail the whole operation if email fails
+            console.error('Failed to send guest pass email:', emailError);
+        }
+    }
+
+    return passData as GuestPass;
+}
+
+/**
+ * Verify a guest pass by verification code (for event check-in)
+ */
+export async function verifyGuestPass(
+    verificationCode: string,
+    staffUserId?: string
+): Promise<GuestPassVerification> {
+    const { data, error } = await supabase.rpc('verify_guest_pass', {
+        p_verification_code: verificationCode.toUpperCase(),
+        p_staff_user_id: staffUserId || null,
+    });
+
+    if (error) {
+        console.error('Error verifying guest pass:', error);
         throw error;
     }
 
-    return data as GuestPass;
+    // RPC returns array, get first item
+    const result = Array.isArray(data) ? data[0] : data;
+    return result as GuestPassVerification;
 }
 
 // ============ Notification Functions ============

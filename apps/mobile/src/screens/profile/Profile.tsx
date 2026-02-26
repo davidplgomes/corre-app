@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     StatusBar,
     ImageBackground,
     Image,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -23,9 +24,22 @@ type ProfileProps = {
 
 export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { profile, user, signOut } = useAuth();
+    const { profile, user, signOut, refreshProfile } = useAuth();
+    const [refreshing, setRefreshing] = useState(false);
 
-    const tier = (profile?.membershipTier || 'basico') as keyof typeof tierColors;
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            await refreshProfile();
+        } catch (error) {
+            console.error('Error refreshing profile:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [refreshProfile]);
+
+    const tier = (profile?.membershipTier || 'free') as keyof typeof tierColors;
     const tierConfig = tierColors[tier];
 
     const handleLogout = async () => {
@@ -102,7 +116,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                 Haptics.selectionAsync();
                 navigation.navigate('GuestPass');
             },
-            highlight: tier === 'baixa_pace', // Only highlight for Club members
+            highlight: tier === 'club', // Only highlight for Club members
         },
         {
             id: 'subscription',
@@ -148,6 +162,14 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                         style={styles.scrollView}
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.scrollContent}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor={theme.colors.brand.primary}
+                                colors={[theme.colors.brand.primary]}
+                            />
+                        }
                     >
                         {/* Header */}
                         <View style={styles.headerSection}>

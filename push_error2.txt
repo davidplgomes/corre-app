@@ -1,0 +1,103 @@
+﻿node.exe : 
+Initialising login 
+role...
+No linha:1 caractere:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Initialising    
+ login role...:Stri    
+ng) [], RemoteExce    
+ption
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+Connecting to remote 
+database...
+Do you want to push 
+these migrations to 
+the remote database?
+ ÔÇó 
+002_rls_policies.sql
+ ÔÇó 003_functions.sql
+ ÔÇó 
+004_user_trigger.sql
+ ÔÇó 20240116_create_fe
+atures.sql
+ ÔÇó 20240116_fix_marke
+tplace_fk.sql
+ ÔÇó 20240119_create_fr
+iendships.sql
+ ÔÇó 20240122_add_bio_c
+ity.sql
+ ÔÇó 20240122_add_insta
+gram.sql
+ ÔÇó 20240122_add_priva
+cy_settings.sql
+ ÔÇó 20240122_create_li
+kes_comments.sql
+ ÔÇó 20240122_enable_pg
+_cron.sql
+ ÔÇó 20240123_add_avata
+r_storage_policies.sql
+ ÔÇó 20240123_fix_avata
+r_policy.sql
+ ÔÇó 20260126_create_ru
+ns_table.sql
+ ÔÇó 20260126_loyalty_s
+ystem.sql
+ ÔÇó 20260126_marketpla
+ce_schema.sql
+ ÔÇó 20260126_monthly_c
+oupons.sql
+ ÔÇó 20260126_postgis_c
+heckin.sql
+ ÔÇó 20260126_secure_ru
+ns.sql
+ ÔÇó 20260126_strava_in
+tegration.sql
+ ÔÇó 20260127_monetizat
+ion_schema.sql
+ ÔÇó 20260205_wallet_an
+d_infrastructure.sql
+ ÔÇó 20260206_referral_
+system.sql
+ ÔÇó 20260207_referral_
+subscription_reward.sql
+ ÔÇó 20260211_subscript
+ions_transactions_chats
+.sql
+ ÔÇó 20260212_partner_c
+oupons.sql
+ ÔÇó 20260213_strava_co
+mpliance.sql
+ ÔÇó 20260220_add_onboa
+rding_completed.sql
+ ÔÇó 20260223_strava_at
+hlete_info.sql
+ ÔÇó 20260224_marketpla
+ce_images_storage.sql
+ ÔÇó 20260224_productio
+n_readiness.sql
+ ÔÇó 20260225_fix_order
+s_and_payments.sql
+ ÔÇó 20260225_marketpla
+ce_orders_webhook_colum
+ns.sql
+ ÔÇó 20260225_seed_mark
+etplace_listings.sql
+ ÔÇó 20260225_seed_shop
+_items.sql
+ ÔÇó 20260225_strava_st
+art_coordinates.sql
+
+ [Y/n] context canceled
