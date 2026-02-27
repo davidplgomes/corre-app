@@ -33,11 +33,11 @@ export async function getAllCoupons(): Promise<PartnerCoupon[]> {
 /**
  * Create coupon
  */
-export async function createCoupon(coupon: Omit<PartnerCoupon, 'id' | 'created_at' | 'updated_at' | 'current_uses'>): Promise<PartnerCoupon> {
+export async function createCoupon(coupon: Omit<PartnerCoupon, 'id' | 'created_at' | 'updated_at' | 'redeemed_count'>): Promise<PartnerCoupon> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('partner_coupons')
-        .insert({ ...coupon, current_uses: 0 })
+        .insert({ ...coupon, redeemed_count: 0 })
         .select()
         .single();
 
@@ -103,7 +103,7 @@ export async function getPartnerCouponStats(partnerId: string) {
     const supabase = createClient();
 
     const [coupons, redemptions] = await Promise.all([
-        supabase.from('partner_coupons').select('id, current_uses, is_active').eq('partner_id', partnerId),
+        supabase.from('partner_coupons').select('id, redeemed_count, is_active').eq('partner_id', partnerId),
         supabase.from('coupon_redemptions')
             .select('id, partner_coupons!inner(partner_id)')
             .eq('partner_coupons.partner_id', partnerId),

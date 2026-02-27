@@ -22,6 +22,16 @@ type ProfileProps = {
     navigation: any;
 };
 
+type MenuItem = {
+    id: string;
+    label: string;
+    icon?: React.ReactNode | null;
+    onPress: () => void;
+    badge?: string | null;
+    isDestructive?: boolean;
+    highlight?: boolean;
+};
+
 export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const { profile, user, signOut, refreshProfile } = useAuth();
@@ -60,7 +70,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const userName = profile?.fullName || user?.email?.split('@')[0] || 'Corredor';
     const userInitial = userName.charAt(0).toUpperCase();
 
-    const menuItems = [
+    const menuItems: MenuItem[] = [
         {
             id: 'myItems',
             label: t('profile.myItems', 'My Items'),

@@ -10,7 +10,7 @@ export async function getAllPartners(): Promise<PartnerWithUser[]> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('partners')
-        .select('*, users(*)')
+        .select('*, users!partners_user_id_fkey(*)')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -24,7 +24,7 @@ export async function getPartnerById(partnerId: string): Promise<PartnerWithUser
     const supabase = createClient();
     const { data, error } = await supabase
         .from('partners')
-        .select('*, users(*)')
+        .select('*, users!partners_user_id_fkey(*)')
         .eq('id', partnerId)
         .single();
 

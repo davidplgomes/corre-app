@@ -13,6 +13,40 @@ import { getPartnerCoupons, getPartnerCouponStats } from '@/lib/services/coupons
 import { getEventsByCreator } from '@/lib/services/events';
 import type { PartnerPlace, PartnerCoupon, Event } from '@/types';
 
+type ActivityPoint = {
+    time: string;
+    val: number;
+};
+
+function buildActivityChart(range: '7d' | '30d', redemptionDates: string[]): ActivityPoint[] {
+    const days = range === '7d' ? 7 : 30;
+    const now = new Date();
+    const points: ActivityPoint[] = [];
+
+    for (let i = days - 1; i >= 0; i -= 1) {
+        const dayStart = new Date(now);
+        dayStart.setHours(0, 0, 0, 0);
+        dayStart.setDate(now.getDate() - i);
+
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayStart.getDate() + 1);
+
+        const val = redemptionDates.filter((d) => {
+            const t = new Date(d).getTime();
+            return t >= dayStart.getTime() && t < dayEnd.getTime();
+        }).length;
+
+        points.push({
+            time: range === '7d'
+                ? dayStart.toLocaleDateString('en-US', { weekday: 'short' })
+                : dayStart.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+            val,
+        });
+    }
+
+    return points;
+}
+
 export default function PartnerDashboardPage() {
     const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
     const [loading, setLoading] = useState(true);
@@ -24,15 +58,8 @@ export default function PartnerDashboardPage() {
         places: [] as PartnerPlace[],
         coupons: [] as PartnerCoupon[],
         events: [] as Event[],
-        activityChart: [] as any[]
+        activityChart: [] as ActivityPoint[]
     });
-
-    // Mock Activity Data for Chart (replace with real analytics if available)
-    const mockActivityData = [
-        { time: 'Mon', val: 12 }, { time: 'Tue', val: 18 }, { time: 'Wed', val: 45 },
-        { time: 'Thu', val: 28 }, { time: 'Fri', val: 55 }, { time: 'Sat', val: 42 },
-        { time: 'Sun', val: 60 },
-    ];
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -42,14 +69,23 @@ export default function PartnerDashboardPage() {
 
                 if (!session) return;
 
-                const [placesData, couponsData, eventsData, couponStats] = await Promise.all([
+                const [placesData, couponsData, eventsData, couponStats, redemptionsRes] = await Promise.all([
                     getPartnerPlaces(session.user.id),
                     getPartnerCoupons(session.user.id),
                     getEventsByCreator(session.user.id),
                     getPartnerCouponStats(session.user.id),
+                    supabase
+                        .from('coupon_redemptions')
+                        .select('redeemed_at, partner_coupons!inner(partner_id)')
+                        .eq('partner_coupons.partner_id', session.user.id),
                 ]);
 
+                if (redemptionsRes.error) throw redemptionsRes.error;
+
                 const upcomingEvents = eventsData.filter(e => new Date(e.event_datetime) > new Date());
+                const redemptionDates = (redemptionsRes.data || [])
+                    .map((r: { redeemed_at?: string | null }) => r.redeemed_at)
+                    .filter((v): v is string => Boolean(v));
 
                 setData({
                     totalPlaces: placesData.length,
@@ -59,7 +95,7 @@ export default function PartnerDashboardPage() {
                     places: placesData,
                     coupons: couponsData,
                     events: eventsData,
-                    activityChart: mockActivityData // Use real data when available
+                    activityChart: buildActivityChart(timeRange, redemptionDates)
                 });
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
@@ -282,10 +318,10 @@ export default function PartnerDashboardPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-white truncate w-24">{coupon.code}</p>
-                                            <p className="text-[10px] text-white/40">{coupon.discount_percent}% Off</p>
+                                            <p className="text-[10px] text-white/40">{coupon.discount_type === 'freebie' ? 'Freebie' : coupon.discount_type === 'fixed' ? `€${coupon.discount_value} Off` : `${coupon.discount_value}% Off`}</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs text-white/60 font-mono">{coupon.current_uses} uses</span>
+                                    <span className="text-xs text-white/60 font-mono">{coupon.redeemed_count} uses</span>
                                 </div>
                             ))}
                             {data.coupons.length === 0 && <p className="text-xs text-white/40 text-center py-4">No active coupons.</p>}
@@ -322,7 +358,7 @@ export default function PartnerDashboardPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <span className={`block px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider mb-1 w-fit ml-auto ${event.event_type === 'run' ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-white/5 text-white/40'
+                                    <span className={`block px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider mb-1 w-fit ml-auto ${event.event_type === 'routine' ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-white/5 text-white/40'
                                         }`}>
                                         {event.event_type}
                                     </span>

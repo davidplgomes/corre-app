@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
-import { getPartnerCoupons } from '@/lib/services/coupons';
+import { getPartnerCoupons, deleteCoupon, toggleCouponActive } from '@/lib/services/coupons';
 import type { PartnerCoupon } from '@/types';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Plus, Tag, Search, Filter, Loader2, Calendar, Users, Copy } from 'lucide-react';
+import { Plus, Tag, Search, Filter, Loader2, Calendar, Users, Copy, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PartnerCouponsPage() {
     const [coupons, setCoupons] = useState<PartnerCoupon[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchCoupons = async () => {
@@ -43,6 +45,33 @@ export default function PartnerCouponsPage() {
     const handleCopyCode = (code: string) => {
         navigator.clipboard.writeText(code);
         toast.success("Code copied to clipboard");
+    };
+
+    const handleDelete = async (couponId: string) => {
+        if (!confirm('Delete this coupon? This cannot be undone.')) return;
+        setDeletingId(couponId);
+        try {
+            await deleteCoupon(couponId);
+            setCoupons(prev => prev.filter(c => c.id !== couponId));
+            toast.success('Coupon deleted');
+        } catch {
+            toast.error('Failed to delete coupon');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleToggle = async (coupon: PartnerCoupon) => {
+        setTogglingId(coupon.id);
+        try {
+            const updated = await toggleCouponActive(coupon.id, !coupon.is_active);
+            setCoupons(prev => prev.map(c => c.id === coupon.id ? updated : c));
+            toast.success(updated.is_active ? 'Coupon activated' : 'Coupon deactivated');
+        } catch {
+            toast.error('Failed to update coupon');
+        } finally {
+            setTogglingId(null);
+        }
     };
 
     if (loading) {
@@ -106,7 +135,7 @@ export default function PartnerCouponsPage() {
                         <GlassCard key={coupon.id} className="group p-6 flex flex-col h-full hover:border-[#FF5722]/30 transition-all relative overflow-hidden">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="w-12 h-12 rounded-lg bg-[#FF5722]/10 flex items-center justify-center text-[#FF5722] font-black text-lg">
-                                    {coupon.discount_percent}%
+                                    {coupon.discount_type === 'freebie' ? 'FREE' : coupon.discount_type === 'fixed' ? `€${coupon.discount_value}` : `${coupon.discount_value}%`}
                                 </div>
                                 <div className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider ${coupon.is_active ? 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/20' : 'bg-white/10 text-white/40 border border-white/10'
                                     }`}>
@@ -131,7 +160,7 @@ export default function PartnerCouponsPage() {
                                             <span>Expires</span>
                                         </div>
                                         <span className="text-white/80">
-                                            {coupon.valid_until ? new Date(coupon.valid_until).toLocaleDateString() : 'No Expiry'}
+                                            {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : 'No Expiry'}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-xs">
@@ -139,11 +168,38 @@ export default function PartnerCouponsPage() {
                                             <Users className="w-3 h-3" />
                                             <span>Redemptions</span>
                                         </div>
-                                        <span className="text-white/80">
-                                            {coupon.current_uses} / {coupon.max_uses || '∞'}
-                                        </span>
+                                        <Link
+                                            href={`/partner/dashboard/coupons/${coupon.id}/redemptions`}
+                                            className="text-white/80 hover:text-[#FF5722] transition-colors underline underline-offset-2"
+                                        >
+                                            {coupon.redeemed_count} / {coupon.stock_limit || '∞'}
+                                        </Link>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="flex gap-2 pt-4 border-t border-white/5 mt-4">
+                                <Link href={`/partner/dashboard/coupons/${coupon.id}/edit`} className="flex-1">
+                                    <button className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                        <Pencil className="w-3 h-3" />
+                                        Edit
+                                    </button>
+                                </Link>
+                                <button
+                                    onClick={() => handleToggle(coupon)}
+                                    disabled={togglingId === coupon.id}
+                                    className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {togglingId === coupon.id ? <Loader2 className="w-3 h-3 animate-spin" /> : coupon.is_active ? <ToggleRight className="w-3 h-3 text-green-400" /> : <ToggleLeft className="w-3 h-3" />}
+                                    {coupon.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(coupon.id)}
+                                    disabled={deletingId === coupon.id}
+                                    className="h-8 w-8 flex items-center justify-center text-red-400/70 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {deletingId === coupon.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                </button>
                             </div>
                         </GlassCard>
                     ))}

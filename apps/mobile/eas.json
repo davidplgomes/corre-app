@@ -16,8 +16,13 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_PASSWORD_RESET_URL": "https://corre-app-web.vercel.app/auth/reset"
+      },
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       }
     }
   },

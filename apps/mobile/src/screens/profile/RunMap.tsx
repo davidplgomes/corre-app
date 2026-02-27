@@ -238,18 +238,20 @@ export const RunMap: React.FC<RunMapProps & { route: any }> = ({ navigation, rou
             )}
 
             {/* Header Overlay */}
-            <SafeAreaView style={styles.headerOverlay} edges={['top']}>
-                <View style={styles.headerRow}>
-                    <BackButton onPress={() => {
-                        Haptics.selectionAsync();
-                        navigation.goBack();
-                    }} color="#FFF" size={24} />
-                    <View style={styles.headerTitleContainer}>
-                        <Text style={styles.headerTitle}>RUN SUMMARY</Text>
-                        <Text style={styles.headerDate}>{selectedRun.date}</Text>
+            <BlurView intensity={40} tint="dark" style={styles.headerBlur}>
+                <SafeAreaView style={styles.headerOverlay} edges={['top']}>
+                    <View style={styles.headerRow}>
+                        <BackButton onPress={() => {
+                            Haptics.selectionAsync();
+                            navigation.goBack();
+                        }} color="#FFF" size={24} />
+                        <View style={styles.headerTitleContainer}>
+                            <Text style={styles.headerTitle}>RUN SUMMARY</Text>
+                            <Text style={styles.headerDate}>{selectedRun.date}</Text>
+                        </View>
                     </View>
-                </View>
-            </SafeAreaView>
+                </SafeAreaView>
+            </BlurView>
 
             {/* Bottom Card - Premium Glass Style */}
             <View style={styles.bottomCardContainer}>
@@ -320,12 +322,18 @@ const styles = StyleSheet.create({
     map: {
         flex: 1,
     },
-    headerOverlay: {
+    headerBlur: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
+        zIndex: 10,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        overflow: 'hidden',
+    },
+    headerOverlay: {
         paddingHorizontal: 20,
+        paddingBottom: 12,
     },
     headerRow: {
         marginTop: 10,
@@ -342,12 +350,18 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         textTransform: 'uppercase',
         fontStyle: 'italic',
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
     headerDate: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.6)',
+        color: 'rgba(255,255,255,0.8)',
         fontWeight: '700',
         letterSpacing: 1,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
     markerContainer: {
         alignItems: 'center',

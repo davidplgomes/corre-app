@@ -1,6 +1,9 @@
 import { supabase } from './client';
 import * as Crypto from 'expo-crypto';
 
+const PASSWORD_RESET_REDIRECT_URL =
+    process.env.EXPO_PUBLIC_PASSWORD_RESET_URL || 'https://corre-app-web.vercel.app/auth/reset';
+
 /**
  * Generate a cryptographically secure QR code secret for user
  */
@@ -87,7 +90,7 @@ export const signOut = async () => {
 export const resetPassword = async (email: string) => {
     try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: 'https://corre-app-web.vercel.app/auth/reset',
+            redirectTo: PASSWORD_RESET_REDIRECT_URL,
         });
         if (error) throw error;
     } catch (error) {

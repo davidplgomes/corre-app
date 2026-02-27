@@ -14,7 +14,7 @@ export default function NewEventPage() {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        event_type: 'run',
+        event_type: 'routine',
         event_datetime: '',
         location_name: '',
         location_lat: '',
@@ -97,10 +97,9 @@ export default function NewEventPage() {
                                 onChange={e => setFormData({ ...formData, event_type: e.target.value })}
                                 className="w-full h-12 bg-white/5 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors"
                             >
-                                <option value="run" className="bg-[#1c1c1e]">Run</option>
-                                <option value="group_run" className="bg-[#1c1c1e]">Group Run</option>
-                                <option value="coffee_run" className="bg-[#1c1c1e]">Coffee Run</option>
-                                <option value="social" className="bg-[#1c1c1e]">Social</option>
+                                <option value="routine" className="bg-[#1c1c1e]">Training Run</option>
+                                <option value="special" className="bg-[#1c1c1e]">Special Event</option>
+                                <option value="race" className="bg-[#1c1c1e]">Race</option>
                             </select>
                         </div>
                         <div className="space-y-2">

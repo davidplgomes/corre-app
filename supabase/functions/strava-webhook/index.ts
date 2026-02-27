@@ -23,7 +23,7 @@ declare const EdgeRuntime: {
 
 const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID')!;
 const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET')!;
-const STRAVA_VERIFY_TOKEN = Deno.env.get('STRAVA_VERIFY_TOKEN') || 'CORRE_STRAVA_VERIFY';
+const STRAVA_VERIFY_TOKEN = Deno.env.get('STRAVA_VERIFY_TOKEN');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -355,6 +355,11 @@ function handleVerification(url: URL): Response {
     const verifyToken = url.searchParams.get('hub.verify_token');
 
     console.log(`Verification request: mode=${mode}, token=${verifyToken ? '***' : 'missing'}`);
+
+    if (!STRAVA_VERIFY_TOKEN) {
+        console.error('STRAVA_VERIFY_TOKEN is not configured');
+        return new Response('Server misconfigured', { status: 500 });
+    }
 
     if (mode === 'subscribe' && verifyToken === STRAVA_VERIFY_TOKEN && challenge) {
         console.log('Webhook subscription verified!');

@@ -59,6 +59,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                 const { error: initError } = await initPaymentSheet({
                     merchantDisplayName: 'Corre Marketplace',
                     paymentIntentClientSecret: data.clientSecret,
+                    returnURL: 'corre://stripe-callback',
                     appearance: {
                         colors: {
                             primary: theme.colors.brand.primary,

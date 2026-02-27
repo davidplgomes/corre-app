@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: theme.spacing[5],
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: 'transparent',
     },
     text: {
         marginTop: theme.spacing[3],

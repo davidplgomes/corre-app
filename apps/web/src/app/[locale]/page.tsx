@@ -154,7 +154,7 @@ export default function Home() {
                                     <h3 className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em] uppercase">{t('sections.culture.events.header')}</h3>
                                 </div>
 
-                                <div className="pt-10 pb-32 w-full overflow-hidden">
+                                <div className="pt-10 pb-32 w-full">
                                     <UpcomingEventsDeck />
                                 </div>
                             </div>
@@ -280,7 +280,36 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* 4. Section 3: "Community // Motion" */}
+            {/* Partner CTA */}
+            <section id="partners" className="py-20 md:py-24 bg-[#050505] border-b border-white/10">
+                <div className="max-w-[1200px] mx-auto px-6">
+                    <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#101010] via-[#0D0D0D] to-[#080808] p-8 md:p-12">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+                            <div className="max-w-2xl">
+                                <p className="text-xs font-mono font-bold text-[#FF5722] tracking-[0.2em] uppercase mb-3">
+                                    {t('sections.partners.label')}
+                                </p>
+                                <h3 className="text-3xl md:text-5xl font-black italic tracking-tight text-white leading-[0.95] uppercase">
+                                    {t('sections.partners.title')}
+                                </h3>
+                                <p className="text-sm md:text-base text-white/60 mt-4">
+                                    {t('sections.partners.description')}
+                                </p>
+                            </div>
+
+                            <div className="flex-shrink-0">
+                                <Link
+                                    href="/partner/register"
+                                    className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-[#FF5722] hover:bg-[#F4511E] text-white font-bold uppercase tracking-wider transition-colors"
+                                >
+                                    {t('sections.partners.button')}
+                                    <ArrowUpRight className="w-4 h-4" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
 
 

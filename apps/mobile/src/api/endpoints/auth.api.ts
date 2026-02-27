@@ -9,6 +9,9 @@ import { logger } from '../../services/logging/Logger';
 import { ApiResponse, SignUpRequest, SignInRequest, ChangePasswordRequest, ResetEmailRequest } from '../../types/api.types';
 import { Session, User } from '@supabase/supabase-js';
 
+const PASSWORD_RESET_REDIRECT_URL =
+    process.env.EXPO_PUBLIC_PASSWORD_RESET_URL || 'https://corre-app-web.vercel.app/auth/reset';
+
 export interface AuthResult {
     user: User;
     session: Session;
@@ -149,7 +152,7 @@ class AuthApiClass {
         return apiClient.query<void>('auth.resetPassword', async () => {
             const supabase = apiClient.getSupabaseClient();
             const { error } = await supabase.auth.resetPasswordForEmail(request.email, {
-                redirectTo: 'https://corre-app-web-drab.vercel.app/auth/reset',
+                redirectTo: PASSWORD_RESET_REDIRECT_URL,
             });
 
             if (error) {

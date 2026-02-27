@@ -9,7 +9,8 @@ import {
     Modal,
     Dimensions,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -287,6 +288,15 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                                         <Text style={styles.modalPointsLabel}>{t('coupons.cost')}:</Text>
                                         <Text style={styles.modalPointsValue}>{selectedCoupon.points_required} pts</Text>
                                     </View>
+
+                                    {selectedCoupon.referral_link && (
+                                        <TouchableOpacity
+                                            style={styles.visitButton}
+                                            onPress={() => Linking.openURL(selectedCoupon.referral_link!)}
+                                        >
+                                            <Text style={styles.visitButtonText}>VISITAR PARCEIRO</Text>
+                                        </TouchableOpacity>
+                                    )}
 
                                     <View style={styles.modalActions}>
                                         <TouchableOpacity
@@ -631,5 +641,20 @@ const styles = StyleSheet.create({
     },
     useButtonDisabled: {
         backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    visitButton: {
+        width: '100%',
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.colors.brand.primary,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    visitButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: theme.colors.brand.primary,
+        letterSpacing: 1,
     },
 });

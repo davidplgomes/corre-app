@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
 import { AuthNavigator } from './AuthNavigator';
@@ -35,6 +35,21 @@ const linking: LinkingOptions<ReactNavigation.RootParamList> = {
 };
 
 const APP_VERSION = 'v1.0.5';
+
+// Dark navigation theme to prevent white/transparent background flashes
+const navTheme = {
+    ...DefaultTheme,
+    dark: true as const,
+    colors: {
+        ...DefaultTheme.colors,
+        background: theme.colors.background.primary,
+        card: theme.colors.background.primary,
+        text: theme.colors.text.primary,
+        border: theme.colors.border.default,
+        primary: theme.colors.brand.primary,
+        notification: theme.colors.brand.primary,
+    },
+};
 
 // ─── Onboarding Context ───────────────────────────────────
 // Allows ProfileSetup to signal onboarding completion,
@@ -132,7 +147,7 @@ export const RootNavigator: React.FC = () => {
     // Password recovery takes priority - show reset screen regardless of auth state
     if (isPasswordRecovery) {
         return (
-            <NavigationContainer linking={linking}>
+            <NavigationContainer linking={linking} theme={navTheme}>
                 <RecoveryStack.Navigator screenOptions={{ headerShown: false }}>
                     <RecoveryStack.Screen
                         name="ResetPassword"
@@ -154,7 +169,7 @@ export const RootNavigator: React.FC = () => {
 
     return (
         <OnboardingContext.Provider value={{ completeOnboarding }}>
-            <NavigationContainer linking={linking}>
+            <NavigationContainer linking={linking} theme={navTheme}>
                 {!user ? (
                     <AuthNavigator />
                 ) : !hasCompletedOnboarding ? (

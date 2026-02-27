@@ -8,9 +8,12 @@ const intlMiddleware = createIntlMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const isPublicPartnerRegisterRoute = pathname === '/partner/register' || pathname === '/partner/register/';
 
     // Check if this is a protected route (partner or admin dashboard)
-    const isProtectedRoute = pathname.startsWith('/partner') || pathname.startsWith('/admin');
+    const isProtectedRoute =
+        (pathname.startsWith('/partner') && !isPublicPartnerRegisterRoute) ||
+        pathname.startsWith('/admin');
     const isLoginRoute = pathname === '/login';
 
     // For protected routes, check authentication

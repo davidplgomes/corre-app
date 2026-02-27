@@ -1,4 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
+import * as Crypto from 'expo-crypto';
 import { supabase } from './client';
 
 // Ensure web browser redirects are handled properly
@@ -16,7 +17,7 @@ if (!STRAVA_CLIENT_ID) {
 const STRAVA_REDIRECT_URI = `${SUPABASE_URL}/functions/v1/strava-auth`;
 
 // App's deep link URL for receiving callbacks from the edge function
-const APP_REDIRECT_URL = 'corre-app://strava-auth';
+const APP_REDIRECT_URL = 'corre://strava-auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -78,13 +79,31 @@ export const connectStrava = async (): Promise<{ success: boolean; error?: strin
             return { success: false, error: 'Please log in first' };
         }
 
-        // Build authorization URL with user_id in state parameter
+        // Create one-time OAuth state and persist it for callback verification.
+        const state = Array.from(await Crypto.getRandomBytesAsync(24))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+
+        const { error: stateError } = await supabase
+            .from('strava_oauth_states')
+            .insert({
+                state,
+                user_id: user.id,
+                expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            });
+
+        if (stateError) {
+            console.error('Error creating Strava OAuth state:', stateError);
+            return { success: false, error: 'Unable to start Strava connection' };
+        }
+
+        // Build authorization URL with one-time state parameter
         const authUrl = `https://www.strava.com/oauth/authorize?` +
             `client_id=${STRAVA_CLIENT_ID}` +
             `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
             `&response_type=code` +
             `&scope=read,activity:read_all` +
-            `&state=${user.id}`;
+            `&state=${encodeURIComponent(state)}`;
 
         console.log('Opening Strava auth URL:', authUrl);
 
@@ -104,6 +123,8 @@ export const connectStrava = async (): Promise<{ success: boolean; error?: strin
             const errorMessages: Record<string, string> = {
                 'denied': 'Authorization was denied',
                 'missing_params': 'Missing authorization parameters',
+                'invalid_state': 'Authorization session expired or invalid. Please try again.',
+                'state_expired': 'Authorization took too long. Please try again.',
                 'token_exchange_failed': 'Failed to connect with Strava',
                 'database_error': 'Failed to save connection',
                 'unknown': 'An unknown error occurred',

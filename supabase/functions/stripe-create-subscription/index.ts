@@ -63,18 +63,29 @@ Deno.serve(async (req: Request) => {
 
         // ─── Cancel Subscription ────────────────────────────
         if (action === "cancel" && subscriptionId) {
-            await stripe.subscriptions.update(subscriptionId, {
+            const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
                 cancel_at_period_end: true,
             });
 
             // Update local DB
             await supabase
                 .from("subscriptions")
-                .update({ cancel_at_period_end: true, status: "canceled" })
+                .update({
+                    cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                    status: updatedSubscription.status,
+                    current_period_start: new Date(updatedSubscription.current_period_start * 1000).toISOString(),
+                    current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
                 .eq("stripe_subscription_id", subscriptionId)
                 .eq("user_id", user.id);
 
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({
+                success: true,
+                status: updatedSubscription.status,
+                cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+            }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
@@ -142,8 +153,10 @@ Deno.serve(async (req: Request) => {
                 plan_id: priceId,
                 plan_name: subscription.items.data[0]?.plan?.nickname || "Pro",
                 status: subscription.status,
+                cancel_at_period_end: subscription.cancel_at_period_end,
                 current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
                 current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                updated_at: new Date().toISOString(),
             }, {
                 onConflict: "stripe_subscription_id",
             });

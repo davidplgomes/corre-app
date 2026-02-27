@@ -121,6 +121,40 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         }
     };
 
+    const waitForSubscriptionActivation = async (
+        userId: string,
+        stripeSubscriptionId?: string,
+        maxAttempts = 15
+    ): Promise<'active' | 'failed' | 'timeout'> => {
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            let query = supabase
+                .from('subscriptions')
+                .select('status')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (stripeSubscriptionId) {
+                query = query.eq('stripe_subscription_id', stripeSubscriptionId);
+            }
+
+            const { data: sub, error } = await query.maybeSingle();
+            if (error) {
+                console.warn('Subscription polling error:', error);
+                continue;
+            }
+
+            const status = sub?.status;
+            if (!status) continue;
+            if (status === 'active' || status === 'trialing') return 'active';
+            if (status === 'incomplete_expired' || status === 'unpaid' || status === 'canceled') return 'failed';
+        }
+
+        return 'timeout';
+    };
+
     const handleSubscribe = async (plan: StripeProductDisplay) => {
         if (!user?.id) {
             Alert.alert(t('common.error'), t('auth.pleaseLogin', 'Please log in to subscribe'));
@@ -136,8 +170,18 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 priceId: plan.priceId
             });
 
-            if (error || !data?.clientSecret) {
+            if (error) {
                 throw new Error(error?.message || 'Failed to initialize subscription');
+            }
+
+            if (!data?.clientSecret) {
+                await fetchData();
+                await refreshProfile();
+                Alert.alert(
+                    t('subscription.processing', 'Processing'),
+                    t('subscription.processingMessage', 'Your subscription request was received. Please refresh in a moment.')
+                );
+                return;
             }
 
             // 2. Initialize Payment Sheet
@@ -147,7 +191,7 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 defaultBillingDetails: {
                     email: user.email,
                 },
-                returnURL: 'correapp://stripe-redirect',
+                returnURL: 'corre://stripe-callback',
             });
 
             if (initError) {
@@ -164,30 +208,26 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 throw new Error(paymentError.message);
             }
 
-            // 4. Success! Wait for webhook to process
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Fallback: Update tier directly if webhook is delayed
-            if (user?.id) {
-                const { data: currentSub } = await supabase
-                    .from('subscriptions')
-                    .select('status')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (currentSub && ['active', 'trialing'].includes(currentSub.status)) {
-                    const tierName = plan.name.toLowerCase().includes('club') ? 'club' : 'pro';
-                    await supabase
-                        .from('users')
-                        .update({ membership_tier: tierName })
-                        .eq('id', user.id);
-                }
-            }
+            // 4. Wait for webhook/database sync
+            const activationResult = await waitForSubscriptionActivation(
+                user.id,
+                data.subscriptionId
+            );
 
             await refreshProfile();
             await fetchData();
+
+            if (activationResult === 'failed') {
+                throw new Error(t('subscription.failedToProcess', 'Failed to process subscription'));
+            }
+
+            if (activationResult === 'timeout') {
+                Alert.alert(
+                    t('subscription.processing', 'Processing'),
+                    t('subscription.processingMessage', 'Payment was received. Your subscription is still syncing and should appear shortly.')
+                );
+                return;
+            }
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert(

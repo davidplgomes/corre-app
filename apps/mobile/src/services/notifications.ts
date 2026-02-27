@@ -1,6 +1,7 @@
 // Expo Push Notifications Service for Corre App
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase/client';
 
@@ -27,6 +28,9 @@ export interface PushNotificationData {
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
     let token: string | null = null;
+    const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        process.env.EXPO_PUBLIC_PROJECT_ID;
 
     // Check if running on physical device
     if (!Device.isDevice) {
@@ -51,7 +55,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Get the token
     try {
         const tokenData = await Notifications.getExpoPushTokenAsync({
-            projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+            projectId,
         });
         token = tokenData.data;
     } catch (error) {

@@ -9,7 +9,7 @@ export type MarketplaceItemWithUser = MarketplaceItem & { users: User };
 export async function getAllListings(): Promise<MarketplaceItemWithUser[]> {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from('marketplace_items')
+        .from('marketplace_listings')
         .select('*, users(*)')
         .order('created_at', { ascending: false });
 
@@ -27,7 +27,7 @@ export async function getAllListings(): Promise<MarketplaceItemWithUser[]> {
 export async function deleteListing(listingId: string): Promise<void> {
     const supabase = createClient();
     const { error } = await supabase
-        .from('marketplace_items')
+        .from('marketplace_listings')
         .delete()
         .eq('id', listingId);
 
@@ -40,7 +40,7 @@ export async function deleteListing(listingId: string): Promise<void> {
 export async function updateListingStatus(listingId: string, status: 'active' | 'sold'): Promise<MarketplaceItem> {
     const supabase = createClient();
     const { data, error } = await supabase
-        .from('marketplace_items')
+        .from('marketplace_listings')
         .update({ status })
         .eq('id', listingId)
         .select()

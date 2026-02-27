@@ -81,6 +81,7 @@ export const ListingDetails: React.FC<ListingDetailsProps> = ({ route, navigatio
             const { error: initError } = await initPaymentSheet({
                 merchantDisplayName: 'Corre Marketplace',
                 paymentIntentClientSecret: data.clientSecret,
+                returnURL: 'corre://stripe-callback',
                 defaultBillingDetails: {
                     name: profile?.fullName || user.user_metadata?.full_name || '',
                 },

@@ -24,6 +24,7 @@ export interface PartnerCoupon {
     redeemed_count: number;
     image_url: string | null;
     terms: string | null;
+    referral_link: string | null;
 }
 
 /**

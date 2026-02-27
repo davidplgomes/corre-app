@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { getPointTransactions, getAvailablePoints } from '../../services/supabase/wallet';
+import { getPointsHistory, getAvailablePoints } from '../../services/supabase/wallet';
 
 type RewardsHistoryProps = {
     navigation: any;
@@ -62,18 +62,18 @@ export const RewardsHistory: React.FC<RewardsHistoryProps> = ({ navigation }) =>
 
         try {
             const [transactionsData, pointsData] = await Promise.all([
-                getPointTransactions(user.id).catch(() => []),
+                getPointsHistory(user.id).catch(() => []),
                 getAvailablePoints(user.id).catch(() => 0),
             ]);
 
             // Map transactions to our format
             const mappedTransactions: Transaction[] = transactionsData.map((tx: any) => ({
                 id: tx.id,
-                type: tx.amount > 0 ? 'earn' : 'spend',
-                amount: Math.abs(tx.amount),
-                description: tx.description || getDefaultDescription(tx.source),
-                source: tx.source || 'bonus',
-                created_at: tx.created_at,
+                type: tx.points_amount > 0 ? 'earn' : 'spend',
+                amount: Math.abs(tx.points_amount || 0),
+                description: tx.description || getDefaultDescription(tx.source_type),
+                source: tx.source_type || 'bonus',
+                created_at: tx.earned_at || tx.created_at,
             }));
 
             // Calculate stats

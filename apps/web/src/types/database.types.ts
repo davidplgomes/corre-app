@@ -1,9 +1,23 @@
-// Database types - synced with mobile app
-// These match the Supabase tables used by the mobile app
+// Database types — single source of truth for web dashboard
+// Must stay in sync with Supabase migrations.
 
-export type MembershipTier = 'bronze' | 'silver' | 'gold' | 'platinum';
-export type EventType = 'run' | 'group_run' | 'coffee_run' | 'meditation' | 'social';
+// ─── Enums ────────────────────────────────────────────────
+
+/** Matches users.membership_tier constraint */
+export type MembershipTier = 'free' | 'pro' | 'club' | 'basico' | 'baixa_pace' | 'parceiros';
+
+/**
+ * Event types synced with the mobile app points model.
+ * routine=base, special=bonus, race=max.
+ */
+export type EventType = 'routine' | 'special' | 'race';
+
+/** Dashboard access role (users.role column) */
 export type UserRole = 'user' | 'partner' | 'admin';
+
+export type DiscountType = 'percentage' | 'fixed' | 'freebie';
+
+// ─── Core tables ──────────────────────────────────────────
 
 export interface User {
     id: string;
@@ -17,15 +31,14 @@ export interface User {
     membership_tier: MembershipTier;
     current_month_points: number;
     total_lifetime_points: number;
-    current_xp?: number;
-    total_xp?: number;
-    current_points?: number;
-    level?: number;
+    current_xp: number;
+    xp_level: string | null;
     language_preference: 'en' | 'pt' | 'es';
     qr_code_secret: string;
     is_merchant: boolean;
     role: UserRole;
-    privacy_visibility: 'friends' | 'anyone' | 'nobody';
+    push_token: string | null;
+    onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -93,6 +106,8 @@ export interface FeedPost {
     users?: Partial<User>;
 }
 
+// ─── Marketplace ──────────────────────────────────────────
+
 export interface MarketplaceItem {
     id: string;
     seller_id: string;
@@ -117,13 +132,55 @@ export interface ShopItem {
     created_at: string;
 }
 
-// Partner-specific types (for web dashboard)
+// ─── Partner / Places ─────────────────────────────────────
+
+/**
+ * Business profile for a partner user.
+ * Joined to users via user_id (one-to-one).
+ */
 export interface Partner {
     id: string;
+    user_id: string;
     business_name: string | null;
     business_logo_url: string | null;
     business_description: string | null;
+    contact_email: string | null;
+    website_url: string | null;
     is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PartnerApplication {
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    phone_country_code: string | null;
+    business_name: string;
+    club_benefits: string | null;
+    staff_benefits: string | null;
+    poc_name: string | null;
+    category: string | null;
+    category_other: string | null;
+    membership: 'Free' | 'Monthly' | 'Annual' | null;
+    start_date: string | null;
+    logo_url: string | null;
+    business_description: string | null;
+    contact_email: string | null;
+    website_url: string | null;
+    instagram_handle: string | null;
+    business_address: string | null;
+    city: string | null;
+    country: string | null;
+    partnership_focus: string[];
+    notes: string | null;
+    status: 'pending' | 'approved' | 'rejected';
+    review_notes: string | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+    created_partner_user_id: string | null;
+    created_partner_id: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -142,18 +199,50 @@ export interface PartnerPlace {
     updated_at: string;
 }
 
+// ─── Coupons ──────────────────────────────────────────────
+
+/**
+ * Unified partner_coupons schema (migration 20260227100044).
+ *
+ * Mobile fields: title, description, partner (display name), code,
+ *   points_required, discount_type, discount_value, category,
+ *   expires_at, stock_limit, redeemed_count, image_url, terms, referral_link
+ *
+ * Web fields added in Sprint 1: partner_id, min_tier, valid_from
+ *
+ * Column name mapping (old web name → correct DB name):
+ *   valid_until    → expires_at
+ *   max_uses       → stock_limit
+ *   current_uses   → redeemed_count
+ *   discount_percent → use discount_value with discount_type='percentage'
+ */
 export interface PartnerCoupon {
     id: string;
-    partner_id: string;
-    code: string;
+    // Ownership
+    partner_id: string | null;
+    // Display (mobile app)
+    title: string;
+    partner: string;
     description: string;
-    discount_percent: number;
+    code: string;
+    // Discount
+    discount_type: DiscountType;
+    discount_value: number | null;
+    // Audience
+    category: 'fashion' | 'health' | 'sports' | 'apps' | 'drinks' | 'other';
     min_tier: MembershipTier;
+    // Validity
+    points_required: number;
     valid_from: string;
-    valid_until: string | null;
-    max_uses: number | null;
-    current_uses: number;
+    expires_at: string;
     is_active: boolean;
+    // Usage
+    stock_limit: number | null;
+    redeemed_count: number;
+    // Optional
+    image_url: string | null;
+    terms: string | null;
+    referral_link: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -162,27 +251,52 @@ export interface CouponRedemption {
     id: string;
     coupon_id: string;
     user_id: string;
+    code_used: string;
+    points_spent: number;
     redeemed_at: string;
+    is_used: boolean;
+    used_at: string | null;
     users?: Partial<User>;
     partner_coupons?: Partial<PartnerCoupon>;
 }
+
+// ─── Transactions ─────────────────────────────────────────
+
+export interface Transaction {
+    id: string;
+    user_id: string | null;
+    stripe_payment_intent_id: string | null;
+    amount: number;
+    currency: string;
+    status: 'succeeded' | 'pending' | 'failed' | 'refunded';
+    description: string | null;
+    created_at: string;
+}
+
+// ─── Subscriptions ────────────────────────────────────────
 
 export interface Plan {
     id: string;
     name: string;
     price: number;
     description: string | null;
-    features: any;
+    features: Record<string, unknown>;
     created_at: string;
 }
 
 export interface Subscription {
     id: string;
     user_id: string;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
     plan_id: string;
-    status: 'active' | 'past_due' | 'cancelled';
+    plan_name: string;
+    status: 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid' | 'free';
+    current_period_start: string | null;
     current_period_end: string | null;
+    cancel_at_period_end: boolean;
     created_at: string;
+    updated_at: string;
     users?: Partial<User>;
     plans?: Partial<Plan>;
 }

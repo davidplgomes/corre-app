@@ -89,15 +89,6 @@ jest.mock('posthog-react-native', () => ({
     default: jest.fn(),
 }));
 
-// Mock Firebase Analytics
-jest.mock('@react-native-firebase/analytics', () => {
-    return () => ({
-        logEvent: jest.fn(),
-        logScreenView: jest.fn(),
-        setUserId: jest.fn(),
-    });
-});
-
 // Mock Reanimated
 jest.mock('react-native-reanimated', () => ({
     default: {

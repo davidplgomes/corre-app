@@ -141,7 +141,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Events Stack Navigator
 const EventsStackNavigator: React.FC = () => (
-    <EventsStack.Navigator screenOptions={{ headerShown: false }}>
+    <EventsStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background.primary } }}>
         <EventsStack.Screen name="EventList" component={EventList} />
         <EventsStack.Screen name="EventDetail" component={EventDetail} />
         <EventsStack.Screen name="CheckIn" component={CheckIn} />
@@ -155,7 +155,7 @@ const EventsStackNavigator: React.FC = () => (
 
 // Feed Stack Navigator
 const FeedStackNavigator: React.FC = () => (
-    <FeedStack.Navigator screenOptions={{ headerShown: false }}>
+    <FeedStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background.primary } }}>
         <FeedStack.Screen name="FeedMain" component={FeedScreen} />
         <FeedStack.Screen name="Leaderboard" component={Leaderboard} />
         <FeedStack.Screen name="PostDetails" component={PostDetails} />
@@ -165,7 +165,7 @@ const FeedStackNavigator: React.FC = () => (
 
 // Loyalty Stack Navigator
 const LoyaltyStackNavigator: React.FC = () => (
-    <LoyaltyStack.Navigator screenOptions={{ headerShown: false }}>
+    <LoyaltyStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background.primary } }}>
         <LoyaltyStack.Screen name="LoyaltyCard" component={LoyaltyCard} />
         <LoyaltyStack.Screen name="MerchantScanner" component={MerchantScanner} />
         <LoyaltyStack.Screen name="Coupons" component={Coupons} />
@@ -178,7 +178,7 @@ const LoyaltyStackNavigator: React.FC = () => (
 
 // Marketplace Stack Navigator
 const MarketplaceStackNavigator: React.FC = () => (
-    <MarketplaceStack.Navigator screenOptions={{ headerShown: false }}>
+    <MarketplaceStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background.primary } }}>
         <MarketplaceStack.Screen name="MarketplaceMain" component={MarketplaceScreen} />
         <MarketplaceStack.Screen name="ProductDetail" component={ProductDetail} />
         <MarketplaceStack.Screen name="CreateListing" component={CreateListing} />
@@ -194,7 +194,7 @@ const MarketplaceStackNavigator: React.FC = () => (
 
 // Profile Stack Navigator
 const ProfileStackNavigator: React.FC = () => (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background.primary } }}>
         <ProfileStack.Screen name="ProfileMain" component={Profile} />
         <ProfileStack.Screen name="Settings" component={Settings} />
         <ProfileStack.Screen name="EditProfile" component={EditProfile} />
@@ -279,6 +279,7 @@ export const TabNavigator: React.FC = () => {
             initialRouteName="Home"
             screenOptions={{
                 headerShown: false,
+                sceneContainerStyle: { backgroundColor: theme.colors.background.primary },
                 tabBarStyle: [
                     styles.tabBar,
                     {

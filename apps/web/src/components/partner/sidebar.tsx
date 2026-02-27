@@ -9,8 +9,7 @@ import {
     Calendar,
     MapPin,
     BarChart3,
-    User,
-    LogOut
+    Settings
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
@@ -29,6 +28,7 @@ const navItems = [
             { title: "Places", href: "/partner/dashboard/places", icon: MapPin },
             { title: "Coupons", href: "/partner/dashboard/coupons", icon: Tag },
             { title: "Events", href: "/partner/dashboard/events", icon: Calendar },
+            { title: "Settings", href: "/partner/dashboard/settings", icon: Settings },
         ]
     }
 ]

@@ -6,10 +6,12 @@ import { CONFIG } from '@constants/config';
 const supabaseUrl = CONFIG.supabase.url;
 const supabaseAnonKey = CONFIG.supabase.anonKey;
 
-// Debug logging
-console.log('🔧 Supabase Client Debug:');
-console.log('  URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING');
-console.log('  Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'MISSING');
+if (__DEV__) {
+  console.log('[Supabase] Client config loaded', {
+    hasUrl: !!supabaseUrl,
+    hasAnonKey: !!supabaseAnonKey,
+  });
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase credentials. Please check your .env file.');
@@ -26,3 +28,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Export types
 export type { Session, User } from '@supabase/supabase-js';
+
+declare const __DEV__: boolean;

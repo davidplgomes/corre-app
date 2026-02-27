@@ -20,7 +20,7 @@ export function EventForm({ isOpen, onClose, onSubmit, initialData, loading }: E
         initialData || {
             title: '',
             description: '',
-            event_type: 'run',
+            event_type: 'routine',
             points_value: 10,
             event_datetime: new Date().toISOString().slice(0, 16),
             location_name: '',
@@ -70,10 +70,9 @@ export function EventForm({ isOpen, onClose, onSubmit, initialData, loading }: E
                             value={formData.event_type}
                             onChange={(e) => setFormData({ ...formData, event_type: e.target.value as EventType })}
                         >
-                            <option value="run">Run</option>
-                            <option value="group_run">Group Run</option>
-                            <option value="coffee_run">Coffee Run</option>
-                            <option value="social">Social</option>
+                            <option value="routine">Routine</option>
+                            <option value="special">Special</option>
+                            <option value="race">Race</option>
                         </select>
                     </div>
                 </div>

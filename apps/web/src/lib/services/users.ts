@@ -33,7 +33,11 @@ export async function getUserById(userId: string): Promise<User | null> {
 /**
  * Update user role (admin only)
  */
-export async function updateUserRole(userId: string, role: UserRole): Promise<User> {
+export async function updateUserRole(
+    userId: string,
+    role: UserRole,
+    context?: { fullName?: string; email?: string }
+): Promise<User> {
     const supabase = createClient();
     const { data, error } = await supabase
         .from('users')
@@ -43,6 +47,43 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<Us
         .single();
 
     if (error) throw error;
+
+    // Ensure partner profile exists whenever a user is promoted to partner.
+    if (role === 'partner') {
+        const businessName = context?.fullName?.trim()
+            ? `${context.fullName.trim()} Business`
+            : null;
+
+        const { data: existingPartner, error: existingPartnerError } = await supabase
+            .from('partners')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (existingPartnerError) throw existingPartnerError;
+
+        const partnerPayload = {
+            user_id: userId,
+            business_name: businessName,
+            contact_email: context?.email || null,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (existingPartner?.id) {
+            const { error: partnerUpdateError } = await supabase
+                .from('partners')
+                .update(partnerPayload)
+                .eq('id', existingPartner.id);
+            if (partnerUpdateError) throw partnerUpdateError;
+        } else {
+            const { error: partnerInsertError } = await supabase
+                .from('partners')
+                .insert({ id: crypto.randomUUID(), ...partnerPayload });
+            if (partnerInsertError) throw partnerInsertError;
+        }
+    }
+
     return data;
 }
 

@@ -28,9 +28,37 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Return URLs - these should match your app's deep link scheme
-const RETURN_URL = "corre://stripe-connect-return";
-const REFRESH_URL = "corre://stripe-connect-refresh";
+// Default return URLs for mobile deep links.
+const DEFAULT_RETURN_URL = "corre://stripe-connect-return";
+const DEFAULT_REFRESH_URL = "corre://stripe-connect-refresh";
+
+function resolveRedirectUrl(value: unknown, fallback: string): string {
+    if (typeof value !== "string" || value.trim().length === 0) {
+        return fallback;
+    }
+
+    const candidate = value.trim();
+
+    // Allow app deep links.
+    if (candidate.startsWith("corre://")) {
+        return candidate;
+    }
+
+    // Allow web callbacks (https + localhost for local development).
+    try {
+        const parsed = new URL(candidate);
+        if (parsed.protocol === "https:") {
+            return parsed.toString();
+        }
+        if (parsed.protocol === "http:" && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")) {
+            return parsed.toString();
+        }
+    } catch {
+        // Fallback below.
+    }
+
+    return fallback;
+}
 
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
@@ -54,7 +82,9 @@ Deno.serve(async (req: Request) => {
         }
 
         const body = await req.json();
-        const { action } = body;
+        const { action, return_url, refresh_url } = body;
+        const returnUrl = resolveRedirectUrl(return_url, DEFAULT_RETURN_URL);
+        const refreshUrl = resolveRedirectUrl(refresh_url, DEFAULT_REFRESH_URL);
 
         // ─── Check Status ────────────────────────────
         if (action === "status") {
@@ -177,8 +207,8 @@ Deno.serve(async (req: Request) => {
             // Create account link for onboarding
             const accountLink = await stripe.accountLinks.create({
                 account: stripeAccountId,
-                refresh_url: REFRESH_URL,
-                return_url: RETURN_URL,
+                refresh_url: refreshUrl,
+                return_url: returnUrl,
                 type: "account_onboarding",
             });
 

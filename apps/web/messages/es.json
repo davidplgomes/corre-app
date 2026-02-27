@@ -115,6 +115,12 @@
                     "current": "PLAN ACTUAL"
                 }
             },
+            "partners": {
+                "label": "PARTNERS",
+                "title": "Lleva Tu Marca A La Comunidad Corre",
+                "description": "Postúlate como partner para crear ofertas para corredores, activar eventos y colaborar con el club.",
+                "button": "Solicitud de Partner"
+            },
             "essentials": {
                 "title": "Club //\nEsenciales",
                 "viewAll": "VER TODO",

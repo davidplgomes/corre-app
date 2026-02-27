@@ -165,17 +165,23 @@ export async function cancelSubscription(userId: string, subscriptionId: string)
  */
 export async function createPaymentIntent(
     userId: string,
-    amount: number, // in cents
+    amount: number, // cash amount in cents (already discounted)
     pointsToUse: number = 0
 ): Promise<PaymentIntent | null> {
     try {
-        const finalAmount = Math.max(50, amount - pointsToUse); // Minimum Stripe charge is usually 50 cents
+        const normalizedAmount = Math.round(amount);
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            throw new Error('Invalid payment amount');
+        }
+        if (normalizedAmount < 50) {
+            throw new Error('Minimum card charge is €0.50');
+        }
 
-        console.log(`Creating payment intent for user ${userId}: €${finalAmount / 100} (Points used: ${pointsToUse})`);
+        console.log(`Creating payment intent for user ${userId}: €${normalizedAmount / 100} (Points used: ${pointsToUse})`);
 
         const { data, error } = await supabase.functions.invoke('create-payment-intent', {
             body: {
-                amount: finalAmount,
+                amount: normalizedAmount,
                 currency: 'eur',
                 metadata: {
                     user_id: userId,

@@ -18,8 +18,8 @@ import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, LoadingSpinner, BackButton } from '../../components/common';
-import { clearCart, consumePoints } from '../../services/supabase/wallet';
-import { createPaymentIntent, confirmPayment as storePaymentIntent } from '../../services/payments';
+import { clearCart, consumePoints, getAvailablePoints } from '../../services/supabase/wallet';
+import { createPaymentIntent, confirmPayment as storePaymentIntent, calculateMaxPointsDiscount } from '../../services/payments';
 import { supabase } from '../../services/supabase/client';
 import { ShippingAddress } from '../../types';
 
@@ -38,7 +38,7 @@ interface CheckoutScreenProps {
 export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, route }) => {
     const { cartItems, subtotal, pointsToUse, total } = route.params;
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { confirmPayment } = useStripe();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
@@ -113,21 +113,51 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
     const handlePlaceOrder = async () => {
         if (!user?.id) return;
 
-        if (!cardComplete) {
+        const trustedSubtotal = cartItems.reduce(
+            (sum, item) => sum + (item?.item?.price || 0) * (item?.quantity || 0),
+            0
+        );
+        const availablePoints = await getAvailablePoints(user.id);
+        const requestedPointsToUse = Math.max(0, Math.floor(Number(pointsToUse) || 0));
+        const maxPointsAllowed = calculateMaxPointsDiscount(
+            Math.round(trustedSubtotal * 100),
+            profile?.membershipTier || 'free',
+            availablePoints
+        );
+        const trustedPointsToUse = Math.min(requestedPointsToUse, maxPointsAllowed, availablePoints);
+        const cashAmountCents = Math.round(trustedSubtotal * 100) - trustedPointsToUse;
+
+        if (trustedPointsToUse !== requestedPointsToUse) {
+            Alert.alert(
+                t('checkout.pointsAdjusted', 'Points adjusted'),
+                t('checkout.pointsAdjustedMessage', 'Points were adjusted to the maximum discount allowed for this order.')
+            );
+        }
+
+        if (cashAmountCents <= 0) {
+            Alert.alert(
+                t('common.error'),
+                t('checkout.pointsCannotCoverFullAmount', 'Points can only be used for a partial discount. A cash payment is still required.')
+            );
+            return;
+        }
+
+        if (cashAmountCents > 0 && !cardComplete) {
             Alert.alert(t('common.error'), t('checkout.enterCard', 'Please enter complete card details'));
             return;
         }
 
         setLoading(true);
+        let orderId: string | null = null;
         try {
             // Create order in database
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
                     user_id: user.id,
-                    total_amount: subtotal,
-                    points_used: pointsToUse,
-                    cash_amount: total,
+                    total_amount: trustedSubtotal,
+                    points_used: trustedPointsToUse,
+                    cash_amount: cashAmountCents / 100,
                     status: 'pending',
                     shipping_address: shippingAddress,
                 })
@@ -135,6 +165,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 .single();
 
             if (orderError) throw orderError;
+            orderId = order.id;
 
             // Create order items
             const orderItems = cartItems.map(item => ({
@@ -151,11 +182,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
             if (itemsError) throw itemsError;
 
-            // Create payment intent
+            // Create payment intent using trusted final cash total (partial points discount applied).
             const paymentIntent = await createPaymentIntent(
                 user.id,
-                Math.round(total * 100), // Convert to cents
-                pointsToUse
+                cashAmountCents,
+                trustedPointsToUse
             );
 
             if (!paymentIntent) {
@@ -213,8 +244,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
             }
 
             // Payment confirmed! Consume points and clear cart
-            if (pointsToUse > 0) {
-                await consumePoints(user.id, pointsToUse);
+            if (trustedPointsToUse > 0) {
+                await consumePoints(user.id, trustedPointsToUse);
             }
 
             // Clear cart
@@ -225,6 +256,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
         } catch (error: any) {
             console.error('Checkout error:', error);
+            if (orderId) {
+                await supabase
+                    .from('orders')
+                    .update({
+                        status: 'payment_failed',
+                        failure_reason: error?.message || 'Checkout failed',
+                    })
+                    .eq('id', orderId)
+                    .neq('status', 'paid');
+            }
             Alert.alert(t('common.error'), error.message || t('checkout.orderFailed', 'Failed to complete order'));
         } finally {
             setLoading(false);

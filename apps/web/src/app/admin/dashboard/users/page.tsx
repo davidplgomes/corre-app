@@ -142,7 +142,7 @@ export default function UsersPage() {
         }
     };
 
-    const handleRoleUpdate = async (userId: string, newRole: UserRole, userName: string) => {
+    const handleRoleUpdate = async (userId: string, newRole: UserRole, userName: string, userEmail: string) => {
         // Confirmation for sensitive role changes
         if (newRole === 'admin') {
             if (!confirm(`Are you sure you want to make ${userName} an Admin? They will have full access to the dashboard.`)) {
@@ -152,7 +152,10 @@ export default function UsersPage() {
 
         try {
             setUpdating(userId);
-            await updateUserRole(userId, newRole);
+            await updateUserRole(userId, newRole, {
+                fullName: userName,
+                email: userEmail,
+            });
 
             // Update local state
             setUsers(users.map(u =>
@@ -342,7 +345,7 @@ export default function UsersPage() {
                                 <div className="relative">
                                     <select
                                         value={user.role}
-                                        onChange={(e) => handleRoleUpdate(user.id, e.target.value as UserRole, user.full_name)}
+                                        onChange={(e) => handleRoleUpdate(user.id, e.target.value as UserRole, user.full_name, user.email)}
                                         disabled={updating === user.id}
                                         className={`appearance-none bg-black/20 border rounded-lg py-1.5 pl-3 pr-8 text-xs text-white/80 focus:outline-none transition-colors cursor-pointer hover:bg-white/5 ${updating === user.id
                                             ? 'border-[#FF5722]/50 animate-pulse'

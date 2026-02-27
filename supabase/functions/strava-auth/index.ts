@@ -29,19 +29,19 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") {
         const code = url.searchParams.get("code");
         const error = url.searchParams.get("error");
-        const state = url.searchParams.get("state"); // Contains user_id
+        const state = url.searchParams.get("state"); // One-time OAuth state token
 
         // Handle authorization denied
         if (error) {
             return new Response(
-                generateHtmlRedirect("corre-app://strava-auth?error=denied"),
+                generateHtmlRedirect("corre://strava-auth?error=denied"),
                 { headers: { "Content-Type": "text/html" } }
             );
         }
 
         if (!code || !state) {
             return new Response(
-                generateHtmlRedirect("corre-app://strava-auth?error=missing_params"),
+                generateHtmlRedirect("corre://strava-auth?error=missing_params"),
                 { headers: { "Content-Type": "text/html" } }
             );
         }
@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
             if (!tokenRes.ok) {
                 console.error("Token exchange failed:", tokenData);
                 return new Response(
-                    generateHtmlRedirect("corre-app://strava-auth?error=token_exchange_failed"),
+                    generateHtmlRedirect("corre://strava-auth?error=token_exchange_failed"),
                     { headers: { "Content-Type": "text/html" } }
                 );
             }
@@ -75,8 +75,53 @@ Deno.serve(async (req: Request) => {
                 Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
             );
 
-            // state contains the user_id
-            const userId = state;
+            // Resolve and validate one-time OAuth state before linking account.
+            const { data: oauthState, error: oauthStateError } = await supabase
+                .from("strava_oauth_states")
+                .select("state, user_id, expires_at, used_at")
+                .eq("state", state)
+                .maybeSingle();
+
+            if (oauthStateError || !oauthState) {
+                console.error("Invalid OAuth state:", oauthStateError);
+                return new Response(
+                    generateHtmlRedirect("corre://strava-auth?error=invalid_state"),
+                    { headers: { "Content-Type": "text/html" } }
+                );
+            }
+
+            if (oauthState.used_at) {
+                return new Response(
+                    generateHtmlRedirect("corre://strava-auth?error=invalid_state"),
+                    { headers: { "Content-Type": "text/html" } }
+                );
+            }
+
+            if (new Date(oauthState.expires_at).getTime() < Date.now()) {
+                return new Response(
+                    generateHtmlRedirect("corre://strava-auth?error=state_expired"),
+                    { headers: { "Content-Type": "text/html" } }
+                );
+            }
+
+            // Mark state as used before writing connection to prevent replay.
+            const { data: consumedState, error: markStateUsedError } = await supabase
+                .from("strava_oauth_states")
+                .update({ used_at: new Date().toISOString() })
+                .eq("state", state)
+                .is("used_at", null)
+                .select("state")
+                .maybeSingle();
+
+            if (markStateUsedError || !consumedState) {
+                console.error("Failed to mark OAuth state as used:", markStateUsedError);
+                return new Response(
+                    generateHtmlRedirect("corre://strava-auth?error=invalid_state"),
+                    { headers: { "Content-Type": "text/html" } }
+                );
+            }
+
+            const userId = oauthState.user_id;
 
             // Upsert connection - use strava_athlete_id as conflict column (it has UNIQUE constraint)
             const { error: dbError } = await supabase.from("strava_connections").upsert(
@@ -98,20 +143,20 @@ Deno.serve(async (req: Request) => {
             if (dbError) {
                 console.error("Database error:", dbError);
                 return new Response(
-                    generateHtmlRedirect("corre-app://strava-auth?error=database_error"),
+                    generateHtmlRedirect("corre://strava-auth?error=database_error"),
                     { headers: { "Content-Type": "text/html" } }
                 );
             }
 
             // Success! Redirect back to app
             return new Response(
-                generateHtmlRedirect("corre-app://strava-auth?success=true"),
+                generateHtmlRedirect("corre://strava-auth?success=true"),
                 { headers: { "Content-Type": "text/html" } }
             );
         } catch (err) {
             console.error("Strava auth error:", err);
             return new Response(
-                generateHtmlRedirect("corre-app://strava-auth?error=unknown"),
+                generateHtmlRedirect("corre://strava-auth?error=unknown"),
                 { headers: { "Content-Type": "text/html" } }
             );
         }

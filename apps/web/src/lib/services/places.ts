@@ -1,11 +1,26 @@
 import { createClient } from '@/lib/supabase';
 import type { PartnerPlace } from '@/types';
 
+async function getPartnerProfileIdByUserId(userId: string): Promise<string | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data?.id || null;
+}
+
 /**
  * Get partner's places
  */
-export async function getPartnerPlaces(partnerId: string): Promise<PartnerPlace[]> {
+export async function getPartnerPlaces(partnerUserId: string): Promise<PartnerPlace[]> {
     const supabase = createClient();
+    const partnerId = await getPartnerProfileIdByUserId(partnerUserId);
+    if (!partnerId) return [];
+
     const { data, error } = await supabase
         .from('partner_places')
         .select('*')
@@ -95,3 +110,5 @@ export async function deletePlace(placeId: string): Promise<void> {
 export async function togglePlaceActive(placeId: string, isActive: boolean): Promise<PartnerPlace> {
     return updatePlace(placeId, { is_active: isActive });
 }
+
+export { getPartnerProfileIdByUserId };

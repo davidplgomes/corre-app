@@ -4,6 +4,39 @@ import { UserProfile } from '../types/user.types';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 
+const TRUSTED_WEB_AUTH_HOST = 'corre-app-web.vercel.app';
+const TRUSTED_SUPABASE_HOST_SUFFIX = '.supabase.co';
+
+const isTrustedAuthRecoveryUrl = (rawUrl: string): boolean => {
+  try {
+    const parsed = new URL(rawUrl);
+    const protocol = parsed.protocol.toLowerCase();
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+
+    if (protocol === 'corre:') {
+      const customTarget = `${host}${path}`.replace(/^\/+/, '');
+      return customTarget === 'auth/reset' || path === '/auth/reset';
+    }
+
+    if (protocol !== 'https:' && protocol !== 'http:') {
+      return false;
+    }
+
+    if (host === TRUSTED_WEB_AUTH_HOST && path === '/auth/reset') {
+      return true;
+    }
+
+    if (host.endsWith(TRUSTED_SUPABASE_HOST_SUFFIX) && path === '/auth/v1/callback') {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
@@ -29,28 +62,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle deep links for auth (password reset, etc.)
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
-      if (url.includes('access_token') || url.includes('refresh_token') || url.includes('type=recovery')) {
-        console.log('[Auth] Processing auth deep link');
-        // Extract hash fragment if present (Supabase uses hash for tokens)
-        const hashIndex = url.indexOf('#');
-        if (hashIndex !== -1) {
-          const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          const type = hashParams.get('type');
+      if (!isTrustedAuthRecoveryUrl(url)) return;
 
-          if (accessToken && refreshToken) {
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            if (error) {
-              console.error('[Auth] Error setting session from deep link:', error);
-            } else if (type === 'recovery') {
-              setIsPasswordRecovery(true);
-            }
-          }
-        }
+      // Supabase sends auth tokens in URL hash for recovery links.
+      const hashIndex = url.indexOf('#');
+      if (hashIndex === -1) return;
+
+      const hashParams = new URLSearchParams(url.substring(hashIndex + 1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+
+      if (type !== 'recovery' || !accessToken || !refreshToken) return;
+
+      if (__DEV__) {
+        console.log('[Auth] Processing trusted password recovery deep link');
+      }
+
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) {
+        console.error('[Auth] Error setting session from deep link:', error);
+      } else {
+        setIsPasswordRecovery(true);
       }
     };
 
@@ -81,13 +118,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth] Auth state changed:', event);
+      if (__DEV__) {
+        console.log('[Auth] Auth state changed:', event);
+      }
       setSession(session);
       setUser(session?.user ?? null);
 
       // Handle PASSWORD_RECOVERY event
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('[Auth] Password recovery session detected');
+        if (__DEV__) {
+          console.log('[Auth] Password recovery session detected');
+        }
         setIsPasswordRecovery(true);
       }
 

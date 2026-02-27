@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
-import { getEventsByCreator } from '@/lib/services/events';
+import { getEventsByCreator, deleteEvent } from '@/lib/services/events';
 import type { Event } from '@/types';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Plus, Calendar, Search, Filter, Loader2, MapPin, Trophy } from 'lucide-react';
+import { Plus, Calendar, Search, Filter, Loader2, MapPin, Trophy, Users, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PartnerEventsPage() {
     const [events, setEvents] = useState<Event[]>([]);
+    const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -24,6 +26,24 @@ export default function PartnerEventsPage() {
 
                 const data = await getEventsByCreator(session.user.id);
                 setEvents(data);
+
+                if (data.length > 0) {
+                    const { data: participantRows, error: participantError } = await supabase
+                        .from('event_participants')
+                        .select('event_id')
+                        .in('event_id', data.map((e) => e.id));
+
+                    if (participantError) throw participantError;
+
+                    const counts = (participantRows || []).reduce<Record<string, number>>((acc, row) => {
+                        acc[row.event_id] = (acc[row.event_id] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    setParticipantCounts(counts);
+                } else {
+                    setParticipantCounts({});
+                }
             } catch (error) {
                 console.error('Error fetching events:', error);
                 toast.error('Failed to load events');
@@ -39,6 +59,20 @@ export default function PartnerEventsPage() {
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.location_name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const handleDelete = async (eventId: string) => {
+        if (!confirm('Delete this event? This cannot be undone.')) return;
+        setDeletingId(eventId);
+        try {
+            await deleteEvent(eventId);
+            setEvents(prev => prev.filter(e => e.id !== eventId));
+            toast.success('Event deleted');
+        } catch {
+            toast.error('Failed to delete event');
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -125,7 +159,34 @@ export default function PartnerEventsPage() {
                                             <Trophy className="w-3 h-3" />
                                             <span>{event.points_value} Points</span>
                                         </div>
+                                        <div className="flex items-center gap-2 text-xs text-white/40">
+                                            <Users className="w-3 h-3" />
+                                            <span>{participantCounts[event.id] || 0} Participants</span>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="flex gap-2 pt-4 border-t border-white/5 mt-4">
+                                    <Link href={`/partner/dashboard/events/${event.id}/participants`} className="flex-1">
+                                        <button className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                            <Users className="w-3 h-3" />
+                                            Participants
+                                        </button>
+                                    </Link>
+                                    <Link href={`/partner/dashboard/events/${event.id}/edit`} className="flex-1">
+                                        <button className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                            <Pencil className="w-3 h-3" />
+                                            Edit
+                                        </button>
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDelete(event.id)}
+                                        disabled={deletingId === event.id}
+                                        className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-red-400/70 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {deletingId === event.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                        Delete
+                                    </button>
                                 </div>
                             </GlassCard>
                         );

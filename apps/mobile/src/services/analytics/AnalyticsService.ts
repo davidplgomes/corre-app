@@ -7,65 +7,44 @@
 import { CONFIG } from '../../constants/config';
 import { logger } from '../logging/Logger';
 import { IAnalyticsProvider } from '../../types/provider.types';
-import analytics from '@react-native-firebase/analytics';
 import PostHog from 'posthog-react-native';
 
 /**
- * Google Analytics Provider (via Firebase)
+ * Google Analytics Provider
+ * Firebase was removed from the project, so this provider is a no-op.
  */
 class GoogleAnalyticsProvider implements IAnalyticsProvider {
     private enabled: boolean;
 
     constructor() {
-        this.enabled = !!CONFIG.googleAnalytics.enabled; // Force boolean
+        this.enabled = false;
     }
 
     async initialize(): Promise<void> {
-        if (!this.enabled) {
-            logger.debug('ANALYTICS', 'Google Analytics disabled (no API key)');
-            return;
-        }
-        logger.info('ANALYTICS', 'Google Analytics initialized');
-        // Firebase analytics is auto-initialized by the native SDK
-    }
-
-    async trackEvent(name: string, properties?: Record<string, any>): Promise<void> {
-        if (!this.enabled) return;
-        try {
-            await analytics().logEvent(name, properties);
-            logger.debug('ANALYTICS', `[GA] Track: ${name}`, properties);
-        } catch (error) {
-            logger.error('ANALYTICS', `[GA] Failed to track event: ${name}`, error);
+        if (CONFIG.googleAnalytics.enabled) {
+            logger.warn(
+                'ANALYTICS',
+                'Google Analytics key is configured, but Firebase analytics is not installed. Skipping provider.'
+            );
+        } else {
+            logger.debug('ANALYTICS', 'Google Analytics disabled');
         }
     }
 
-    async trackScreenView(screenName: string): Promise<void> {
+    trackEvent(name: string, properties?: Record<string, any>): void {
         if (!this.enabled) return;
-        try {
-            await analytics().logScreenView({ screen_name: screenName, screen_class: screenName });
-            logger.debug('ANALYTICS', `[GA] Screen: ${screenName}`);
-        } catch (error) {
-            logger.error('ANALYTICS', `[GA] Failed to track screen: ${screenName}`, error);
-        }
     }
 
-    async identify(userId: string): Promise<void> {
+    trackScreenView(screenName: string): void {
         if (!this.enabled) return;
-        try {
-            await analytics().setUserId(userId);
-            logger.debug('ANALYTICS', `[GA] Identify: ${userId}`);
-        } catch (error) {
-            logger.error('ANALYTICS', `[GA] Failed to identify user`, error);
-        }
     }
 
-    async reset(): Promise<void> {
+    identify(userId: string): void {
         if (!this.enabled) return;
-        try {
-            await analytics().setUserId(null);
-        } catch (error) {
-            logger.error('ANALYTICS', `[GA] Failed to reset user`, error);
-        }
+    }
+
+    reset(): void {
+        if (!this.enabled) return;
     }
 }
 

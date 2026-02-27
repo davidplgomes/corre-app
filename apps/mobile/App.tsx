@@ -5,10 +5,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initI18n } from './src/services/i18n';
-import { StripeProvider } from '@stripe/stripe-react-native';
+import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
 import { CONFIG } from './src/constants/config';
 import { ChatwootWidgetContainer } from './src/components/support/ChatwootWidgetContainer';
 import { migrateAuthTokensToSecureStore } from './src/services/supabase/tokenMigration';
+import * as Linking from 'expo-linking';
 
 // Simple Error Boundary to catch crashes
 interface ErrorBoundaryState {
@@ -48,12 +49,38 @@ const AppContent: React.FC<{ children: React.ReactElement }> = ({ children }) =>
         publishableKey={CONFIG.stripe.publishableKey}
         merchantIdentifier="merchant.com.corre"
       >
+        <StripeDeepLinkHandler />
         {children}
       </StripeProvider>
     );
   }
   // Stripe not configured - render without provider
   return children;
+};
+
+const StripeDeepLinkHandler: React.FC = () => {
+  const { handleURLCallback } = useStripe();
+
+  useEffect(() => {
+    const processUrl = async (url: string | null) => {
+      if (!url) return;
+      try {
+        await handleURLCallback(url);
+      } catch (error) {
+        console.error('[Stripe] Failed to process URL callback:', error);
+      }
+    };
+
+    Linking.getInitialURL().then(processUrl);
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      processUrl(url);
+    });
+
+    return () => subscription.remove();
+  }, [handleURLCallback]);
+
+  return null;
 };
 
 export default function App() {

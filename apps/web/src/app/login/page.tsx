@@ -35,10 +35,17 @@ export default function Login() {
                 .from('users')
                 .select('role')
                 .eq('id', data.user.id)
-                .single();
+                .maybeSingle();
 
             if (userError) {
-                setError('Unable to verify user role.');
+                setError(`Unable to verify user role: ${userError.message}`);
+                await supabase.auth.signOut();
+                return;
+            }
+
+            if (!userData) {
+                setError('User profile is missing in the users table. Contact an admin to backfill this account.');
+                await supabase.auth.signOut();
                 return;
             }
 
@@ -126,9 +133,9 @@ export default function Login() {
                         >
                             Sign in
                         </div>
-                        <button className="px-5 py-2 rounded-full text-white/50 text-sm font-medium hover:text-white/70 transition-colors">
+                        <Link href="/partner/register" className="px-5 py-2 rounded-full text-white/50 text-sm font-medium hover:text-white/70 transition-colors">
                             Sign up
-                        </button>
+                        </Link>
                     </div>
 
                     {/* Title */}

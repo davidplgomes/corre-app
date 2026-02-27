@@ -48,18 +48,16 @@ export default function AdminDashboardPage() {
                 // 3. Fetch Active Runners (Runs in filtered period)
                 const { count: activeRunners } = await supabase.from('runs').select('*', { count: 'exact', head: true }).gte('created_at', dateFilter.toISOString());
 
-                // 4. Fetch Revenue
-                const { data: subs } = await supabase.from('subscriptions').select('plan_id, status');
-                const { data: plans } = await supabase.from('plans').select('id, price');
+                // 4. Fetch Revenue — sum succeeded transactions in the period
+                const { data: txns } = await supabase
+                    .from('transactions')
+                    .select('amount')
+                    .eq('status', 'succeeded')
+                    .gte('created_at', dateFilter.toISOString());
 
-                let revenue = 0;
-                if (subs && plans) {
-                    const priceMap = new Map(plans.map(p => [p.id, Number(p.price)]));
-                    revenue = subs.reduce((acc, sub) => {
-                        if (sub.status === 'active') return acc + (priceMap.get(sub.plan_id) || 0);
-                        return acc;
-                    }, 0);
-                }
+                const revenue = txns
+                    ? txns.reduce((acc, t) => acc + (Number(t.amount) || 0), 0) / 100 // stored in cents
+                    : 0;
 
                 // 5. Fetch Events
                 const { data: events } = await supabase.from('events').select('*').gte('event_datetime', new Date().toISOString()).order('event_datetime', { ascending: true }).limit(3);
@@ -69,9 +67,9 @@ export default function AdminDashboardPage() {
 
                 // Mock Data Fallbacks
                 const mockEvents = [
-                    { title: 'Morning Run Club', event_datetime: new Date(Date.now() + 86400000).toISOString(), location_name: 'Phoenix Park', event_type: 'run', points_value: 50 },
-                    { title: 'Evening Sprint', event_datetime: new Date(Date.now() + 172800000).toISOString(), location_name: 'Grand Canal Dock', event_type: 'run', points_value: 30 },
-                    { title: 'Community Yoga', event_datetime: new Date(Date.now() + 259200000).toISOString(), location_name: 'Herbert Park', event_type: 'social', points_value: 20 },
+                    { title: 'Morning Run Club', event_datetime: new Date(Date.now() + 86400000).toISOString(), location_name: 'Phoenix Park', event_type: 'routine', points_value: 50 },
+                    { title: 'Evening Sprint', event_datetime: new Date(Date.now() + 172800000).toISOString(), location_name: 'Grand Canal Dock', event_type: 'routine', points_value: 30 },
+                    { title: 'Community Yoga', event_datetime: new Date(Date.now() + 259200000).toISOString(), location_name: 'Herbert Park', event_type: 'special', points_value: 20 },
                 ];
 
                 const mockLocations = [
@@ -404,7 +402,7 @@ export default function AdminDashboardPage() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className={`block px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider mb-1 w-fit ml-auto ${event.event_type === 'run' ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-white/5 text-white/40'
+                                        <span className={`block px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider mb-1 w-fit ml-auto ${event.event_type === 'routine' ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-white/5 text-white/40'
                                             }`}>
                                             {event.event_type}
                                         </span>

@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
-import { getPartnerPlaces } from '@/lib/services/places';
+import { getPartnerPlaces, deletePlace, togglePlaceActive } from '@/lib/services/places';
 import type { PartnerPlace } from '@/types';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Plus, MapPin, Search, Filter, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Search, Filter, Loader2, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PartnerPlacesPage() {
     const [places, setPlaces] = useState<PartnerPlace[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [togglingId, setTogglingId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchPlaces = async () => {
@@ -39,6 +41,33 @@ export default function PartnerPlacesPage() {
         place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         place.address?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const handleDelete = async (placeId: string) => {
+        if (!confirm('Delete this place? This cannot be undone.')) return;
+        setDeletingId(placeId);
+        try {
+            await deletePlace(placeId);
+            setPlaces(prev => prev.filter(p => p.id !== placeId));
+            toast.success('Place deleted');
+        } catch {
+            toast.error('Failed to delete place');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleToggle = async (place: PartnerPlace) => {
+        setTogglingId(place.id);
+        try {
+            const updated = await togglePlaceActive(place.id, !place.is_active);
+            setPlaces(prev => prev.map(p => p.id === place.id ? updated : p));
+            toast.success(updated.is_active ? 'Place activated' : 'Place deactivated');
+        } catch {
+            toast.error('Failed to update place');
+        } finally {
+            setTogglingId(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -127,6 +156,30 @@ export default function PartnerPlacesPage() {
                                 <div className="flex items-center gap-2 text-xs text-white/40 mt-auto pt-4 border-t border-white/5">
                                     <MapPin className="w-3 h-3" />
                                     <span className="truncate">{place.address || 'No address'}</span>
+                                </div>
+
+                                <div className="flex gap-2 pt-4 mt-2">
+                                    <Link href={`/partner/dashboard/places/${place.id}/edit`} className="flex-1">
+                                        <button className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+                                            <Pencil className="w-3 h-3" />
+                                            Edit
+                                        </button>
+                                    </Link>
+                                    <button
+                                        onClick={() => handleToggle(place)}
+                                        disabled={togglingId === place.id}
+                                        className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {togglingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : place.is_active ? <ToggleRight className="w-3 h-3 text-green-400" /> : <ToggleLeft className="w-3 h-3" />}
+                                        {place.is_active ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(place.id)}
+                                        disabled={deletingId === place.id}
+                                        className="h-8 w-8 flex items-center justify-center text-red-400/70 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {deletingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                    </button>
                                 </div>
                             </div>
                         </GlassCard>

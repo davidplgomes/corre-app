@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { getPartnerProfileIdByUserId } from '@/lib/services/places';
 import { GlassCard } from '@/components/ui/glass-card';
 import { ChevronLeft, Loader2, Upload, MapPin } from 'lucide-react';
 import Link from 'next/link';
@@ -33,8 +34,14 @@ export default function NewPlacePage() {
                 return;
             }
 
+            const partnerProfileId = await getPartnerProfileIdByUserId(session.user.id);
+            if (!partnerProfileId) {
+                toast.error("Partner profile not found. Ask an admin to complete partner setup.");
+                return;
+            }
+
             const { error } = await supabase.from('partner_places').insert({
-                partner_id: session.user.id,
+                partner_id: partnerProfileId,
                 name: formData.name,
                 address: formData.address,
                 description: formData.description,
