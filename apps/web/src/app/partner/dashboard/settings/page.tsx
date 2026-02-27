@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -30,7 +30,7 @@ const DEFAULT_FORM: PartnerFormState = {
     websiteUrl: '',
 };
 
-export default function PartnerSettingsPage() {
+function PartnerSettingsContent() {
     const searchParams = useSearchParams();
     const supabase = useMemo(() => createClient(), []);
 
@@ -362,5 +362,19 @@ export default function PartnerSettingsPage() {
                 </form>
             </GlassCard>
         </div>
+    );
+}
+
+export default function PartnerSettingsPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex items-center justify-center h-96">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#FF5722]" />
+                </div>
+            }
+        >
+            <PartnerSettingsContent />
+        </Suspense>
     );
 }
