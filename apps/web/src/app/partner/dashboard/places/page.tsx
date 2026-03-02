@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { getPartnerPlaces, deletePlace, togglePlaceActive } from '@/lib/services/places';
@@ -10,6 +10,7 @@ import { Plus, MapPin, Search, Filter, Loader2, Pencil, Trash2, ToggleLeft, Togg
 import { toast } from 'sonner';
 
 export default function PartnerPlacesPage() {
+    const supabase = useMemo(() => createClient(), []);
     const [places, setPlaces] = useState<PartnerPlace[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -17,26 +18,47 @@ export default function PartnerPlacesPage() {
     const [togglingId, setTogglingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchPlaces = async () => {
-            try {
-                const supabase = createClient();
-                const { data: { session } } = await supabase.auth.getSession();
+    const fetchPlaces = useCallback(async (silent = false) => {
+        try {
+            if (!silent) {
+                setLoading(true);
+            }
 
-                if (!session) return;
+            const { data: { session } } = await supabase.auth.getSession();
 
-                const data = await getPartnerPlaces(session.user.id);
-                setPlaces(data);
-            } catch (error) {
-                console.error('Error fetching places:', error);
-                toast.error('Failed to load places');
-            } finally {
+            if (!session) {
+                setPlaces([]);
+                return;
+            }
+
+            const data = await getPartnerPlaces(session.user.id);
+            setPlaces(data);
+        } catch (error) {
+            console.error('Error fetching places:', error);
+            toast.error('Failed to load places');
+        } finally {
+            if (!silent) {
                 setLoading(false);
             }
-        };
+        }
+    }, [supabase]);
 
-        fetchPlaces();
-    }, []);
+    useEffect(() => {
+        void fetchPlaces(false);
+
+        const channel = supabase
+            .channel('partner-places-live')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'partner_places' },
+                () => { void fetchPlaces(true); }
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [fetchPlaces, supabase]);
 
     const filteredPlaces = places.filter(place =>
         place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

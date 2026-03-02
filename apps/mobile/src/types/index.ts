@@ -72,9 +72,24 @@ export interface CartItem {
 export interface Order {
     id: string;
     user_id: string;
-    status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-    total_amount: number; // Stored as cents usually, but called total_amount in legacy?
+    status:
+        | 'pending'
+        | 'paid'
+        | 'processing'
+        | 'ready_for_pickup'
+        | 'picked_up'
+        | 'shipped'
+        | 'delivered'
+        | 'cancelled'
+        | 'canceled'
+        | 'payment_failed'
+        | 'refunded'
+        | 'disputed';
+    // total_amount is subtotal before points discount (EUR decimal), cash_amount is card charge after discount.
+    total_amount: number;
     points_used: number;
+    cash_amount: number | null;
+    stripe_payment_intent_id?: string | null;
     items: CartItem[];
     shipping_address: ShippingAddress | null;
     created_at: string;

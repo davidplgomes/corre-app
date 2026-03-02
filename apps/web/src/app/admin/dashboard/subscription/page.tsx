@@ -1,11 +1,12 @@
 "use client"
 
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { GlassCard } from "@/components/ui/glass-card"
 import { AdminTable } from "@/components/ui/admin-table"
 import { Button } from "@/components/ui/button"
-import { ArrowUpRight, Download, RefreshCw, Loader2, XCircle, RotateCcw, ArrowRightLeft } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { ArrowUpRight, Download, RefreshCw, Loader2, XCircle, RotateCcw, ArrowRightLeft, Search } from "lucide-react"
 import { toast } from "sonner"
 
 type StripeProduct = {
@@ -56,6 +57,7 @@ const CANCELED_STATUSES = new Set(["canceled", "cancelled", "unpaid", "incomplet
 const CANCELABLE_STATUSES = new Set(["active", "trialing", "past_due"])
 const RESUMABLE_STATUSES = new Set(["active", "trialing", "past_due"])
 const PLAN_CHANGEABLE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"])
+const PAGE_SIZE = 25
 
 const normalizeTier = (value: string | null | undefined): SubscriptionTier | null => {
     if (!value) return null
@@ -105,12 +107,16 @@ const resolveTierForSubscriptionRow = (item: SubscriptionRow): SubscriptionTier 
 
 export default function SubscriptionPage() {
     const supabase = useMemo(() => createClient(), [])
+    const realtimeRefreshTimeoutRef = useRef<number | null>(null)
     const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([])
     const [catalogByPriceId, setCatalogByPriceId] = useState<CatalogByPriceId>({})
     const [catalogByTier, setCatalogByTier] = useState<CatalogByTier>({})
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [mutatingByStripeSubscriptionId, setMutatingByStripeSubscriptionId] = useState<Record<string, boolean>>({})
+    const [searchQuery, setSearchQuery] = useState("")
+    const [statusFilter, setStatusFilter] = useState("all")
+    const [currentPage, setCurrentPage] = useState(1)
     const [stats, setStats] = useState<DashboardStats>({
         mrr: 0,
         activeCount: 0,
@@ -119,10 +125,6 @@ export default function SubscriptionPage() {
         ltv: 0,
     })
 
-    useEffect(() => {
-        void fetchSubscriptions()
-    }, [])
-
     const formatMoney = (amount: number, currency = "EUR") =>
         new Intl.NumberFormat("en-IE", {
             style: "currency",
@@ -130,9 +132,11 @@ export default function SubscriptionPage() {
             maximumFractionDigits: 2,
         }).format(amount)
 
-    const fetchSubscriptions = async () => {
+    const fetchSubscriptions = useCallback(async (silent = false) => {
         try {
-            setLoading(true)
+            if (!silent) {
+                setLoading(true)
+            }
 
             const [subsResult, productsResult] = await Promise.all([
                 supabase
@@ -224,9 +228,47 @@ export default function SubscriptionPage() {
             console.error("Error fetching subscriptions:", error)
             toast.error("Failed to load subscriptions")
         } finally {
-            setLoading(false)
+            if (!silent) {
+                setLoading(false)
+            }
         }
-    }
+    }, [supabase])
+
+    useEffect(() => {
+        void fetchSubscriptions(false)
+    }, [fetchSubscriptions])
+
+    const scheduleRealtimeRefresh = useCallback(() => {
+        if (realtimeRefreshTimeoutRef.current) return
+        realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+            realtimeRefreshTimeoutRef.current = null
+            void fetchSubscriptions(true)
+        }, 700)
+    }, [fetchSubscriptions])
+
+    useEffect(() => {
+        const channel = supabase
+            .channel("admin-subscriptions-live")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "subscriptions" },
+                scheduleRealtimeRefresh
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "users" },
+                scheduleRealtimeRefresh
+            )
+            .subscribe()
+
+        return () => {
+            if (realtimeRefreshTimeoutRef.current) {
+                window.clearTimeout(realtimeRefreshTimeoutRef.current)
+                realtimeRefreshTimeoutRef.current = null
+            }
+            void supabase.removeChannel(channel)
+        }
+    }, [scheduleRealtimeRefresh, supabase])
 
     const buildStats = (rows: SubscriptionRow[]): DashboardStats => {
         const activeRows = rows.filter((r) => ACTIVE_STATUSES.has((r.status || "").toLowerCase()))
@@ -248,10 +290,73 @@ export default function SubscriptionPage() {
 
     const handleRefresh = async () => {
         setRefreshing(true)
-        await fetchSubscriptions()
+        await fetchSubscriptions(false)
         setRefreshing(false)
         toast.success("Subscription data refreshed")
     }
+
+    const statusesInData = useMemo(() => {
+        const set = new Set<string>()
+        for (const subscription of subscriptions) {
+            const status = (subscription.status || "").toLowerCase()
+            if (status) {
+                set.add(status)
+            }
+        }
+        return Array.from(set).sort((a, b) => a.localeCompare(b))
+    }, [subscriptions])
+
+    const filteredSubscriptions = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase()
+
+        return subscriptions.filter((subscription) => {
+            const normalizedStatus = (subscription.status || "").toLowerCase()
+            if (statusFilter !== "all" && normalizedStatus !== statusFilter) {
+                return false
+            }
+
+            if (!query) {
+                return true
+            }
+
+            const haystack = [
+                subscription.user_name || "",
+                subscription.user_email || "",
+                subscription.user_id || "",
+                subscription.user_tier || "",
+                subscription.plan_id || "",
+                subscription.plan_name || "",
+                subscription.catalog_plan_name || "",
+                subscription.status || "",
+                subscription.stripe_customer_id || "",
+                subscription.stripe_subscription_id || "",
+            ]
+                .join(" ")
+                .toLowerCase()
+
+            return haystack.includes(query)
+        })
+    }, [searchQuery, statusFilter, subscriptions])
+
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchQuery, statusFilter])
+
+    const totalPages = useMemo(
+        () => Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE)),
+        [filteredSubscriptions.length]
+    )
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages)
+        }
+    }, [currentPage, totalPages])
+
+    const paginatedSubscriptions = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE
+        return filteredSubscriptions.slice(start, start + PAGE_SIZE)
+    }, [currentPage, filteredSubscriptions])
 
     const canScheduleCancel = (item: SubscriptionRow) => {
         if (!item.stripe_subscription_id) return false
@@ -571,7 +676,7 @@ export default function SubscriptionPage() {
             "StripeSubscriptionId",
         ]
 
-        const rows = subscriptions.map((s) => [
+        const rows = filteredSubscriptions.map((s) => [
             s.user_name,
             s.user_email,
             s.user_tier,
@@ -668,8 +773,40 @@ export default function SubscriptionPage() {
 
             <AdminTable
                 title="Subscriber List"
-                data={subscriptions}
+                data={paginatedSubscriptions}
                 isLoading={loading}
+                pagination={{
+                    currentPage,
+                    totalPages,
+                    onPageChange: (page) => {
+                        setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+                    },
+                }}
+                toolbar={(
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-8 relative">
+                            <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <Input
+                                className="pl-10"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                placeholder="Search by subscriber, email, plan, status, or Stripe id"
+                            />
+                        </div>
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value)}
+                            className="h-10 md:col-span-4 rounded-lg border border-white/10 bg-[#0A0A0A] px-3 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]"
+                        >
+                            <option value="all">All statuses</option>
+                            {statusesInData.map((status) => (
+                                <option key={status} value={status}>
+                                    {status}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 columns={[
                     {
                         header: "Subscriber",

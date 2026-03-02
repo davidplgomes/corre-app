@@ -37,6 +37,7 @@ protected_functions=(
   create-payment-intent
   create-shop-payment
   cancel-shop-payment
+  reconcile-shop-orders
   create-marketplace-payment
   stripe-connect-onboarding
   release-marketplace-funds

@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { getOrderHistory } from '../../services/supabase/wallet';
+import { getOrderHistory, reconcileStaleShopOrders } from '../../services/supabase/wallet';
 import { Order } from '../../types';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 
@@ -28,14 +28,21 @@ interface OrderHistoryScreenProps {
 const STATUS_CONFIG: Record<string, { color: string; label: string; emoji: string }> = {
     pending: { color: '#F59E0B', label: 'PENDING', emoji: '⏳' },
     paid: { color: '#3B82F6', label: 'PAID', emoji: '✓' },
-    processing: { color: '#8B5CF6', label: 'PROCESSING', emoji: '⚙️' },
+    processing: { color: '#8B5CF6', label: 'PREPARING', emoji: '⚙️' },
+    ready_for_pickup: { color: '#6366F1', label: 'READY', emoji: '🏪' },
+    picked_up: { color: '#10B981', label: 'PICKED UP', emoji: '✅' },
     shipped: { color: '#6366F1', label: 'SHIPPED', emoji: '📦' },
     delivered: { color: '#10B981', label: 'DELIVERED', emoji: '✅' },
     cancelled: { color: '#EF4444', label: 'CANCELLED', emoji: '✕' },
+    canceled: { color: '#EF4444', label: 'CANCELLED', emoji: '✕' },
+    payment_failed: { color: '#EF4444', label: 'FAILED', emoji: '⚠️' },
+    refunded: { color: '#06B6D4', label: 'REFUNDED', emoji: '↩' },
+    disputed: { color: '#F97316', label: 'DISPUTED', emoji: '⚖️' },
 };
 
 const OrderCard = ({ order, onPress }: { order: Order; onPress: () => void }) => {
     const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+    const chargedAmount = Number(order.cash_amount ?? order.total_amount ?? 0);
 
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('en-GB', {
@@ -72,12 +79,12 @@ const OrderCard = ({ order, onPress }: { order: Order; onPress: () => void }) =>
                         </View>
                         <View style={styles.detailItem}>
                             <Text style={styles.detailLabel}>Total</Text>
-                            <Text style={styles.detailValueHighlight}>€{Number(order.total_amount).toFixed(2)}</Text>
+                            <Text style={styles.detailValueHighlight}>€{chargedAmount.toFixed(2)}</Text>
                         </View>
                         {order.points_used > 0 && (
                             <View style={styles.detailItem}>
                                 <Text style={styles.detailLabel}>Points</Text>
-                                <Text style={styles.detailValueSuccess}>-{order.points_used}</Text>
+                                <Text style={styles.detailValueSuccess}>-{order.points_used} pts</Text>
                             </View>
                         )}
                     </View>
@@ -104,6 +111,7 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
         if (!user?.id) return;
 
         try {
+            await reconcileStaleShopOrders(20);
             const orderData = await getOrderHistory(user.id);
             setOrders(orderData);
         } catch (error) {
@@ -126,8 +134,8 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
 
     const stats = {
         total: orders.length,
-        delivered: orders.filter(o => o.status === 'delivered').length,
-        pending: orders.filter(o => ['pending', 'paid', 'processing', 'shipped'].includes(o.status)).length,
+        pickedUp: orders.filter(o => ['picked_up', 'delivered'].includes(o.status)).length,
+        active: orders.filter(o => ['pending', 'paid', 'processing', 'ready_for_pickup', 'shipped', 'disputed'].includes(o.status)).length,
     };
 
     if (loading) {
@@ -171,11 +179,11 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
                                 <Text style={styles.statLabel}>Total</Text>
                             </BlurView>
                             <BlurView intensity={20} tint="dark" style={styles.statPill}>
-                                <Text style={[styles.statValue, { color: theme.colors.success }]}>{stats.delivered}</Text>
-                                <Text style={styles.statLabel}>Delivered</Text>
+                                <Text style={[styles.statValue, { color: theme.colors.success }]}>{stats.pickedUp}</Text>
+                                <Text style={styles.statLabel}>Picked Up</Text>
                             </BlurView>
                             <BlurView intensity={20} tint="dark" style={styles.statPill}>
-                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stats.pending}</Text>
+                                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{stats.active}</Text>
                                 <Text style={styles.statLabel}>Active</Text>
                             </BlurView>
                         </View>

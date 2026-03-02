@@ -73,7 +73,10 @@
       "Bash(xcrun simctl io 22CBC665-7E18-42AE-9CAA-9031D2158E7B tap 147 812)",
       "Bash(osascript -e ':*)",
       "Bash(xcrun simctl io booted screenshot /tmp/sim_screenshot_2.png)",
-      "Bash(# Use cliclick for precise screen clicking which cliclick || brew install cliclick 2>&1)"
+      "Bash(# Use cliclick for precise screen clicking which cliclick || brew install cliclick 2>&1)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__get_logs"
     ]
   },
   "enabledMcpjsonServers": [

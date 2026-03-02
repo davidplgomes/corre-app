@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
 import { getPlaceById, updatePlace } from '@/lib/services/places';
+import { getPartnerScopeIdsByUserId } from '@/lib/services/partners';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -16,6 +18,7 @@ export default function EditPlacePage() {
     const placeId = params.id as string;
 
     const [loading, setLoading] = useState(true);
+    const [authorized, setAuthorized] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -29,12 +32,33 @@ export default function EditPlacePage() {
     useEffect(() => {
         const load = async () => {
             try {
+                const supabase = createClient();
+                const {
+                    data: { session },
+                    error: sessionError,
+                } = await supabase.auth.getSession();
+
+                if (sessionError) throw sessionError;
+                if (!session) {
+                    toast.error('You must be logged in');
+                    router.push('/login');
+                    return;
+                }
+
+                const partnerScopeIds = await getPartnerScopeIdsByUserId(session.user.id);
                 const place = await getPlaceById(placeId);
                 if (!place) {
                     toast.error('Place not found');
                     router.push('/partner/dashboard/places');
                     return;
                 }
+
+                if (!partnerScopeIds.includes(place.partner_id)) {
+                    setAuthorized(false);
+                    toast.error('This place does not belong to your account');
+                    return;
+                }
+
                 setFormData({
                     name: place.name || '',
                     address: place.address || '',
@@ -78,6 +102,22 @@ export default function EditPlacePage() {
             <div className="flex items-center justify-center h-96">
                 <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
             </div>
+        );
+    }
+
+    if (!authorized) {
+        return (
+            <GlassCard className="p-8 text-center">
+                <h2 className="text-xl font-bold text-white mb-2">Access denied</h2>
+                <p className="text-white/50 mb-6">This place does not belong to your partner account.</p>
+                <Link
+                    href="/partner/dashboard/places"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-white hover:text-[#FF5722] transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to places
+                </Link>
+            </GlassCard>
         );
     }
 

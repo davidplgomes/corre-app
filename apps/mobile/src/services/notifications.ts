@@ -263,6 +263,8 @@ export async function notifyOrderStatus(
     const statusMessages: Record<string, string> = {
         paid: 'Your order has been confirmed!',
         processing: 'Your order is being prepared.',
+        ready_for_pickup: 'Your order is ready for pickup!',
+        picked_up: 'Your order has been picked up!',
         shipped: 'Your order has been shipped!',
         delivered: 'Your order has been delivered!',
     };

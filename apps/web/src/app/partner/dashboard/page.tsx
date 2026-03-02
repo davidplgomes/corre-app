@@ -69,16 +69,20 @@ export default function PartnerDashboardPage() {
 
                 if (!session) return;
 
-                const [placesData, couponsData, eventsData, couponStats, redemptionsRes] = await Promise.all([
+                const [placesData, couponsData, eventsData, couponStats] = await Promise.all([
                     getPartnerPlaces(session.user.id),
                     getPartnerCoupons(session.user.id),
                     getEventsByCreator(session.user.id),
                     getPartnerCouponStats(session.user.id),
-                    supabase
-                        .from('coupon_redemptions')
-                        .select('redeemed_at, partner_coupons!inner(partner_id)')
-                        .eq('partner_coupons.partner_id', session.user.id),
                 ]);
+
+                const couponIds = couponsData.map((coupon) => coupon.id);
+                const redemptionsRes = couponIds.length > 0
+                    ? await supabase
+                        .from('coupon_redemptions')
+                        .select('redeemed_at')
+                        .in('coupon_id', couponIds)
+                    : { data: [], error: null };
 
                 if (redemptionsRes.error) throw redemptionsRes.error;
 

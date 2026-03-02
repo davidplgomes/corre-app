@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { getEventsByCreator, deleteEvent } from '@/lib/services/events';
@@ -10,50 +10,78 @@ import { Plus, Calendar, Search, Filter, Loader2, MapPin, Trophy, Users, Pencil,
 import { toast } from 'sonner';
 
 export default function PartnerEventsPage() {
+    const supabase = useMemo(() => createClient(), []);
     const [events, setEvents] = useState<Event[]>([]);
     const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchEvents = async () => {
-            try {
-                const supabase = createClient();
-                const { data: { session } } = await supabase.auth.getSession();
+    const fetchEvents = useCallback(async (silent = false) => {
+        try {
+            if (!silent) {
+                setLoading(true);
+            }
 
-                if (!session) return;
+            const { data: { session } } = await supabase.auth.getSession();
 
-                const data = await getEventsByCreator(session.user.id);
-                setEvents(data);
+            if (!session) {
+                setEvents([]);
+                setParticipantCounts({});
+                return;
+            }
 
-                if (data.length > 0) {
-                    const { data: participantRows, error: participantError } = await supabase
-                        .from('event_participants')
-                        .select('event_id')
-                        .in('event_id', data.map((e) => e.id));
+            const data = await getEventsByCreator(session.user.id);
+            setEvents(data);
 
-                    if (participantError) throw participantError;
+            if (data.length > 0) {
+                const { data: participantRows, error: participantError } = await supabase
+                    .from('event_participants')
+                    .select('event_id')
+                    .in('event_id', data.map((e) => e.id));
 
-                    const counts = (participantRows || []).reduce<Record<string, number>>((acc, row) => {
-                        acc[row.event_id] = (acc[row.event_id] || 0) + 1;
-                        return acc;
-                    }, {});
+                if (participantError) throw participantError;
 
-                    setParticipantCounts(counts);
-                } else {
-                    setParticipantCounts({});
-                }
-            } catch (error) {
-                console.error('Error fetching events:', error);
-                toast.error('Failed to load events');
-            } finally {
+                const counts = (participantRows || []).reduce<Record<string, number>>((acc, row) => {
+                    acc[row.event_id] = (acc[row.event_id] || 0) + 1;
+                    return acc;
+                }, {});
+
+                setParticipantCounts(counts);
+            } else {
+                setParticipantCounts({});
+            }
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            toast.error('Failed to load events');
+        } finally {
+            if (!silent) {
                 setLoading(false);
             }
-        };
+        }
+    }, [supabase]);
 
-        fetchEvents();
-    }, []);
+    useEffect(() => {
+        void fetchEvents(false);
+
+        const channel = supabase
+            .channel('partner-events-live')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'events' },
+                () => { void fetchEvents(true); }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'event_participants' },
+                () => { void fetchEvents(true); }
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [fetchEvents, supabase]);
 
     const filteredEvents = events.filter(event =>
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

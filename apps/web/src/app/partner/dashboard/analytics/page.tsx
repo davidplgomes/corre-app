@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
 import { TrendingUp, Users, Eye, MousePointerClick, Loader2 } from 'lucide-react';
+import { getPartnerScopeIdsByUserId } from '@/lib/services/partners';
 
 type DailySeries = {
     date: string;
@@ -24,6 +25,24 @@ type Summary = {
     activeCoupons: number;
     upcomingEvents: number;
     totalPlaces: number;
+};
+
+type CouponRow = {
+    id: string;
+    is_active: boolean;
+    created_at: string;
+};
+
+type CouponRedemptionRow = {
+    id: string;
+    coupon_id: string;
+    redeemed_at: string;
+    user_id: string | null;
+};
+
+type EventRow = {
+    id: string;
+    event_datetime: string;
 };
 
 function buildLast7DaysSeries(redemptionDates: string[], couponDates: string[]): DailySeries[] {
@@ -80,6 +99,7 @@ export default function PartnerAnalyticsPage() {
                 if (!session) return;
 
                 const userId = session.user.id;
+                const partnerScopeIds = await getPartnerScopeIdsByUserId(userId);
 
                 const { data: partnerData, error: partnerError } = await supabase
                     .from('partners')
@@ -90,15 +110,22 @@ export default function PartnerAnalyticsPage() {
 
                 const partnerId = partnerData?.id || null;
 
-                const [couponsRes, redemptionsRes, eventsRes, placesRes] = await Promise.all([
-                    supabase
-                        .from('partner_coupons')
-                        .select('id, is_active, created_at')
-                        .eq('partner_id', userId),
-                    supabase
-                        .from('coupon_redemptions')
-                        .select('id, redeemed_at, user_id, partner_coupons!inner(partner_id)')
-                        .eq('partner_coupons.partner_id', userId),
+                const { data: coupons, error: couponsError } = await supabase
+                    .from('partner_coupons')
+                    .select('id, is_active, created_at')
+                    .in('partner_id', partnerScopeIds);
+                if (couponsError) throw couponsError;
+
+                const couponRows = (coupons || []) as CouponRow[];
+                const couponIds = couponRows.map((coupon) => coupon.id);
+
+                const [redemptionsRes, eventsRes, placesRes] = await Promise.all([
+                    couponIds.length > 0
+                        ? supabase
+                            .from('coupon_redemptions')
+                            .select('id, coupon_id, redeemed_at, user_id')
+                            .in('coupon_id', couponIds)
+                        : Promise.resolve({ data: [], error: null }),
                     supabase
                         .from('events')
                         .select('id, event_datetime')
@@ -108,21 +135,19 @@ export default function PartnerAnalyticsPage() {
                         : Promise.resolve({ count: 0, error: null } as { count: number | null; error: null }),
                 ]);
 
-                if (couponsRes.error) throw couponsRes.error;
                 if (redemptionsRes.error) throw redemptionsRes.error;
                 if (eventsRes.error) throw eventsRes.error;
                 if (placesRes.error) throw placesRes.error;
 
-                const coupons = couponsRes.data || [];
-                const redemptions = redemptionsRes.data || [];
-                const events = eventsRes.data || [];
+                const redemptions = (redemptionsRes.data || []) as CouponRedemptionRow[];
+                const events = (eventsRes.data || []) as EventRow[];
 
                 const upcomingEvents = events.filter((e) => new Date(e.event_datetime) > new Date()).length;
-                const activeCoupons = coupons.filter((c) => c.is_active).length;
+                const activeCoupons = couponRows.filter((coupon) => coupon.is_active).length;
 
                 setSummary({
                     totalRedemptions: redemptions.length,
-                    totalCoupons: coupons.length,
+                    totalCoupons: couponRows.length,
                     activeCoupons,
                     upcomingEvents,
                     totalPlaces: placesRes.count || 0,
@@ -131,7 +156,7 @@ export default function PartnerAnalyticsPage() {
                 setTrafficData(
                     buildLast7DaysSeries(
                         redemptions.map((r) => r.redeemed_at),
-                        coupons.map((c) => c.created_at)
+                        couponRows.map((coupon) => coupon.created_at)
                     )
                 );
 
@@ -174,7 +199,7 @@ export default function PartnerAnalyticsPage() {
         };
 
         void loadAnalytics();
-    }, []);
+    }, [supabase]);
 
     if (loading) {
         return (

@@ -5,7 +5,6 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    TextInput,
     StatusBar,
     Alert,
     KeyboardAvoidingView,
@@ -21,7 +20,6 @@ import { Button, LoadingSpinner, BackButton } from '../../components/common';
 import { clearCart } from '../../services/supabase/wallet';
 import { createShopPaymentSession } from '../../services/payments';
 import { supabase } from '../../services/supabase/client';
-import { ShippingAddress } from '../../types';
 
 interface CheckoutScreenProps {
     navigation: any;
@@ -41,30 +39,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
     const { user } = useAuth();
     const { confirmPayment } = useStripe();
     const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
+    const [step, setStep] = useState<'payment' | 'confirmation'>('payment');
     const [cardComplete, setCardComplete] = useState(false);
 
-    const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-        name: '',
-        line1: '',
-        line2: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        country: 'Ireland',
-    });
-
-    const updateAddress = (field: keyof ShippingAddress, value: string) => {
-        setShippingAddress(prev => ({ ...prev, [field]: value }));
-    };
-
     /**
-     * Poll order status waiting for webhook to confirm payment
+     * Poll order status waiting for webhook to confirm payment.
      * Returns final status: 'paid' | 'payment_failed' | 'timeout'
      */
     const pollOrderStatus = async (orderId: string, maxAttempts = 15): Promise<'paid' | 'payment_failed' | 'timeout'> => {
         for (let i = 0; i < maxAttempts; i++) {
-            // Wait 2 seconds between polls
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             const { data: order } = await supabase
@@ -80,34 +63,8 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 return 'payment_failed';
             }
         }
-        // After 30 seconds (15 attempts × 2s), consider it a timeout
+
         return 'timeout';
-    };
-
-    const validateShipping = (): boolean => {
-        if (!shippingAddress.name.trim()) {
-            Alert.alert(t('common.error'), t('checkout.enterName', 'Please enter your name'));
-            return false;
-        }
-        if (!shippingAddress.line1.trim()) {
-            Alert.alert(t('common.error'), t('checkout.enterAddress', 'Please enter your address'));
-            return false;
-        }
-        if (!shippingAddress.city.trim()) {
-            Alert.alert(t('common.error'), t('checkout.enterCity', 'Please enter your city'));
-            return false;
-        }
-        if (!shippingAddress.postal_code.trim()) {
-            Alert.alert(t('common.error'), t('checkout.enterPostal', 'Please enter your postal code'));
-            return false;
-        }
-        return true;
-    };
-
-    const handleContinueToPayment = () => {
-        if (validateShipping()) {
-            setStep('payment');
-        }
     };
 
     const handlePlaceOrder = async () => {
@@ -121,11 +78,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
         setLoading(true);
         let orderId: string | null = null;
         try {
-            // Create a server-authoritative checkout session.
-            const checkoutSession = await createShopPaymentSession(
-                shippingAddress,
-                pointsToUse
-            );
+            const checkoutSession = await createShopPaymentSession(pointsToUse);
 
             if (!checkoutSession.success || !checkoutSession.data) {
                 throw new Error(checkoutSession.error || 'Failed to create checkout session');
@@ -144,7 +97,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 );
             }
 
-            // Confirm payment with Stripe using the card data
             const { error: stripeError } = await confirmPayment(sessionData.clientSecret, {
                 paymentMethodType: 'Card',
             });
@@ -171,13 +123,13 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                 throw new Error(stripeError.message || 'Payment failed');
             }
 
-            // Wait for webhook to confirm payment (polls every 2s for up to 30s)
             const finalStatus = await pollOrderStatus(orderId);
 
             if (finalStatus === 'payment_failed') {
                 throw new Error('Payment was declined. Please try a different payment method.');
-            } else if (finalStatus === 'timeout') {
-                // Payment is processing - show pending state
+            }
+
+            if (finalStatus === 'timeout') {
                 Alert.alert(
                     t('checkout.processing', 'Payment Processing'),
                     t('checkout.processingMessage', 'Your payment is being processed. Check your order history for updates.'),
@@ -189,19 +141,15 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     index: 0,
                                     routes: [{ name: 'OrderHistory' }],
                                 });
-                            }
-                        }
+                            },
+                        },
                     ]
                 );
                 return;
             }
 
-            // Clear cart
             await clearCart(user.id);
-
-            // Navigate to confirmation
             setStep('confirmation');
-
         } catch (error: any) {
             console.error('Checkout error:', error);
             if (orderId) {
@@ -258,31 +206,10 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="light-content" />
 
-            {/* Header */}
             <View style={styles.header}>
-                <BackButton
-                    onPress={() => step === 'shipping' ? navigation.goBack() : setStep('shipping')}
-                    style={styles.backButton}
-                />
+                <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
                 <Text style={styles.headerTitle}>{t('checkout.title', 'Checkout')}</Text>
                 <View style={{ width: 40 }} />
-            </View>
-
-            {/* Progress Steps */}
-            <View style={styles.progressContainer}>
-                <View style={styles.progressStep}>
-                    <View style={[styles.stepCircle, styles.stepActive]}>
-                        <Text style={styles.stepNumber}>1</Text>
-                    </View>
-                    <Text style={[styles.stepLabel, styles.stepLabelActive]}>{t('checkout.shipping', 'Shipping')}</Text>
-                </View>
-                <View style={[styles.progressLine, step === 'payment' && styles.progressLineActive]} />
-                <View style={styles.progressStep}>
-                    <View style={[styles.stepCircle, step === 'payment' && styles.stepActive]}>
-                        <Text style={styles.stepNumber}>2</Text>
-                    </View>
-                    <Text style={[styles.stepLabel, step === 'payment' && styles.stepLabelActive]}>{t('checkout.payment', 'Payment')}</Text>
-                </View>
             </View>
 
             <KeyboardAvoidingView
@@ -294,159 +221,83 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {step === 'shipping' && (
-                        <>
-                            <Text style={styles.sectionTitle}>{t('checkout.shippingAddress', 'Shipping Address')}</Text>
+                    <Text style={styles.sectionTitle}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
 
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>{t('checkout.fullName', 'Full Name')}</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={shippingAddress.name}
-                                    onChangeText={(v) => updateAddress('name', v)}
-                                    placeholder="John Doe"
-                                    placeholderTextColor={theme.colors.text.tertiary}
-                                />
+                    <View style={styles.paymentOption}>
+                        <View style={styles.paymentRadio}>
+                            <View style={styles.radioOuter}>
+                                <View style={styles.radioInner} />
                             </View>
+                        </View>
+                        <Ionicons name="card" size={24} color={theme.colors.brand.primary} />
+                        <Text style={styles.paymentLabel}>{t('checkout.creditDebit', 'Credit/Debit Card')}</Text>
+                    </View>
 
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>{t('checkout.addressLine1', 'Address Line 1')}</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={shippingAddress.line1}
-                                    onChangeText={(v) => updateAddress('line1', v)}
-                                    placeholder="123 Main Street"
-                                    placeholderTextColor={theme.colors.text.tertiary}
-                                />
+                    <View style={styles.cardInputs}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>{t('checkout.cardDetails', 'Card Details')}</Text>
+                            <CardField
+                                postalCodeEnabled={false}
+                                placeholders={{
+                                    number: '4242 4242 4242 4242',
+                                }}
+                                cardStyle={{
+                                    backgroundColor: theme.colors.background.elevated,
+                                    textColor: '#FFFFFF',
+                                    placeholderColor: '#666666',
+                                    borderRadius: 12,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                }}
+                                style={styles.cardField}
+                                onCardChange={(cardDetails) => {
+                                    setCardComplete(Boolean(cardDetails.complete));
+                                }}
+                            />
+                            <Text style={styles.cardHint}>
+                                🔒 {t('checkout.stripeSecure', 'Your card information is securely processed by Stripe')}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.pickupInfoCard}>
+                        <Ionicons name="storefront-outline" size={20} color={theme.colors.brand.primary} />
+                        <Text style={styles.pickupInfoText}>
+                            {t('checkout.localPickupOnly', 'All shop items are available for local pickup only.')}
+                        </Text>
+                    </View>
+
+                    <View style={styles.summaryCard}>
+                        <Text style={styles.sectionTitle}>{t('checkout.orderSummary', 'Order Summary')}</Text>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>{t('checkout.items', 'Items')} ({cartItems.length})</Text>
+                            <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
+                        </View>
+                        {pointsToUse > 0 && (
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
+                                <Text style={styles.discountValue}>-€{(pointsToUse / 100).toFixed(2)}</Text>
                             </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>{t('checkout.addressLine2', 'Address Line 2 (Optional)')}</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={shippingAddress.line2}
-                                    onChangeText={(v) => updateAddress('line2', v)}
-                                    placeholder="Apartment, suite, etc."
-                                    placeholderTextColor={theme.colors.text.tertiary}
-                                />
-                            </View>
-
-                            <View style={styles.row}>
-                                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>{t('checkout.city', 'City')}</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={shippingAddress.city}
-                                        onChangeText={(v) => updateAddress('city', v)}
-                                        placeholder="Dublin"
-                                        placeholderTextColor={theme.colors.text.tertiary}
-                                    />
-                                </View>
-                                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                    <Text style={styles.inputLabel}>{t('checkout.postalCode', 'Postal Code')}</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={shippingAddress.postal_code}
-                                        onChangeText={(v) => updateAddress('postal_code', v)}
-                                        placeholder="D01 1234"
-                                        placeholderTextColor={theme.colors.text.tertiary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>{t('checkout.country', 'Country')}</Text>
-                                <View style={styles.countrySelect}>
-                                    <Text style={styles.countryText}>{shippingAddress.country}</Text>
-                                    <Ionicons name="chevron-down" size={20} color="#888" />
-                                </View>
-                            </View>
-                        </>
-                    )}
-
-                    {step === 'payment' && (
-                        <>
-                            <Text style={styles.sectionTitle}>{t('checkout.paymentMethod', 'Payment Method')}</Text>
-
-                            <View style={styles.paymentOption}>
-                                <View style={styles.paymentRadio}>
-                                    <View style={styles.radioOuter}>
-                                        <View style={styles.radioInner} />
-                                    </View>
-                                </View>
-                                <Ionicons name="card" size={24} color={theme.colors.brand.primary} />
-                                <Text style={styles.paymentLabel}>{t('checkout.creditDebit', 'Credit/Debit Card')}</Text>
-                            </View>
-
-                            <View style={styles.cardInputs}>
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>{t('checkout.cardDetails', 'Card Details')}</Text>
-                                    <CardField
-                                        postalCodeEnabled={false}
-                                        placeholders={{
-                                            number: '4242 4242 4242 4242',
-                                        }}
-                                        cardStyle={{
-                                            backgroundColor: theme.colors.background.elevated,
-                                            textColor: '#FFFFFF',
-                                            placeholderColor: '#666666',
-                                            borderRadius: 12,
-                                            borderWidth: 1,
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                        }}
-                                        style={styles.cardField}
-                                        onCardChange={(cardDetails) => {
-                                            setCardComplete(cardDetails.complete);
-                                        }}
-                                    />
-                                    <Text style={styles.cardHint}>
-                                        🔒 {t('checkout.stripeSecure', 'Your card information is securely processed by Stripe')}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Order Summary */}
-                            <View style={styles.summaryCard}>
-                                <Text style={styles.sectionTitle}>{t('checkout.orderSummary', 'Order Summary')}</Text>
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>{t('checkout.items', 'Items')} ({cartItems.length})</Text>
-                                    <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
-                                </View>
-                                {pointsToUse > 0 && (
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
-                                        <Text style={styles.discountValue}>-€{(pointsToUse / 100).toFixed(2)}</Text>
-                                    </View>
-                                )}
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>{t('checkout.shipping', 'Shipping')}</Text>
-                                    <Text style={styles.summaryValue}>{t('checkout.free', 'Free')}</Text>
-                                </View>
-                                <View style={styles.totalRow}>
-                                    <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
-                                    <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
-                                </View>
-                            </View>
-                        </>
-                    )}
+                        )}
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>{t('checkout.pickup', 'Pickup')}</Text>
+                            <Text style={styles.summaryValue}>{t('checkout.localOnly', 'Local only')}</Text>
+                        </View>
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
+                            <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
+                        </View>
+                    </View>
                 </ScrollView>
 
-                {/* Bottom Button */}
                 <View style={styles.bottomSection}>
-                    {step === 'shipping' ? (
-                        <Button
-                            title={t('checkout.continueToPayment', 'Continue to Payment')}
-                            onPress={handleContinueToPayment}
-                        />
-                    ) : (
-                        <Button
-                            title={`${t('checkout.pay', 'Pay')} €${total.toFixed(2)}`}
-                            onPress={handlePlaceOrder}
-                        />
-                    )}
+                    <Button
+                        title={`${t('checkout.pay', 'Pay')} €${total.toFixed(2)}`}
+                        onPress={handlePlaceOrder}
+                    />
                 </View>
             </KeyboardAvoidingView>
-        </SafeAreaView >
+        </SafeAreaView>
     );
 };
 
@@ -473,59 +324,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
-    backButton: {
-    },
+    backButton: {},
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: '#FFF',
     },
-
-    // Progress
-    progressContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 16,
-    },
-    progressStep: {
-        alignItems: 'center',
-    },
-    stepCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: theme.colors.gray[700],
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    stepActive: {
-        backgroundColor: theme.colors.brand.primary,
-    },
-    stepNumber: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    stepLabel: {
-        color: theme.colors.text.tertiary,
-        fontSize: 12,
-        marginTop: 6,
-    },
-    stepLabelActive: {
-        color: '#FFF',
-    },
-    progressLine: {
-        flex: 1,
-        height: 2,
-        backgroundColor: theme.colors.gray[700],
-        marginHorizontal: 12,
-    },
-    progressLineActive: {
-        backgroundColor: theme.colors.brand.primary,
-    },
-
     content: {
         flex: 1,
     },
@@ -542,8 +346,6 @@ const styles = StyleSheet.create({
         color: '#FFF',
         marginBottom: 16,
     },
-
-    // Inputs
     inputGroup: {
         marginBottom: 16,
     },
@@ -554,34 +356,6 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
-    input: {
-        backgroundColor: theme.colors.background.elevated,
-        borderRadius: 12,
-        padding: 16,
-        color: '#FFF',
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    row: {
-        flexDirection: 'row',
-    },
-    countrySelect: {
-        backgroundColor: theme.colors.background.elevated,
-        borderRadius: 12,
-        padding: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    countryText: {
-        color: '#FFF',
-        fontSize: 16,
-    },
-
-    // Payment
     paymentOption: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -616,7 +390,7 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     cardInputs: {
-        marginBottom: 24,
+        marginBottom: 16,
     },
     cardField: {
         width: '100%',
@@ -629,8 +403,23 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
     },
-
-    // Summary
+    pickupInfoCard: {
+        marginBottom: 16,
+        borderRadius: 12,
+        backgroundColor: theme.colors.background.elevated,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 12,
+        flexDirection: 'row',
+        gap: 10,
+        alignItems: 'center',
+    },
+    pickupInfoText: {
+        flex: 1,
+        color: theme.colors.text.secondary,
+        fontSize: 13,
+        lineHeight: 18,
+    },
     summaryCard: {
         backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
@@ -676,8 +465,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: theme.colors.brand.primary,
     },
-
-    // Bottom
     bottomSection: {
         padding: 16,
         paddingBottom: 34,
@@ -685,8 +472,6 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.1)',
     },
-
-    // Confirmation
     confirmationContainer: {
         flex: 1,
         justifyContent: 'center',

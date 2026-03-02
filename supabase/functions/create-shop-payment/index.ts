@@ -2,16 +2,6 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.14.0?target=deno";
 
-type ShippingAddress = {
-  name: string;
-  line1: string;
-  line2?: string;
-  city: string;
-  state?: string;
-  postal_code: string;
-  country: string;
-};
-
 type CartRow = {
   item_id: string;
   item_type: "shop" | "marketplace";
@@ -52,27 +42,6 @@ const toPriceCents = (item: ShopItemRow): number => {
   return 0;
 };
 
-const trimOrEmpty = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
-
-const validateShipping = (shipping: Partial<ShippingAddress>): string | null => {
-  if (!trimOrEmpty(shipping.name)) return "Name is required.";
-  if (!trimOrEmpty(shipping.line1)) return "Address line 1 is required.";
-  if (!trimOrEmpty(shipping.city)) return "City is required.";
-  if (!trimOrEmpty(shipping.postal_code)) return "Postal code is required.";
-  if (!trimOrEmpty(shipping.country)) return "Country is required.";
-  return null;
-};
-
-const normalizeShipping = (shipping: Partial<ShippingAddress>): ShippingAddress => ({
-  name: trimOrEmpty(shipping.name),
-  line1: trimOrEmpty(shipping.line1),
-  line2: trimOrEmpty(shipping.line2),
-  city: trimOrEmpty(shipping.city),
-  state: trimOrEmpty(shipping.state),
-  postal_code: trimOrEmpty(shipping.postal_code),
-  country: trimOrEmpty(shipping.country),
-});
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -106,15 +75,6 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const requestedPoints = Math.max(0, Math.floor(Number(body?.points_to_use) || 0));
-    const shipping = normalizeShipping(body?.shipping_address || {});
-    const shippingError = validateShipping(shipping);
-
-    if (shippingError) {
-      return new Response(JSON.stringify({ error: shippingError }), {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
 
     const { data: userRow, error: userError } = await supabase
       .from("users")
@@ -267,7 +227,7 @@ Deno.serve(async (req: Request) => {
         points_used: approvedPoints,
         cash_amount: cashAmountCents / 100,
         status: "pending",
-        shipping_address: shipping,
+        shipping_address: null,
         customer_email: userRow.email || user.email || null,
       })
       .select("id")

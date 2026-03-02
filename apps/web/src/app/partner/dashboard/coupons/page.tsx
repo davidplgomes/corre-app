@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { getPartnerCoupons, deleteCoupon, toggleCouponActive } from '@/lib/services/coupons';
@@ -10,32 +10,59 @@ import { Plus, Tag, Search, Filter, Loader2, Calendar, Users, Copy, Pencil, Tras
 import { toast } from 'sonner';
 
 export default function PartnerCouponsPage() {
+    const supabase = useMemo(() => createClient(), []);
     const [coupons, setCoupons] = useState<PartnerCoupon[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [togglingId, setTogglingId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchCoupons = async () => {
-            try {
-                const supabase = createClient();
-                const { data: { session } } = await supabase.auth.getSession();
+    const fetchCoupons = useCallback(async (silent = false) => {
+        try {
+            if (!silent) {
+                setLoading(true);
+            }
 
-                if (!session) return;
+            const { data: { session } } = await supabase.auth.getSession();
 
-                const data = await getPartnerCoupons(session.user.id);
-                setCoupons(data);
-            } catch (error) {
-                console.error('Error fetching coupons:', error);
-                toast.error('Failed to load coupons');
-            } finally {
+            if (!session) {
+                setCoupons([]);
+                return;
+            }
+
+            const data = await getPartnerCoupons(session.user.id);
+            setCoupons(data);
+        } catch (error) {
+            console.error('Error fetching coupons:', error);
+            toast.error('Failed to load coupons');
+        } finally {
+            if (!silent) {
                 setLoading(false);
             }
-        };
+        }
+    }, [supabase]);
 
-        fetchCoupons();
-    }, []);
+    useEffect(() => {
+        void fetchCoupons(false);
+
+        const channel = supabase
+            .channel('partner-coupons-live')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'partner_coupons' },
+                () => { void fetchCoupons(true); }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'coupon_redemptions' },
+                () => { void fetchCoupons(true); }
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
+    }, [fetchCoupons, supabase]);
 
     const filteredCoupons = coupons.filter(coupon =>
         coupon.code.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -73,7 +73,19 @@ export interface Order {
     total_amount: number;
     points_used: number;
     cash_amount: number;
-    status: 'pending' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+    status:
+        | 'pending'
+        | 'paid'
+        | 'processing'
+        | 'ready_for_pickup'
+        | 'picked_up'
+        | 'shipped'
+        | 'delivered'
+        | 'cancelled'
+        | 'canceled'
+        | 'payment_failed'
+        | 'refunded'
+        | 'disputed';
     stripe_payment_intent_id: string | null;
     shipping_address: ShippingAddress | null;
     created_at: string;

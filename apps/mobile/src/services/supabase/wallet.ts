@@ -396,6 +396,132 @@ export async function clearCart(userId: string): Promise<void> {
 
 // ============ Order Functions ============
 
+type ReconcileShopOrdersResult = {
+    success: boolean;
+    checked: number;
+    marked_paid: number;
+    marked_processing: number;
+    marked_failed: number;
+    points_refunded: number;
+    max_age_minutes: number;
+};
+
+const toNumber = (value: unknown, fallback = 0): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const hydrateOrderRows = async (rows: any[]): Promise<Order[]> => {
+    if (!rows.length) return [];
+
+    const allOrderItems = rows.flatMap((row) =>
+        Array.isArray(row?.order_items) ? row.order_items : []
+    );
+
+    const shopIds = [...new Set(
+        allOrderItems
+            .filter((item: any) => item?.item_type === 'shop' && item?.item_id)
+            .map((item: any) => item.item_id)
+    )];
+
+    const marketplaceIds = [...new Set(
+        allOrderItems
+            .filter((item: any) => item?.item_type === 'marketplace' && item?.item_id)
+            .map((item: any) => item.item_id)
+    )];
+
+    let shopItemsById = new Map<string, any>();
+    let marketplaceItemsById = new Map<string, any>();
+
+    if (shopIds.length > 0) {
+        const { data: shopItems, error: shopError } = await supabase
+            .from('corre_shop_items')
+            .select('id, title, description, image_url, price_cents')
+            .in('id', shopIds);
+
+        if (shopError) {
+            console.warn('Error hydrating shop order items:', shopError);
+        } else {
+            shopItemsById = new Map((shopItems || []).map((item: any) => [item.id, item]));
+        }
+    }
+
+    if (marketplaceIds.length > 0) {
+        const { data: marketplaceItems, error: marketplaceError } = await supabase
+            .from('marketplace_listings')
+            .select('id, title, description, images, price_cents')
+            .in('id', marketplaceIds);
+
+        if (marketplaceError) {
+            console.warn('Error hydrating marketplace order items:', marketplaceError);
+        } else {
+            marketplaceItemsById = new Map((marketplaceItems || []).map((item: any) => [item.id, item]));
+        }
+    }
+
+    return rows.map((row) => {
+        const rawItems = Array.isArray(row?.order_items) ? row.order_items : [];
+
+        const items = rawItems.map((orderItem: any) => {
+            if (orderItem.item_type === 'shop') {
+                const shop = shopItemsById.get(orderItem.item_id);
+                return {
+                    ...orderItem,
+                    item: {
+                        title: shop?.title || 'Item',
+                        description: shop?.description || null,
+                        price: toNumber(orderItem.unit_price, toNumber(shop?.price_cents) / 100),
+                        image_url: shop?.image_url || null,
+                    },
+                };
+            }
+
+            const listing = marketplaceItemsById.get(orderItem.item_id);
+            return {
+                ...orderItem,
+                item: {
+                    title: listing?.title || 'Listing',
+                    description: listing?.description || null,
+                    price: toNumber(orderItem.unit_price, toNumber(listing?.price_cents) / 100),
+                    image_url: Array.isArray(listing?.images) && listing.images.length > 0
+                        ? listing.images[0]
+                        : null,
+                },
+            };
+        });
+
+        return {
+            ...row,
+            items,
+        } as Order;
+    });
+};
+
+/**
+ * Reconcile stale pending shop orders for current user.
+ * This recovers orders when webhook delivery is delayed or missing.
+ */
+export async function reconcileStaleShopOrders(
+    maxAgeMinutes = 20
+): Promise<ReconcileShopOrdersResult | null> {
+    const { data, error } = await supabase.functions.invoke('reconcile-shop-orders', {
+        body: {
+            max_age_minutes: maxAgeMinutes,
+        },
+    });
+
+    if (error) {
+        console.warn('Error reconciling stale orders:', error);
+        return null;
+    }
+
+    if (!data || data.error) {
+        return null;
+    }
+
+    return data as ReconcileShopOrdersResult;
+}
+
 /**
  * Get order history
  */
@@ -414,7 +540,7 @@ export async function getOrderHistory(userId: string): Promise<Order[]> {
         throw error;
     }
 
-    return (data || []) as Order[];
+    return hydrateOrderRows(data || []);
 }
 
 /**
@@ -436,7 +562,8 @@ export async function getOrder(orderId: string): Promise<Order | null> {
         throw error;
     }
 
-    return data as Order;
+    const hydrated = await hydrateOrderRows([data]);
+    return hydrated[0] || null;
 }
 
 // ============ Guest Pass Functions ============

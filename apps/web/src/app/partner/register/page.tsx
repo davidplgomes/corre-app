@@ -157,7 +157,11 @@ const FORM_TEXT: Record<
             instagram: '6. Instagram',
             loginEmail: 'Login Email',
             businessDescription: 'Business Description',
-            websiteUrl: 'Website URL',
+            websiteUrl: 'Site URL?',
+            websiteYes: 'Yes',
+            websiteNo: 'No',
+            websiteNoMessage: 'This site and mobile app were made by',
+            websiteNoMessageEnd: '— get in touch if you need our services!',
             contactEmail: 'Contact Email',
             city: 'City',
             country: 'Country',
@@ -174,7 +178,7 @@ const FORM_TEXT: Record<
             instagram: '@business',
             loginEmail: 'email for partner dashboard access',
             businessDescription: 'Optional extra context about your business',
-            websiteUrl: 'https://example.com',
+            websiteUrl: 'yourbusiness.com',
             contactEmail: 'Optional contact email',
             city: 'City',
             country: 'Country',
@@ -229,7 +233,11 @@ const FORM_TEXT: Record<
             instagram: '6. Instagram',
             loginEmail: 'Email de Login',
             businessDescription: 'Descricao do Negocio',
-            websiteUrl: 'Website',
+            websiteUrl: 'Site / URL?',
+            websiteYes: 'Sim',
+            websiteNo: 'Nao',
+            websiteNoMessage: 'Este site e aplicativo foram feitos pela',
+            websiteNoMessageEnd: '— entre em contato se precisar dos nossos serviços!',
             contactEmail: 'Email de Contato',
             city: 'Cidade',
             country: 'Pais',
@@ -246,7 +254,7 @@ const FORM_TEXT: Record<
             instagram: '@seunegocio',
             loginEmail: 'email para acesso ao painel parceiro',
             businessDescription: 'Contexto extra opcional sobre seu negocio',
-            websiteUrl: 'https://exemplo.com',
+            websiteUrl: 'seunegocio.com',
             contactEmail: 'Email de contato opcional',
             city: 'Cidade',
             country: 'Pais',
@@ -301,7 +309,11 @@ const FORM_TEXT: Record<
             instagram: '6. Instagram',
             loginEmail: 'Email de Login',
             businessDescription: 'Descripcion del Negocio',
-            websiteUrl: 'Sitio Web',
+            websiteUrl: 'Sitio Web / URL?',
+            websiteYes: 'Si',
+            websiteNo: 'No',
+            websiteNoMessage: 'Este sitio y la app fueron hechos por',
+            websiteNoMessageEnd: '— contactanos si necesitas nuestros servicios!',
             contactEmail: 'Email de Contacto',
             city: 'Ciudad',
             country: 'Pais',
@@ -318,7 +330,7 @@ const FORM_TEXT: Record<
             instagram: '@tunegocio',
             loginEmail: 'email para acceso al panel partner',
             businessDescription: 'Contexto opcional de tu negocio',
-            websiteUrl: 'https://ejemplo.com',
+            websiteUrl: 'tunegocio.com',
             contactEmail: 'Email de contacto opcional',
             city: 'Ciudad',
             country: 'Pais',
@@ -582,9 +594,8 @@ export default function PartnerRegisterPage() {
                             return (
                                 <div key={n} className="flex items-center flex-1">
                                     <div
-                                        className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center ${
-                                            isDone ? 'bg-green-500 text-white' : isActive ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-white/40'
-                                        }`}
+                                        className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center ${isDone ? 'bg-green-500 text-white' : isActive ? 'bg-[#FF5722] text-white' : 'bg-white/10 text-white/40'
+                                            }`}
                                     >
                                         {isDone ? '✓' : n}
                                     </div>
@@ -850,7 +861,7 @@ export default function PartnerRegisterPage() {
                                         <label className="block text-xs text-white/60 mb-1">
                                             {copy.labels.phone}<RequiredAsterisk />
                                         </label>
-                                        <div className="grid grid-cols-[180px_1fr] gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3">
                                             <select
                                                 required
                                                 value={form.phone_country_code}
@@ -924,15 +935,57 @@ export default function PartnerRegisterPage() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs text-white/60 mb-1">{copy.labels.websiteUrl}</label>
-                                            <input
-                                                type="url"
-                                                value={form.website_url}
-                                                onChange={(e) => setField('website_url', e.target.value)}
-                                                placeholder={copy.placeholders.websiteUrl}
-                                                className={inputCls}
-                                                style={inputStyle}
-                                            />
+                                            <label className="block text-xs text-white/60 mb-2">{copy.labels.websiteUrl}</label>
+                                            <div className="flex gap-2 mb-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { if (!form.website_url) setField('website_url', ' '); }}
+                                                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${form.website_url
+                                                        ? 'bg-[#FF5722] text-white shadow-lg shadow-orange-500/20'
+                                                        : 'text-white/60 hover:bg-white/10'
+                                                        }`}
+                                                    style={form.website_url ? undefined : inputStyle}
+                                                >
+                                                    {copy.labels.websiteYes}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setField('website_url', '')}
+                                                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${!form.website_url
+                                                        ? 'bg-white/15 text-white'
+                                                        : 'text-white/60 hover:bg-white/10'
+                                                        }`}
+                                                    style={form.website_url ? inputStyle : undefined}
+                                                >
+                                                    {copy.labels.websiteNo}
+                                                </button>
+                                            </div>
+                                            {form.website_url ? (
+                                                <input
+                                                    type="text"
+                                                    value={form.website_url.trim()}
+                                                    onChange={(e) => setField('website_url', e.target.value)}
+                                                    placeholder={copy.placeholders.websiteUrl}
+                                                    className={inputCls}
+                                                    style={inputStyle}
+                                                />
+                                            ) : (
+                                                <div
+                                                    className="rounded-xl px-4 py-3 text-sm text-white/50"
+                                                    style={{ background: 'rgba(255,87,34,0.06)', border: '1px solid rgba(255,87,34,0.15)' }}
+                                                >
+                                                    {copy.labels.websiteNoMessage}{' '}
+                                                    <a
+                                                        href="https://webstarstudio.com"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[#FF5722] font-semibold hover:underline"
+                                                    >
+                                                        Web Star Studio
+                                                    </a>
+                                                    {' '}{copy.labels.websiteNoMessageEnd}
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-xs text-white/60 mb-1">{copy.labels.contactEmail}</label>

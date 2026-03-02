@@ -12,11 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner, Button, BackButton } from '../../components/common';
-import { getOrder } from '../../services/supabase/wallet';
+import { getOrder, reconcileStaleShopOrders } from '../../services/supabase/wallet';
 import { Order } from '../../types';
 
 interface OrderDetailScreenProps {
@@ -28,33 +27,45 @@ interface OrderDetailScreenProps {
     };
 }
 
-const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
-    const statusConfig = {
-        pending: { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', label: 'Pending', icon: 'time-outline' },
-        paid: { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', label: 'Paid', icon: 'checkmark-circle-outline' },
-        processing: { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Processing', icon: 'cube-outline' },
-        shipped: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Shipped', icon: 'airplane-outline' },
-        delivered: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Delivered', icon: 'checkmark-done-outline' },
-        cancelled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled', icon: 'close-circle-outline' },
-    };
+const statusConfig: Record<string, { color: string; bg: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+    pending: { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', label: 'Pending', icon: 'time-outline' },
+    paid: { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', label: 'Paid', icon: 'checkmark-circle-outline' },
+    processing: { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Preparing', icon: 'cube-outline' },
+    ready_for_pickup: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Ready for Pickup', icon: 'storefront-outline' },
+    picked_up: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Picked Up', icon: 'checkmark-done-outline' },
+    shipped: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Shipped', icon: 'airplane-outline' },
+    delivered: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Delivered', icon: 'checkmark-done-outline' },
+    cancelled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled', icon: 'close-circle-outline' },
+    canceled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled', icon: 'close-circle-outline' },
+    payment_failed: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Payment Failed', icon: 'alert-circle-outline' },
+    refunded: { color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.1)', label: 'Refunded', icon: 'return-up-back-outline' },
+    disputed: { color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', label: 'Disputed', icon: 'warning-outline' },
+};
 
-    const config = statusConfig[status];
+const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
+    const config = statusConfig[status] || statusConfig.pending;
 
     return (
         <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
-            <Ionicons name={config.icon as any} size={18} color={config.color} />
+            <Ionicons name={config.icon} size={18} color={config.color} />
             <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
         </View>
     );
 };
 
 const OrderTimeline = ({ order }: { order: Order }) => {
+    const status = String(order.status || '');
+    const paymentConfirmed = ['paid', 'processing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered', 'refunded', 'disputed'].includes(status);
+    const inPreparation = ['processing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(status);
+    const readyForPickup = ['ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(status);
+    const pickedUp = ['picked_up', 'delivered'].includes(status);
+
     const steps = [
         { key: 'created', label: 'Order Placed', date: order.created_at, complete: true },
-        { key: 'paid', label: 'Payment Confirmed', date: order.status !== 'pending' ? order.created_at : null, complete: order.status !== 'pending' },
-        { key: 'processing', label: 'Processing', date: null, complete: ['processing', 'shipped', 'delivered'].includes(order.status) },
-        { key: 'shipped', label: 'Shipped', date: null, complete: ['shipped', 'delivered'].includes(order.status) },
-        { key: 'delivered', label: 'Delivered', date: null, complete: order.status === 'delivered' },
+        { key: 'paid', label: 'Payment Confirmed', date: paymentConfirmed ? order.created_at : null, complete: paymentConfirmed },
+        { key: 'processing', label: 'Preparing', date: null, complete: inPreparation },
+        { key: 'ready', label: 'Ready for Pickup', date: null, complete: readyForPickup },
+        { key: 'picked', label: 'Picked Up', date: null, complete: pickedUp },
     ];
 
     return (
@@ -62,29 +73,18 @@ const OrderTimeline = ({ order }: { order: Order }) => {
             {steps.map((step, index) => (
                 <View key={step.key} style={styles.timelineStep}>
                     <View style={styles.timelineLeft}>
-                        <View style={[
-                            styles.timelineDot,
-                            step.complete && styles.timelineDotComplete
-                        ]}>
-                            {step.complete && (
-                                <Ionicons name="checkmark" size={12} color="#FFF" />
-                            )}
+                        <View style={[styles.timelineDot, step.complete && styles.timelineDotComplete]}>
+                            {step.complete ? <Ionicons name="checkmark" size={12} color="#FFF" /> : null}
                         </View>
-                        {index < steps.length - 1 && (
-                            <View style={[
-                                styles.timelineLine,
-                                step.complete && styles.timelineLineComplete
-                            ]} />
-                        )}
+                        {index < steps.length - 1 ? (
+                            <View style={[styles.timelineLine, step.complete && styles.timelineLineComplete]} />
+                        ) : null}
                     </View>
                     <View style={styles.timelineContent}>
-                        <Text style={[
-                            styles.timelineLabel,
-                            step.complete && styles.timelineLabelComplete
-                        ]}>
+                        <Text style={[styles.timelineLabel, step.complete && styles.timelineLabelComplete]}>
                             {step.label}
                         </Text>
-                        {step.date && (
+                        {step.date ? (
                             <Text style={styles.timelineDate}>
                                 {new Date(step.date).toLocaleDateString('en-GB', {
                                     day: '2-digit',
@@ -93,7 +93,7 @@ const OrderTimeline = ({ order }: { order: Order }) => {
                                     minute: '2-digit',
                                 })}
                             </Text>
-                        )}
+                        ) : null}
                     </View>
                 </View>
             ))}
@@ -102,16 +102,24 @@ const OrderTimeline = ({ order }: { order: Order }) => {
 };
 
 export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation, route }) => {
-    const { t } = useTranslation();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [order, setOrder] = useState<Order | null>(null);
 
     const { orderId } = route.params;
+    const subtotalAmount = Number(order?.total_amount || 0);
+    const pointsDiscountAmount = Number(order?.points_used || 0) / 100;
+    const chargedAmount = Number(
+        order?.cash_amount ??
+        Math.max(0, subtotalAmount - pointsDiscountAmount)
+    );
 
     const loadOrder = useCallback(async () => {
+        if (!user?.id) return;
+
         try {
+            await reconcileStaleShopOrders(20);
             const data = await getOrder(orderId);
             setOrder(data);
         } catch (error) {
@@ -120,7 +128,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
             setLoading(false);
             setRefreshing(false);
         }
-    }, [orderId]);
+    }, [orderId, user?.id]);
 
     useEffect(() => {
         loadOrder();
@@ -131,13 +139,8 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
         loadOrder();
     }, [loadOrder]);
 
-    const handleTrackShipment = () => {
-        // In production, this would open the tracking URL
-        Linking.openURL('https://track.example.com');
-    };
-
     const handleContactSupport = () => {
-        Linking.openURL('mailto:support@corre.app?subject=Order%20' + order?.id);
+        Linking.openURL(`mailto:support@corre.app?subject=Order%20${order?.id || ''}`);
     };
 
     if (loading) {
@@ -153,7 +156,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
             <SafeAreaView style={styles.container} edges={['top']}>
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
-                    <BackButton style={styles.backButton} />
+                    <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
                     <Text style={styles.headerTitle}>Order Details</Text>
                     <View style={{ width: 40 }} />
                 </View>
@@ -174,9 +177,8 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="light-content" />
 
-            {/* Header */}
             <View style={styles.header}>
-                <BackButton style={styles.backButton} />
+                <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
                 <Text style={styles.headerTitle}>Order Details</Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -192,7 +194,6 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
                     />
                 }
             >
-                {/* Order Header */}
                 <View style={styles.orderHeader}>
                     <View style={styles.orderIdRow}>
                         <Text style={styles.orderIdLabel}>Order</Text>
@@ -201,7 +202,6 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
                     <OrderStatusBadge status={order.status} />
                 </View>
 
-                {/* Order Date */}
                 <Text style={styles.orderDate}>
                     Placed on {new Date(order.created_at).toLocaleDateString('en-GB', {
                         weekday: 'long',
@@ -211,13 +211,11 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
                     })}
                 </Text>
 
-                {/* Order Timeline */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Status</Text>
                     <OrderTimeline order={order} />
                 </View>
 
-                {/* Order Items */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Items</Text>
                     <View style={styles.itemsCard}>
@@ -240,61 +238,31 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
                     </View>
                 </View>
 
-                {/* Order Summary */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Summary</Text>
                     <View style={styles.summaryCard}>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Subtotal</Text>
-                            <Text style={styles.summaryValue}>€{((order.total_amount || 0) + (order.points_used || 0) / 100).toFixed(2)}</Text>
+                            <Text style={styles.summaryValue}>€{subtotalAmount.toFixed(2)}</Text>
                         </View>
-                        {order.points_used && order.points_used > 0 && (
+                        {order.points_used && order.points_used > 0 ? (
                             <View style={styles.summaryRow}>
                                 <Text style={styles.discountLabel}>Points Discount ({order.points_used} pts)</Text>
-                                <Text style={styles.discountValue}>-€{(order.points_used / 100).toFixed(2)}</Text>
+                                <Text style={styles.discountValue}>-€{pointsDiscountAmount.toFixed(2)}</Text>
                             </View>
-                        )}
+                        ) : null}
                         <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Shipping</Text>
-                            <Text style={styles.summaryValue}>Free</Text>
+                            <Text style={styles.summaryLabel}>Pickup</Text>
+                            <Text style={styles.summaryValue}>Local</Text>
                         </View>
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total</Text>
-                            <Text style={styles.totalValue}>€{(order.total_amount || 0).toFixed(2)}</Text>
+                            <Text style={styles.totalValue}>€{chargedAmount.toFixed(2)}</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* Shipping Address */}
-                {order.shipping_address && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Shipping Address</Text>
-                        <View style={styles.addressCard}>
-                            <Ionicons name="location-outline" size={20} color="#888" />
-                            <View style={styles.addressContent}>
-                                <Text style={styles.addressLine}>{order.shipping_address.name}</Text>
-                                <Text style={styles.addressLine}>{order.shipping_address.line1}</Text>
-                                {order.shipping_address.line2 && (
-                                    <Text style={styles.addressLine}>{order.shipping_address.line2}</Text>
-                                )}
-                                <Text style={styles.addressLine}>
-                                    {order.shipping_address.city}, {order.shipping_address.postal_code}
-                                </Text>
-                                <Text style={styles.addressLine}>{order.shipping_address.country}</Text>
-                            </View>
-                        </View>
-                    </View>
-                )}
-
-                {/* Actions */}
                 <View style={styles.actionsSection}>
-                    {order.status === 'shipped' && (
-                        <Button
-                            title="Track Shipment"
-                            onPress={handleTrackShipment}
-                            style={styles.actionButton}
-                        />
-                    )}
                     <TouchableOpacity style={styles.supportButton} onPress={handleContactSupport}>
                         <Ionicons name="help-circle-outline" size={20} color="#888" />
                         <Text style={styles.supportText}>Need help? Contact Support</Text>
@@ -323,8 +291,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
-    backButton: {
-    },
+    backButton: {},
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
@@ -337,8 +304,6 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingBottom: 100,
     },
-
-    // Order Header
     orderHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -376,8 +341,6 @@ const styles = StyleSheet.create({
         color: theme.colors.text.secondary,
         marginBottom: 24,
     },
-
-    // Section
     section: {
         marginBottom: 24,
     },
@@ -387,8 +350,6 @@ const styles = StyleSheet.create({
         color: '#FFF',
         marginBottom: 12,
     },
-
-    // Timeline
     timeline: {
         backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
@@ -437,8 +398,6 @@ const styles = StyleSheet.create({
         color: theme.colors.text.secondary,
         marginTop: 2,
     },
-
-    // Items
     itemsCard: {
         backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
@@ -483,8 +442,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: theme.colors.brand.primary,
     },
-
-    // Summary
     summaryCard: {
         backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
@@ -529,30 +486,8 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: theme.colors.brand.primary,
     },
-
-    // Address
-    addressCard: {
-        flexDirection: 'row',
-        backgroundColor: theme.colors.background.elevated,
-        borderRadius: 16,
-        padding: 16,
-        gap: 12,
-    },
-    addressContent: {
-        flex: 1,
-    },
-    addressLine: {
-        fontSize: 14,
-        color: theme.colors.gray[300],
-        marginBottom: 2,
-    },
-
-    // Actions
     actionsSection: {
         marginTop: 8,
-    },
-    actionButton: {
-        marginBottom: 16,
     },
     supportButton: {
         flexDirection: 'row',
@@ -565,8 +500,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: theme.colors.text.secondary,
     },
-
-    // Error State
     errorState: {
         flex: 1,
         justifyContent: 'center',

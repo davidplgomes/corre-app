@@ -333,6 +333,41 @@ Deno.serve(async (req: Request) => {
                 break;
             }
 
+            case "payment_intent.processing": {
+                const paymentIntent = event.data.object as Stripe.PaymentIntent;
+                const paymentType = paymentIntent.metadata.type;
+
+                if (paymentType === "marketplace_order") {
+                    const { data: mktOrder } = await supabase
+                        .from("marketplace_orders")
+                        .select("id, status")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
+
+                    if (mktOrder && mktOrder.status === "pending") {
+                        await supabase
+                            .from("marketplace_orders")
+                            .update({ status: "pending" })
+                            .eq("id", mktOrder.id);
+                    }
+                } else {
+                    const { data: order } = await supabase
+                        .from("orders")
+                        .select("id, status")
+                        .eq("stripe_payment_intent_id", paymentIntent.id)
+                        .single();
+
+                    if (order && order.status === "pending") {
+                        await supabase
+                            .from("orders")
+                            .update({ status: "processing" })
+                            .eq("id", order.id);
+                        console.log(`Shop order ${order.id} marked as processing`);
+                    }
+                }
+                break;
+            }
+
             case "payment_intent.payment_failed":
             case "payment_intent.canceled": {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;

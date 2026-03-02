@@ -1,15 +1,17 @@
 import { createClient } from '@/lib/supabase';
 import type { PartnerCoupon, CouponRedemption } from '@/types';
+import { getPartnerScopeIdsByUserId } from './partners';
 
 /**
  * Get partner's coupons
  */
 export async function getPartnerCoupons(partnerId: string): Promise<PartnerCoupon[]> {
     const supabase = createClient();
+    const partnerScopeIds = await getPartnerScopeIdsByUserId(partnerId);
     const { data, error } = await supabase
         .from('partner_coupons')
         .select('*')
-        .eq('partner_id', partnerId)
+        .in('partner_id', partnerScopeIds)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -101,16 +103,28 @@ export async function getCouponRedemptions(couponId: string): Promise<CouponRede
  */
 export async function getPartnerCouponStats(partnerId: string) {
     const supabase = createClient();
+    const partnerScopeIds = await getPartnerScopeIdsByUserId(partnerId);
 
-    const [coupons, redemptions] = await Promise.all([
-        supabase.from('partner_coupons').select('id, redeemed_count, is_active').eq('partner_id', partnerId),
-        supabase.from('coupon_redemptions')
-            .select('id, partner_coupons!inner(partner_id)')
-            .eq('partner_coupons.partner_id', partnerId),
-    ]);
+    const coupons = await supabase
+        .from('partner_coupons')
+        .select('id, redeemed_count, is_active')
+        .in('partner_id', partnerScopeIds);
+
+    if (coupons.error) throw coupons.error;
+
+    const couponIds = (coupons.data || []).map((coupon) => coupon.id);
+
+    const redemptions = couponIds.length > 0
+        ? await supabase
+            .from('coupon_redemptions')
+            .select('id', { count: 'exact', head: true })
+            .in('coupon_id', couponIds)
+        : { count: 0, error: null };
+
+    if (redemptions.error) throw redemptions.error;
 
     const activeCoupons = coupons.data?.filter(c => c.is_active).length || 0;
-    const totalRedemptions = redemptions.data?.length || 0;
+    const totalRedemptions = redemptions.count || 0;
 
     return {
         totalCoupons: coupons.data?.length || 0,

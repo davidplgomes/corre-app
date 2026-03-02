@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase';
 import { getEventById, getEventParticipants } from '@/lib/services/events';
 import type { Event, EventParticipant } from '@/types';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Calendar, ChevronLeft, Loader2, MapPin, Trophy, Users } from 'lucide-react';
+import { Calendar, ChevronLeft, Loader2, MapPin, Trophy, Users, Search, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ParticipantWithCheckIn = EventParticipant & {
@@ -24,6 +24,8 @@ export default function PartnerEventParticipantsPage() {
     const [event, setEvent] = useState<Event | null>(null);
     const [participants, setParticipants] = useState<ParticipantWithCheckIn[]>([]);
     const [authorized, setAuthorized] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'checked_in' | 'not_checked_in'>('all');
 
     useEffect(() => {
         const loadData = async () => {
@@ -109,6 +111,57 @@ export default function PartnerEventParticipantsPage() {
         void loadData();
     }, [eventId, supabase]);
 
+    const checkedInCount = useMemo(
+        () => participants.filter((participant) => Boolean(participant.checked_in_at)).length,
+        [participants]
+    );
+
+    const filteredParticipants = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+
+        return participants.filter((participant) => {
+            const checkedIn = Boolean(participant.checked_in_at);
+            if (attendanceFilter === 'checked_in' && !checkedIn) return false;
+            if (attendanceFilter === 'not_checked_in' && checkedIn) return false;
+
+            if (!query) return true;
+
+            const haystack = [
+                participant.users?.full_name || '',
+                participant.users?.email || '',
+                participant.users?.membership_tier || '',
+            ]
+                .join(' ')
+                .toLowerCase();
+
+            return haystack.includes(query);
+        });
+    }, [attendanceFilter, participants, searchQuery]);
+
+    const exportCsv = () => {
+        const headers = ['Runner', 'Email', 'Tier', 'Joined', 'Check-In', 'Points'];
+        const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
+        const rows = filteredParticipants.map((participant) => [
+            participant.users?.full_name || 'Unknown runner',
+            participant.users?.email || participant.user_id,
+            participant.users?.membership_tier || 'free',
+            new Date(participant.joined_at).toLocaleString('en-IE'),
+            participant.checked_in_at ? new Date(participant.checked_in_at).toLocaleString('en-IE') : 'Not checked in',
+            participant.points_earned != null ? String(participant.points_earned) : '0',
+        ]);
+
+        const csv = [headers.map(escape).join(','), ...rows.map((row) => row.map(escape).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `event_participants_${event?.id || eventId}_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-96">
@@ -176,9 +229,74 @@ export default function PartnerEventParticipantsPage() {
                     </span>
                 </div>
 
-                {participants.length === 0 ? (
+                <div className="px-5 py-4 border-b border-white/5 flex flex-col md:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            placeholder="Search by runner, email or tier..."
+                            className="w-full h-10 bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setAttendanceFilter('all')}
+                            className={`px-3 h-10 rounded-lg text-xs uppercase tracking-wider font-bold transition-colors ${
+                                attendanceFilter === 'all'
+                                    ? 'bg-[#FF5722] text-white'
+                                    : 'bg-white/5 border border-white/10 text-white/60 hover:text-white'
+                            }`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setAttendanceFilter('checked_in')}
+                            className={`px-3 h-10 rounded-lg text-xs uppercase tracking-wider font-bold transition-colors ${
+                                attendanceFilter === 'checked_in'
+                                    ? 'bg-[#FF5722] text-white'
+                                    : 'bg-white/5 border border-white/10 text-white/60 hover:text-white'
+                            }`}
+                        >
+                            Checked In
+                        </button>
+                        <button
+                            onClick={() => setAttendanceFilter('not_checked_in')}
+                            className={`px-3 h-10 rounded-lg text-xs uppercase tracking-wider font-bold transition-colors ${
+                                attendanceFilter === 'not_checked_in'
+                                    ? 'bg-[#FF5722] text-white'
+                                    : 'bg-white/5 border border-white/10 text-white/60 hover:text-white'
+                            }`}
+                        >
+                            Pending
+                        </button>
+                    </div>
+                    <button
+                        onClick={exportCsv}
+                        className="h-10 px-4 inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-lg text-xs uppercase tracking-wider font-bold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        Export CSV
+                    </button>
+                </div>
+
+                <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                    <p className="text-xs text-white/40">
+                        Showing {filteredParticipants.length} of {participants.length}
+                    </p>
+                    <p className="text-xs text-white/40">
+                        Checked in: {checkedInCount} • Pending: {participants.length - checkedInCount}
+                    </p>
+                </div>
+
+                {filteredParticipants.length === 0 ? (
                     <div className="p-10 text-center">
-                        <p className="text-white/40">No participants joined this event yet.</p>
+                        <p className="text-white/40">
+                            {participants.length === 0
+                                ? 'No participants joined this event yet.'
+                                : 'No participants match your current filters.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -193,7 +311,7 @@ export default function PartnerEventParticipantsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {participants.map((participant) => {
+                                {filteredParticipants.map((participant) => {
                                     const runnerName = participant.users?.full_name || 'Unknown runner';
                                     const runnerEmail = participant.users?.email || participant.user_id;
                                     const tier = participant.users?.membership_tier || 'free';

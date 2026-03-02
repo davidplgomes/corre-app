@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (["paid", "refunded", "shipped", "delivered"].includes(order.status)) {
+    if (["paid", "refunded", "ready_for_pickup", "picked_up", "shipped", "delivered"].includes(order.status)) {
       return new Response(
         JSON.stringify({
           success: true,

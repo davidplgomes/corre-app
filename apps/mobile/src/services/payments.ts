@@ -1,7 +1,6 @@
 // Stripe Payment Service for Corre App
 // Handles subscription management and one-time payments
 import { supabase } from './supabase/client';
-import { ShippingAddress } from '../types';
 
 // Stripe configuration
 // In production, these would come from environment variables
@@ -175,13 +174,11 @@ export async function cancelSubscription(userId: string, subscriptionId: string)
  * The backend computes totals and points discounts from cart data.
  */
 export async function createShopPaymentSession(
-    shippingAddress: ShippingAddress,
     pointsToUse: number
 ): Promise<{ success: boolean; data?: ShopPaymentSession; error?: string }> {
     try {
         const { data, error } = await supabase.functions.invoke('create-shop-payment', {
             body: {
-                shipping_address: shippingAddress,
                 points_to_use: Math.max(0, Math.floor(Number(pointsToUse) || 0)),
             },
         });

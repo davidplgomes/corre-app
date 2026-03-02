@@ -9,13 +9,11 @@ import {
     Calendar,
     Store,
     ShoppingBag,
+    Package,
     Building2,
     Activity,
-    Plus,
-    Sparkles,
     Settings,
     FileText,
-    Shield
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
@@ -42,6 +40,7 @@ const navItems = [
         items: [
             { title: "Marketplace", href: "/admin/dashboard/marketplace", icon: Store },
             { title: "Shop", href: "/admin/dashboard/shop", icon: ShoppingBag },
+            { title: "Orders", href: "/admin/dashboard/orders", icon: Package },
             { title: "Logs", href: "/admin/dashboard/logs", icon: FileText },
         ]
     }
@@ -122,7 +121,11 @@ export function AdminSidebar({ className, onNavigate }: AdminSidebarProps) {
                 <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                     <div className="w-8 h-8 rounded-full bg-neutral-700 overflow-hidden">
                         {user?.user_metadata?.avatar_url ? (
-                            <img src={user.user_metadata.avatar_url} className="w-full h-full object-cover" />
+                            <img
+                                src={user.user_metadata.avatar_url}
+                                alt="Admin avatar"
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs text-white/40">
                                 {user?.email?.[0].toUpperCase() || 'A'}

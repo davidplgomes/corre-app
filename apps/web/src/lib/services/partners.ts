@@ -4,6 +4,41 @@ import type { Partner, User } from '@/types';
 export type PartnerWithUser = Partner & { users: User };
 
 /**
+ * Resolve all possible owner ids used by partner-linked rows.
+ * Some records may use partners.id while older rows may use users.id.
+ */
+export async function getPartnerScopeIdsByUserId(userId: string): Promise<string[]> {
+    const supabase = createClient();
+    const ids = new Set<string>([userId]);
+
+    const { data, error } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) throw error;
+
+    if (data?.id) {
+        ids.add(data.id);
+    }
+
+    return Array.from(ids);
+}
+
+export async function getPartnerProfileIdByUserId(userId: string): Promise<string | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data?.id || null;
+}
+
+/**
  * Get all partners with user details
  */
 export async function getAllPartners(): Promise<PartnerWithUser[]> {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { getPartnerProfileIdByUserId } from '@/lib/services/partners';
 import { GlassCard } from '@/components/ui/glass-card';
 import { ChevronLeft, Loader2, Tag } from 'lucide-react';
 import Link from 'next/link';
@@ -64,8 +65,11 @@ export default function NewCouponPage() {
                 return;
             }
 
+            const partnerProfileId = await getPartnerProfileIdByUserId(session.user.id);
+            const partnerOwnerId = partnerProfileId || session.user.id;
+
             const { error } = await supabase.from('partner_coupons').insert({
-                partner_id:      session.user.id,
+                partner_id:      partnerOwnerId,
                 title:           formData.title,
                 partner:         formData.partner,
                 code:            formData.code.toUpperCase(),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
 import { getEventById, updateEvent } from '@/lib/services/events';
 import type { EventType } from '@/types';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -16,6 +17,7 @@ export default function EditEventPage() {
     const eventId = params.id as string;
 
     const [loading, setLoading] = useState(true);
+    const [authorized, setAuthorized] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
@@ -32,12 +34,32 @@ export default function EditEventPage() {
     useEffect(() => {
         const load = async () => {
             try {
+                const supabase = createClient();
+                const {
+                    data: { session },
+                    error: sessionError,
+                } = await supabase.auth.getSession();
+
+                if (sessionError) throw sessionError;
+                if (!session) {
+                    toast.error('You must be logged in');
+                    router.push('/login');
+                    return;
+                }
+
                 const event = await getEventById(eventId);
                 if (!event) {
                     toast.error('Event not found');
                     router.push('/partner/dashboard/events');
                     return;
                 }
+
+                if (event.creator_id !== session.user.id) {
+                    setAuthorized(false);
+                    toast.error('This event does not belong to your account');
+                    return;
+                }
+
                 const dt = new Date(event.event_datetime);
                 const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
                     .toISOString()
@@ -90,6 +112,22 @@ export default function EditEventPage() {
             <div className="flex items-center justify-center h-96">
                 <Loader2 className="w-8 h-8 text-[#FF5722] animate-spin" />
             </div>
+        );
+    }
+
+    if (!authorized) {
+        return (
+            <GlassCard className="p-8 text-center">
+                <h2 className="text-xl font-bold text-white mb-2">Access denied</h2>
+                <p className="text-white/50 mb-6">This event does not belong to your partner account.</p>
+                <Link
+                    href="/partner/dashboard/events"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-white hover:text-[#FF5722] transition-colors"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to events
+                </Link>
+            </GlassCard>
         );
     }
 
