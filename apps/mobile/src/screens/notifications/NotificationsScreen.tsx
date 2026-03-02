@@ -29,7 +29,7 @@ interface NotificationsScreenProps {
 }
 
 const NOTIFICATION_ICONS: Record<string, { emoji: string; color: string }> = {
-    general: { emoji: '🔔', color: '#888' },
+    general: { emoji: '🔔', color: theme.colors.text.secondary },
     event: { emoji: '📅', color: '#6366F1' },
     points: { emoji: '⭐', color: '#F59E0B' },
     order: { emoji: '📦', color: '#10B981' },

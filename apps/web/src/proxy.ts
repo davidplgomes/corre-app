@@ -3,20 +3,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
-// Create the internationalization middleware
 const intlMiddleware = createIntlMiddleware(routing);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const isPublicPartnerRegisterRoute = pathname === '/partner/register' || pathname === '/partner/register/';
 
-    // Check if this is a protected route (partner or admin dashboard)
     const isProtectedRoute =
         (pathname.startsWith('/partner') && !isPublicPartnerRegisterRoute) ||
         pathname.startsWith('/admin');
     const isLoginRoute = pathname === '/login';
 
-    // For protected routes, check authentication
     if (isProtectedRoute) {
         let response = NextResponse.next({
             request: {
@@ -51,14 +48,12 @@ export async function middleware(request: NextRequest) {
 
         const { data: { session } } = await supabase.auth.getSession();
 
-        // If no session, redirect to login
         if (!session) {
             const loginUrl = new URL('/login', request.url);
             loginUrl.searchParams.set('redirect', pathname);
             return NextResponse.redirect(loginUrl);
         }
 
-        // Check user role for the specific dashboard
         const { data: userData } = await supabase
             .from('users')
             .select('role')
@@ -66,19 +61,16 @@ export async function middleware(request: NextRequest) {
             .single();
 
         if (pathname.startsWith('/partner') && userData?.role !== 'partner') {
-            // Partner route but not a partner - redirect to login
             return NextResponse.redirect(new URL('/login', request.url));
         }
 
         if (pathname.startsWith('/admin') && userData?.role !== 'admin') {
-            // Admin route but not an admin - redirect to login
             return NextResponse.redirect(new URL('/login', request.url));
         }
 
         return response;
     }
 
-    // If logged in and trying to access login, redirect to appropriate dashboard
     if (isLoginRoute) {
         let response = NextResponse.next({
             request: {
@@ -130,7 +122,6 @@ export async function middleware(request: NextRequest) {
         return response;
     }
 
-    // For i18n routes, use the intl middleware
     if (pathname === '/' || pathname.match(/^\/(en|pt|es)(\/|$)/)) {
         return intlMiddleware(request);
     }

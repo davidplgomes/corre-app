@@ -117,15 +117,38 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
             (sum, item) => sum + (item?.item?.price || 0) * (item?.quantity || 0),
             0
         );
+        const trustedSubtotalCents = Math.round(trustedSubtotal * 100);
         const availablePoints = await getAvailablePoints(user.id);
         const requestedPointsToUse = Math.max(0, Math.floor(Number(pointsToUse) || 0));
-        const maxPointsAllowed = calculateMaxPointsDiscount(
-            Math.round(trustedSubtotal * 100),
+        const membershipMaxPointsAllowed = calculateMaxPointsDiscount(
+            trustedSubtotalCents,
             profile?.membershipTier || 'free',
             availablePoints
         );
-        const trustedPointsToUse = Math.min(requestedPointsToUse, maxPointsAllowed, availablePoints);
-        const cashAmountCents = Math.round(trustedSubtotal * 100) - trustedPointsToUse;
+        const itemMaxPointsAllowed = cartItems.reduce((sum, item) => {
+            const itemPriceCents = Math.round((item?.item?.price || 0) * 100);
+            const quantity = Math.max(0, Number(item?.quantity) || 0);
+            const lineSubtotalCents = itemPriceCents * quantity;
+            if (lineSubtotalCents <= 0) return sum;
+
+            if (item?.item?.allow_points_discount === false) {
+                return sum;
+            }
+
+            const maxPercent = Math.max(
+                0,
+                Math.min(100, Number(item?.item?.max_points_discount_percent ?? 20))
+            );
+            return sum + Math.floor(lineSubtotalCents * (maxPercent / 100));
+        }, 0);
+
+        const maxPointsAllowed = Math.min(
+            membershipMaxPointsAllowed,
+            itemMaxPointsAllowed,
+            availablePoints
+        );
+        const trustedPointsToUse = Math.min(requestedPointsToUse, maxPointsAllowed);
+        const cashAmountCents = trustedSubtotalCents - trustedPointsToUse;
 
         if (trustedPointsToUse !== requestedPointsToUse) {
             Alert.alert(
@@ -357,7 +380,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     value={shippingAddress.name}
                                     onChangeText={(v) => updateAddress('name', v)}
                                     placeholder="John Doe"
-                                    placeholderTextColor="#666"
+                                    placeholderTextColor={theme.colors.text.tertiary}
                                 />
                             </View>
 
@@ -368,7 +391,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     value={shippingAddress.line1}
                                     onChangeText={(v) => updateAddress('line1', v)}
                                     placeholder="123 Main Street"
-                                    placeholderTextColor="#666"
+                                    placeholderTextColor={theme.colors.text.tertiary}
                                 />
                             </View>
 
@@ -379,7 +402,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                     value={shippingAddress.line2}
                                     onChangeText={(v) => updateAddress('line2', v)}
                                     placeholder="Apartment, suite, etc."
-                                    placeholderTextColor="#666"
+                                    placeholderTextColor={theme.colors.text.tertiary}
                                 />
                             </View>
 
@@ -391,7 +414,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                         value={shippingAddress.city}
                                         onChangeText={(v) => updateAddress('city', v)}
                                         placeholder="Dublin"
-                                        placeholderTextColor="#666"
+                                        placeholderTextColor={theme.colors.text.tertiary}
                                     />
                                 </View>
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
@@ -401,7 +424,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                         value={shippingAddress.postal_code}
                                         onChangeText={(v) => updateAddress('postal_code', v)}
                                         placeholder="D01 1234"
-                                        placeholderTextColor="#666"
+                                        placeholderTextColor={theme.colors.text.tertiary}
                                     />
                                 </View>
                             </View>
@@ -439,7 +462,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                                             number: '4242 4242 4242 4242',
                                         }}
                                         cardStyle={{
-                                            backgroundColor: '#1A1A1A',
+                                            backgroundColor: theme.colors.background.elevated,
                                             textColor: '#FFFFFF',
                                             placeholderColor: '#666666',
                                             borderRadius: 12,
@@ -505,16 +528,16 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     loadingText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 16,
         fontSize: 14,
     },
@@ -548,7 +571,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -561,7 +584,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     stepLabel: {
-        color: '#666',
+        color: theme.colors.text.tertiary,
         fontSize: 12,
         marginTop: 6,
     },
@@ -571,7 +594,7 @@ const styles = StyleSheet.create({
     progressLine: {
         flex: 1,
         height: 2,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         marginHorizontal: 12,
     },
     progressLineActive: {
@@ -601,13 +624,13 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 8,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         color: '#FFF',
@@ -619,7 +642,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     countrySelect: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         flexDirection: 'row',
@@ -637,7 +660,7 @@ const styles = StyleSheet.create({
     paymentOption: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -677,14 +700,14 @@ const styles = StyleSheet.create({
     },
     cardHint: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         marginTop: 8,
         textAlign: 'center',
     },
 
     // Summary
     summaryCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
     },
@@ -695,7 +718,7 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     summaryValue: {
         fontSize: 14,
@@ -733,7 +756,7 @@ const styles = StyleSheet.create({
     bottomSection: {
         padding: 16,
         paddingBottom: 34,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.1)',
     },
@@ -756,7 +779,7 @@ const styles = StyleSheet.create({
     },
     successSubtitle: {
         fontSize: 16,
-        color: '#888',
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         marginBottom: 32,
     },

@@ -315,11 +315,11 @@ export const ReferralScreen: React.FC<ReferralScreenProps> = ({ navigation }) =>
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
 
     // Hero
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
 
     // Code Section
     codeSection: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 20,
         marginBottom: 24,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     codeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: 12,
         paddingVertical: 16,
         paddingHorizontal: 20,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
         alignItems: 'center',
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontSize: 11,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 4,
         textAlign: 'center',
     },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     rewardCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 20,
     },
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     },
     stepDesc: {
         fontSize: 13,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
 
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     referredCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 12,
         marginBottom: 8,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     },
     referredDate: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     statusBadge: {
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 8,
         textAlign: 'center',
     },

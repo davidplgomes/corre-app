@@ -188,7 +188,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                                     <View style={styles.actionIconContainer}>
                                         <QRCodeIcon size={24} color="#FFF" />
                                     </View>
-                                    <Text style={styles.actionLabel}>{t('loyalty.scan').toUpperCase()}</Text>
+                                    <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('loyalty.scan').toUpperCase()}</Text>
                                 </View>
                             </BlurView>
                         </TouchableOpacity>
@@ -203,7 +203,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                                     <View style={styles.actionIconContainer}>
                                         <GiftIcon size={24} color="#FFF" />
                                     </View>
-                                    <Text style={styles.actionLabel}>{t('coupons.title').toUpperCase()}</Text>
+                                    <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('coupons.title').toUpperCase()}</Text>
                                 </View>
                             </BlurView>
                         </TouchableOpacity>
@@ -218,7 +218,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                                     <View style={styles.actionIconContainer}>
                                         <CardIcon size={24} color="#FFF" />
                                     </View>
-                                    <Text style={styles.actionLabel}>{t('profile.wallet', 'WALLET').toUpperCase()}</Text>
+                                    <Text style={styles.actionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('profile.wallet', 'WALLET').toUpperCase()}</Text>
                                 </View>
                             </BlurView>
                         </TouchableOpacity>
@@ -458,7 +458,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.15)',
     },
     actionContent: {
-        padding: 20,
+        paddingVertical: 20,
+        paddingHorizontal: 8,
         backgroundColor: 'rgba(0,0,0,0.3)',
         alignItems: 'center',
         justifyContent: 'center',
@@ -486,10 +487,11 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     actionLabel: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '800',
         color: '#FFF',
-        letterSpacing: 1,
+        letterSpacing: 0.5,
+        textAlign: 'center',
     },
     // Keep old styles for compatibility
     actionGlass: {

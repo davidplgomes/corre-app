@@ -43,12 +43,28 @@ export const getShopItems = async (): Promise<ShopItem[]> => {
     try {
         const { data, error } = await supabase
             .from('corre_shop_items')
-            .select('*')
+            .select('id, title, description, image_url, stock, price_cents, points_price, allow_points_discount, max_points_discount_percent, is_active, created_at, updated_at')
+            .eq('is_active', true)
             .gt('stock', 0)
-            .order('points_price', { ascending: true });
+            .order('price_cents', { ascending: true });
 
         if (error) throw error;
-        return data || [];
+        return (data || []).map((item: any) => {
+            const normalizedPriceCents =
+                typeof item.price_cents === 'number'
+                    ? item.price_cents
+                    : (typeof item.points_price === 'number' ? item.points_price : 0);
+
+            return {
+                ...item,
+                price_cents: normalizedPriceCents,
+                allow_points_discount: item.allow_points_discount !== false,
+                max_points_discount_percent:
+                    typeof item.max_points_discount_percent === 'number'
+                        ? item.max_points_discount_percent
+                        : 20,
+            } as ShopItem;
+        });
     } catch (error) {
         // Return empty if table doesn't exist yet (soft fail)
         console.warn('Shop items table might be missing, returning empty.');

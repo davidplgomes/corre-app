@@ -5,6 +5,8 @@ import {
     StyleSheet,
     ScrollView,
     SafeAreaView,
+    KeyboardAvoidingView,
+    Platform,
     Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -85,6 +87,7 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation, route }) =
 
     return (
         <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.content}>
                     <Text style={styles.title}>{isEditing ? t('events.editEvent') : t('events.createEvent')}</Text>
@@ -219,6 +222,7 @@ export const CreateEvent: React.FC<CreateEventProps> = ({ navigation, route }) =
                     />
                 </View>
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
@@ -230,6 +234,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
+        paddingBottom: 120,
     },
     content: {
         padding: 24,

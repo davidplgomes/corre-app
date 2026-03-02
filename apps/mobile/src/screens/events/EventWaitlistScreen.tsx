@@ -298,11 +298,11 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         borderRadius: 8,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         alignItems: 'center',
     },
     filterTabActive: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     filterTabText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     filterTabTextActive: {
         color: '#FFF',
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     },
     resultsCount: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 12,
         textTransform: 'uppercase',
         letterSpacing: 1,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
 
     // Waitlist Card
     waitlistCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
         marginBottom: 12,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     positionBadge: {
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 6,
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     },
     detailText: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         flex: 1,
     },
     cardActions: {
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     },
     joinedAt: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         textAlign: 'center',
     },
 
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 8,
         textAlign: 'center',
     },

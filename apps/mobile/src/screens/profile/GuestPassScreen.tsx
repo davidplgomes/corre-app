@@ -256,7 +256,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                                 value={guestName}
                                 onChangeText={setGuestName}
                                 placeholder="Enter guest's name"
-                                placeholderTextColor="#666"
+                                placeholderTextColor={theme.colors.text.tertiary}
                             />
                         </View>
 
@@ -267,7 +267,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                                 value={guestEmail}
                                 onChangeText={setGuestEmail}
                                 placeholder="Enter guest's email"
-                                placeholderTextColor="#666"
+                                placeholderTextColor={theme.colors.text.tertiary}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
@@ -323,11 +323,11 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
 
     // Info Section
     infoSection: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 20,
         marginBottom: 24,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     infoText: {
         flex: 1,
         fontSize: 14,
-        color: '#CCC',
+        color: theme.colors.gray[300],
         lineHeight: 20,
     },
     inviteButton: {
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 24,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     },
     upgradeText: {
         fontSize: 16,
-        color: '#888',
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         lineHeight: 24,
         marginBottom: 24,
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     // Modal
     modalContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -575,12 +575,12 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 8,
         textTransform: 'uppercase',
     },
     input: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         color: '#FFF',
@@ -590,14 +590,14 @@ const styles = StyleSheet.create({
     },
     inputHint: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         marginTop: 8,
         fontStyle: 'italic',
     },
     eventOption: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         marginBottom: 8,
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: '#666',
+        borderColor: theme.colors.text.tertiary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     },
     eventDate: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 4,
     },
 });

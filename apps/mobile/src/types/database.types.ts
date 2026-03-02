@@ -170,10 +170,15 @@ export interface ShopItem {
   id: string;
   title: string;
   description: string | null;
-  points_price: number;
+  price_cents: number | null;
+  points_price?: number | null; // Legacy fallback
+  allow_points_discount: boolean;
+  max_points_discount_percent: number;
+  is_active: boolean;
   image_url: string | null;
   stock: number;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface PostLike {

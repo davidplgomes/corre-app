@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,11 +8,13 @@ import {
     RefreshControl,
     StatusBar,
     Dimensions,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner, BackButton } from '../../components/common';
@@ -163,7 +165,7 @@ const TransactionItem = ({ transaction }: { transaction: PointTransaction }) => 
                 <Ionicons
                     name={sourceIcons[transaction.source_type] as any}
                     size={20}
-                    color={isExpired || isConsumed ? '#666' : theme.colors.brand.primary}
+                    color={isExpired || isConsumed ? theme.colors.text.tertiary : theme.colors.brand.primary}
                 />
             </View>
             <View style={styles.transactionDetails}>
@@ -216,15 +218,18 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
             setTransactions(txHistory);
         } catch (error) {
             console.error('Error loading wallet data:', error);
+            Alert.alert('Error', 'Failed to load wallet data. Pull to refresh.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, [user?.id]);
 
-    useEffect(() => {
-        loadWalletData();
-    }, [loadWalletData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadWalletData();
+        }, [loadWalletData])
+    );
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
@@ -320,11 +325,11 @@ export const WalletScreen: React.FC<WalletScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -347,7 +352,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
 
     // XP Card
@@ -423,7 +428,7 @@ const styles = StyleSheet.create({
 
     // Points Card
     pointsCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 20,
         padding: 20,
         marginBottom: 16,
@@ -449,7 +454,7 @@ const styles = StyleSheet.create({
     },
     pointsLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         marginBottom: 16,
     },
@@ -476,7 +481,7 @@ const styles = StyleSheet.create({
     breakdownTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 12,
     },
     breakdownRow: {
@@ -495,18 +500,18 @@ const styles = StyleSheet.create({
     },
     breakdownLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 4,
     },
     breakdownTtl: {
         fontSize: 10,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         marginTop: 2,
     },
 
     // How to Earn
     howToEarnCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 20,
         padding: 20,
         marginBottom: 16,
@@ -549,7 +554,7 @@ const styles = StyleSheet.create({
     },
     earnLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 4,
     },
 
@@ -560,7 +565,7 @@ const styles = StyleSheet.create({
     transactionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 16,
         marginBottom: 8,
@@ -587,7 +592,7 @@ const styles = StyleSheet.create({
     },
     transactionDate: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     transactionPoints: {
@@ -599,11 +604,11 @@ const styles = StyleSheet.create({
         color: theme.colors.brand.primary,
     },
     transactionAmountInactive: {
-        color: '#666',
+        color: theme.colors.text.tertiary,
     },
     transactionOriginal: {
         fontSize: 10,
-        color: '#666',
+        color: theme.colors.text.tertiary,
     },
 
     // Empty State
@@ -614,12 +619,12 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 16,
     },
     emptySubtext: {
         fontSize: 14,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         marginTop: 4,
         textAlign: 'center',
     },

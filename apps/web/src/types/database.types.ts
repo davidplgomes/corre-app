@@ -125,11 +125,16 @@ export interface ShopItem {
     id: string;
     title: string;
     description: string | null;
-    points_price: number;
+    price_cents: number;
+    allow_points_discount: boolean;
+    max_points_discount_percent: number;
+    // Legacy compatibility with older mobile/web clients.
+    points_price?: number | null;
     image_url: string | null;
     stock: number;
     is_active: boolean;
     created_at: string;
+    updated_at: string;
 }
 
 // ─── Partner / Places ─────────────────────────────────────

@@ -243,7 +243,7 @@ export const PartnerCouponScreen: React.FC<PartnerCouponScreenProps> = ({ naviga
                 <Text style={styles.tierLabel}>Your discount level:</Text>
                 <View style={[
                     styles.tierBadge,
-                    { backgroundColor: tierColors[userTier as keyof typeof tierColors]?.primary || '#666' }
+                    { backgroundColor: tierColors[userTier as keyof typeof tierColors]?.primary || theme.colors.text.tertiary }
                 ]}>
                     <Text style={styles.tierText}>
                         {tierColors[userTier as keyof typeof tierColors]?.label || userTier.toUpperCase()}
@@ -293,11 +293,11 @@ export const PartnerCouponScreen: React.FC<PartnerCouponScreenProps> = ({ naviga
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -321,14 +321,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 8,
         paddingVertical: 12,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         marginHorizontal: 16,
         borderRadius: 12,
         marginBottom: 16,
     },
     tierLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     tierBadge: {
         paddingHorizontal: 10,
@@ -345,11 +345,11 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
     resultsCount: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 12,
         textTransform: 'uppercase',
         letterSpacing: 1,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
 
     // Coupon Card
     couponCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 20,
         overflow: 'hidden',
         marginBottom: 16,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     },
     metaText: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.text.tertiary,
     },
     couponActions: {
         flexDirection: 'row',
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     },
     addressText: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.text.tertiary,
         flex: 1,
     },
 
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     },
     emptySubtitle: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 8,
         textAlign: 'center',
     },

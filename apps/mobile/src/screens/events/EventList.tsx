@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -8,11 +8,13 @@ import {
     TouchableOpacity,
     StatusBar,
     ImageBackground,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
 import { EventCard } from '../../components/events/EventCard';
 import { LoadingSpinner, AnimatedListItem } from '../../components/common';
 import { getUpcomingEvents } from '../../services/supabase/events';
@@ -65,6 +67,7 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
             setEvents(data || []);
         } catch (error) {
             console.error('Error loading events:', error);
+            Alert.alert('Error', 'Failed to load events. Pull to refresh.');
             setEvents([]);
         } finally {
             setLoading(false);
@@ -72,9 +75,11 @@ export const EventList: React.FC<EventListProps> = ({ navigation }) => {
         }
     }, []);
 
-    useEffect(() => {
-        loadEvents();
-    }, [loadEvents]);
+    useFocusEffect(
+        useCallback(() => {
+            loadEvents();
+        }, [loadEvents])
+    );
 
     const filteredEvents = useMemo(() => {
         if (activeFilter === 'all') return events;

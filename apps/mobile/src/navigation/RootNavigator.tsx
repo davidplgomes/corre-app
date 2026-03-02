@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { NavigationContainer, LinkingOptions, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -10,6 +10,7 @@ import { ResetPasswordScreen } from '../screens/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../constants/theme';
 import { supabase } from '../services/supabase/client';
+import { OnboardingContext, useOnboarding } from '../contexts/OnboardingContext';
 
 // Stack for password recovery flow
 const RecoveryStack = createStackNavigator();
@@ -52,20 +53,8 @@ const navTheme = {
 };
 
 // ─── Onboarding Context ───────────────────────────────────
-// Allows ProfileSetup to signal onboarding completion,
-// triggering a re-render that swaps OnboardingNavigator → TabNavigator.
-
-interface OnboardingContextType {
-    completeOnboarding: () => Promise<void>;
-}
-
-const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
-
-export const useOnboarding = () => {
-    const ctx = useContext(OnboardingContext);
-    if (!ctx) throw new Error('useOnboarding must be used within RootNavigator');
-    return ctx;
-};
+// Re-export useOnboarding for backwards compatibility
+export { useOnboarding };
 
 // ─── Splash ────────────────────────────────────────────────
 

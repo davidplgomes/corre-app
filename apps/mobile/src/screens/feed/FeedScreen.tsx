@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics'; // Import Haptics
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
 import { FeedPost } from '../../types';
 import { getFeedPosts, getFriendFeedPosts } from '../../services/supabase/feed';
@@ -66,16 +67,18 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Error loading feed:', error);
-            // Don't show alert on every error to avoid annoyance, just log
+            Alert.alert('Error', 'Failed to load feed. Pull to refresh.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, [activeTab, profile?.id]);
 
-    useEffect(() => {
-        loadPosts();
-    }, [loadPosts]);
+    useFocusEffect(
+        useCallback(() => {
+            loadPosts();
+        }, [loadPosts])
+    );
 
     const onRefresh = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -191,7 +194,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: theme.colors.background.primary,
     },
     backgroundImage: {
         flex: 1,
@@ -406,7 +409,7 @@ const styles = StyleSheet.create({
     },
     activeTab: {
         borderBottomWidth: 2,
-        borderBottomColor: '#FFF',
+        borderBottomColor: theme.colors.text.primary,
     },
     tabText: {
         fontSize: 14,
@@ -415,7 +418,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     activeTabText: {
-        color: '#FFF',
+        color: theme.colors.text.primary,
     },
     activeDot: {
         position: 'absolute',

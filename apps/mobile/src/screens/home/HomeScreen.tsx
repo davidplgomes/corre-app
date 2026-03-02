@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, ImageBackground, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, StatusBar, ImageBackground, Dimensions, Animated, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -145,6 +145,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
         } catch (error) {
             console.error('Error loading home data:', error);
+            Alert.alert('Error', 'Failed to load data. Pull to refresh.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 20,
         paddingTop: 60,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
     header: {
         flexDirection: 'row',
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.2)',
         alignItems: 'center',

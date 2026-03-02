@@ -20,9 +20,12 @@ export function ShopItemForm({ isOpen, onClose, onSubmit, initialData, loading }
     const [formData, setFormData] = useState<Partial<ShopItem>>({
         title: '',
         description: '',
-        points_price: 100,
+        price_cents: 1999,
         stock: 10,
-        image_url: ''
+        image_url: '',
+        is_active: true,
+        allow_points_discount: true,
+        max_points_discount_percent: 20,
     })
 
     useEffect(() => {
@@ -32,9 +35,12 @@ export function ShopItemForm({ isOpen, onClose, onSubmit, initialData, loading }
             setFormData({
                 title: '',
                 description: '',
-                points_price: 100,
+                price_cents: 1999,
                 stock: 10,
-                image_url: ''
+                image_url: '',
+                is_active: true,
+                allow_points_discount: true,
+                max_points_discount_percent: 20,
             })
         }
     }, [initialData, isOpen])
@@ -70,13 +76,14 @@ export function ShopItemForm({ isOpen, onClose, onSubmit, initialData, loading }
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label className="text-xs font-mono font-bold uppercase text-white/60">Price (Points)</label>
+                        <label className="text-xs font-mono font-bold uppercase text-white/60">Price (EUR)</label>
                         <Input
                             type="number"
                             required
-                            min="0"
-                            value={formData.points_price}
-                            onChange={(e) => setFormData({ ...formData, points_price: parseInt(e.target.value) })}
+                            min="0.5"
+                            step="0.01"
+                            value={((formData.price_cents || 0) / 100).toFixed(2)}
+                            onChange={(e) => setFormData({ ...formData, price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) })}
                             className="bg-black/50 border-white/10 focus:border-[#FF5722]"
                         />
                     </div>
@@ -89,6 +96,32 @@ export function ShopItemForm({ isOpen, onClose, onSubmit, initialData, loading }
                             value={formData.stock}
                             onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
                             className="bg-black/50 border-white/10 focus:border-[#FF5722]"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono font-bold uppercase text-white/60">Allow Points Discount</label>
+                        <label className="h-10 px-3 rounded-lg bg-black/50 border border-white/10 inline-flex items-center gap-2 text-sm text-white/80">
+                            <input
+                                type="checkbox"
+                                checked={formData.allow_points_discount ?? true}
+                                onChange={(e) => setFormData({ ...formData, allow_points_discount: e.target.checked })}
+                            />
+                            Enabled
+                        </label>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono font-bold uppercase text-white/60">Max Discount (%)</label>
+                        <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.max_points_discount_percent ?? 20}
+                            onChange={(e) => setFormData({ ...formData, max_points_discount_percent: parseInt(e.target.value || '0', 10) })}
+                            className="bg-black/50 border-white/10 focus:border-[#FF5722]"
+                            disabled={!formData.allow_points_discount}
                         />
                     </div>
                 </div>

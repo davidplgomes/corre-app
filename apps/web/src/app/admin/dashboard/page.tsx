@@ -4,11 +4,90 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid } from 'recharts';
-import { ArrowUpRight, ArrowRight, Zap, Users, ShoppingBag, Database, Activity, Server, MapPin, Calendar, DollarSign, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, ArrowRight, Zap, Users, ShoppingBag, Database, Activity, Server, MapPin, Calendar, DollarSign, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import DashboardLocations from '@/components/admin/dashboard-locations';
+
+type DashboardEvent = {
+    id: string;
+    title: string;
+    event_datetime: string;
+    location_name: string | null;
+    event_type: string;
+    points_value: number;
+};
+
+type ActivityPoint = {
+    time: string;
+    val: number;
+};
+
+type RevenuePoint = {
+    day: string;
+    revenue: number;
+    orders: number;
+};
+
+function buildActivityChart(runs: Array<{ started_at?: string | null; created_at?: string | null }>): ActivityPoint[] {
+    const buckets = [
+        { label: '00:00', from: 0, to: 4 },
+        { label: '04:00', from: 4, to: 8 },
+        { label: '08:00', from: 8, to: 12 },
+        { label: '12:00', from: 12, to: 16 },
+        { label: '16:00', from: 16, to: 20 },
+        { label: '20:00', from: 20, to: 24 },
+    ];
+
+    return buckets.map((bucket) => {
+        const val = runs.filter((run) => {
+            const source = run.started_at || run.created_at;
+            if (!source) return false;
+            const hour = new Date(source).getHours();
+            return hour >= bucket.from && hour < bucket.to;
+        }).length;
+
+        return { time: bucket.label, val };
+    });
+}
+
+function buildRevenueChart(
+    txns: Array<{ created_at?: string | null; amount?: number | null }>
+): RevenuePoint[] {
+    const now = new Date();
+    const output: RevenuePoint[] = [];
+
+    for (let i = 6; i >= 0; i -= 1) {
+        const dayStart = new Date(now);
+        dayStart.setHours(0, 0, 0, 0);
+        dayStart.setDate(now.getDate() - i);
+
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayStart.getDate() + 1);
+
+        const daily = txns.filter((txn) => {
+            if (!txn.created_at) return false;
+            const ts = new Date(txn.created_at).getTime();
+            return ts >= dayStart.getTime() && ts < dayEnd.getTime();
+        });
+
+        output.push({
+            day: dayStart.toLocaleDateString('en-IE', { weekday: 'short' }),
+            revenue: daily.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) / 100,
+            orders: daily.length,
+        });
+    }
+
+    return output;
+}
+
+function calculateChangePercent(current: number, previous: number): number {
+    if (previous <= 0) {
+        return current > 0 ? 100 : 0;
+    }
+    return ((current - previous) / previous) * 100;
+}
 
 export default function AdminDashboardPage() {
     const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
@@ -18,94 +97,117 @@ export default function AdminDashboardPage() {
         newUsers: 0,
         activeRunners: 0,
         revenue: 0,
-        avgLatency: '1m 24s', // Mock for system health
-        events: [] as any[],
-        topLocations: [] as any[],
-        revenueChart: [] as any[],
-        activityChart: [] as any[]
+        avgLatency: '1m 24s',
+        systemHealth: 0,
+        activeRunnersChangePct: 0,
+        revenueChangePct: 0,
+        signupChangePct: 0,
+        events: [] as DashboardEvent[],
+        revenueChart: [] as RevenuePoint[],
+        activityChart: [] as ActivityPoint[]
     });
-
-    // Fallback Mock Data for charts if empty
-    const mockActivityData = [
-        { time: '00:00', val: 120 }, { time: '04:00', val: 180 }, { time: '08:00', val: 450 },
-        { time: '12:00', val: 680 }, { time: '16:00', val: 550 }, { time: '20:00', val: 420 },
-        { time: '23:59', val: 200 },
-    ];
 
     const supabase = createClient();
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // 1. Set Time Window
+                const startedAt = performance.now();
+                const periodDays = timeRange === '7d' ? 7 : 30;
                 const dateFilter = new Date();
-                dateFilter.setDate(dateFilter.getDate() - (timeRange === '7d' ? 7 : 30));
+                dateFilter.setDate(dateFilter.getDate() - periodDays);
+                const dateFilterIso = dateFilter.toISOString();
 
-                // 2. Fetch Users
-                const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
-                const { count: newUsers } = await supabase.from('users').select('*', { count: 'exact', head: true }).gte('created_at', dateFilter.toISOString());
+                const previousWindowStart = new Date();
+                previousWindowStart.setDate(previousWindowStart.getDate() - periodDays * 2);
+                const previousWindowStartIso = previousWindowStart.toISOString();
 
-                // 3. Fetch Active Runners (Runs in filtered period)
-                const { count: activeRunners } = await supabase.from('runs').select('*', { count: 'exact', head: true }).gte('created_at', dateFilter.toISOString());
+                const nowIso = new Date().toISOString();
 
-                // 4. Fetch Revenue — sum succeeded transactions in the period
-                const { data: txns } = await supabase
-                    .from('transactions')
-                    .select('amount')
-                    .eq('status', 'succeeded')
-                    .gte('created_at', dateFilter.toISOString());
+                const [
+                    totalUsersRes,
+                    newUsersRes,
+                    previousNewUsersRes,
+                    runsRes,
+                    previousRunsRes,
+                    txnsRes,
+                    previousTxnsRes,
+                    eventsRes,
+                ] = await Promise.all([
+                    supabase.from('users').select('id', { count: 'exact', head: true }),
+                    supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', dateFilterIso),
+                    supabase
+                        .from('users')
+                        .select('id', { count: 'exact', head: true })
+                        .gte('created_at', previousWindowStartIso)
+                        .lt('created_at', dateFilterIso),
+                    supabase.from('runs').select('id, started_at, created_at').gte('created_at', dateFilterIso),
+                    supabase
+                        .from('runs')
+                        .select('id', { count: 'exact', head: true })
+                        .gte('created_at', previousWindowStartIso)
+                        .lt('created_at', dateFilterIso),
+                    supabase
+                        .from('transactions')
+                        .select('amount, created_at')
+                        .eq('status', 'succeeded')
+                        .gte('created_at', dateFilterIso),
+                    supabase
+                        .from('transactions')
+                        .select('amount')
+                        .eq('status', 'succeeded')
+                        .gte('created_at', previousWindowStartIso)
+                        .lt('created_at', dateFilterIso),
+                    supabase
+                        .from('events')
+                        .select('id, title, event_datetime, location_name, event_type, points_value')
+                        .gte('event_datetime', nowIso)
+                        .order('event_datetime', { ascending: true })
+                        .limit(5),
+                ]);
+
+                if (totalUsersRes.error) throw totalUsersRes.error;
+                if (newUsersRes.error) throw newUsersRes.error;
+                if (previousNewUsersRes.error) throw previousNewUsersRes.error;
+                if (runsRes.error) throw runsRes.error;
+                if (previousRunsRes.error) throw previousRunsRes.error;
+                if (txnsRes.error) throw txnsRes.error;
+                if (previousTxnsRes.error) throw previousTxnsRes.error;
+                if (eventsRes.error) throw eventsRes.error;
+
+                const runs = runsRes.data || [];
+                const txns = txnsRes.data || [];
+                const previousTxns = previousTxnsRes.data || [];
+                const events = (eventsRes.data || []) as DashboardEvent[];
 
                 const revenue = txns
-                    ? txns.reduce((acc, t) => acc + (Number(t.amount) || 0), 0) / 100 // stored in cents
+                    ? txns.reduce((acc, t) => acc + (Number(t.amount) || 0), 0) / 100
+                    : 0;
+                const previousRevenue = previousTxns
+                    ? previousTxns.reduce((acc, t) => acc + (Number(t.amount) || 0), 0) / 100
                     : 0;
 
-                // 5. Fetch Events
-                const { data: events } = await supabase.from('events').select('*').gte('event_datetime', new Date().toISOString()).order('event_datetime', { ascending: true }).limit(3);
-
-                // 6. Fetch Locations
-                const { data: locations } = await supabase.from('partner_places').select('*').limit(5);
-
-                // Mock Data Fallbacks
-                const mockEvents = [
-                    { title: 'Morning Run Club', event_datetime: new Date(Date.now() + 86400000).toISOString(), location_name: 'Phoenix Park', event_type: 'routine', points_value: 50 },
-                    { title: 'Evening Sprint', event_datetime: new Date(Date.now() + 172800000).toISOString(), location_name: 'Grand Canal Dock', event_type: 'routine', points_value: 30 },
-                    { title: 'Community Yoga', event_datetime: new Date(Date.now() + 259200000).toISOString(), location_name: 'Herbert Park', event_type: 'special', points_value: 20 },
-                ];
-
-                const mockLocations = [
-                    { name: 'Coffee & Kicks', address: '22 South William St' },
-                    { name: 'The Runner\'s Hub', address: 'Phoenix Park Visitor Centre' },
-                    { name: 'Docklands Gym', address: 'Grand Canal Square' },
-                ];
-
-                const mockRevenueChart = [
-                    { day: 'Mon', revenue: 1250, orders: 45 },
-                    { day: 'Tue', revenue: 1450, orders: 38 },
-                    { day: 'Wed', revenue: 1800, orders: 52 },
-                    { day: 'Thu', revenue: 1600, orders: 49 },
-                    { day: 'Fri', revenue: 2200, orders: 65 },
-                    { day: 'Sat', revenue: 2800, orders: 85 },
-                    { day: 'Sun', revenue: 1950, orders: 72 },
-                ];
+                const latencyMs = Math.max(1, Math.round(performance.now() - startedAt));
+                const systemHealth = Math.max(90, 100 - Math.min(10, latencyMs / 250));
 
                 setData(prev => ({
                     ...prev,
-                    totalUsers: totalUsers || 1248, // Fallback to mock if 0
-                    newUsers: newUsers || 156,
-                    activeRunners: activeRunners || 843,
-                    revenue: revenue || 12450.50,
-                    events: events && events.length > 0 ? events : mockEvents,
-                    topLocations: locations && locations.length > 0 ? locations : mockLocations,
-                    activityChart: mockActivityData,
-                    revenueChart: revenue > 0 ? [ // If real revenue exists, map it (mock logic for now as granular data missing)
-                        { day: 'Mon', revenue: revenue * 0.1, orders: 45 },
-                        { day: 'Tue', revenue: revenue * 0.12, orders: 38 },
-                        { day: 'Wed', revenue: revenue * 0.15, orders: 52 },
-                        { day: 'Thu', revenue: revenue * 0.11, orders: 49 },
-                        { day: 'Fri', revenue: revenue * 0.2, orders: 65 },
-                        { day: 'Sat', revenue: revenue * 0.22, orders: 85 },
-                        { day: 'Sun', revenue: revenue * 0.1, orders: 72 },
-                    ] : mockRevenueChart
+                    totalUsers: totalUsersRes.count || 0,
+                    newUsers: newUsersRes.count || 0,
+                    activeRunners: runs.length,
+                    revenue,
+                    avgLatency: `${latencyMs}ms`,
+                    systemHealth: Number(systemHealth.toFixed(1)),
+                    activeRunnersChangePct: Number(
+                        calculateChangePercent(runs.length, previousRunsRes.count || 0).toFixed(1)
+                    ),
+                    revenueChangePct: Number(calculateChangePercent(revenue, previousRevenue).toFixed(1)),
+                    signupChangePct: Number(
+                        calculateChangePercent(newUsersRes.count || 0, previousNewUsersRes.count || 0).toFixed(1)
+                    ),
+                    events,
+                    activityChart: buildActivityChart(runs),
+                    revenueChart: buildRevenueChart(txns),
                 }));
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
@@ -130,8 +232,12 @@ export default function AdminDashboardPage() {
                 ['Total Revenue', `€${data.revenue}`, new Date().toISOString()],
             ];
 
-            data.events.forEach(e => {
-                rows.push(['Event', `${e.name} (${e.status})`, e.date]);
+            data.events.forEach((event) => {
+                rows.push([
+                    'Upcoming Event',
+                    `${event.title} (${event.event_type})`,
+                    new Date(event.event_datetime).toISOString(),
+                ]);
             });
 
             let csvContent = "data:text/csv;charset=utf-8,"
@@ -153,6 +259,8 @@ export default function AdminDashboardPage() {
             setIsGenerating(false);
         }
     };
+
+    const maxActivityValue = Math.max(1, ...data.activityChart.map((point) => point.val));
 
     return (
         <div className="space-y-6">
@@ -207,9 +315,9 @@ export default function AdminDashboardPage() {
                             </h3>
                         </div>
                         <div>
-                            <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
-                                <ArrowUpRight className="w-3 h-3" />
-                                <span>+14.2%</span>
+                            <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 ${data.revenueChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
+                                {data.revenueChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                <span>{data.revenueChangePct >= 0 ? '+' : ''}{data.revenueChangePct}%</span>
                                 <span className="text-white/20 font-medium">vs last period</span>
                             </div>
                             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
@@ -229,9 +337,18 @@ export default function AdminDashboardPage() {
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.activeRunners.toLocaleString()}</h3>
                         </div>
 
+                        <div className={`flex items-center gap-1.5 text-xs font-bold mb-2 ${data.activeRunnersChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
+                            {data.activeRunnersChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            <span>{data.activeRunnersChangePct >= 0 ? '+' : ''}{data.activeRunnersChangePct}%</span>
+                            <span className="text-white/20 font-medium">vs last period</span>
+                        </div>
                         <div className="h-10 flex items-end gap-1">
-                            {[40, 65, 50, 80, 60, 90, 70].map((h, i) => (
-                                <div key={i} className="flex-1 bg-white/20 rounded-t-sm hover:bg-[#FF5722] transition-colors" style={{ height: `${h}%` }} />
+                            {data.activityChart.map((point) => (
+                                <div
+                                    key={point.time}
+                                    className="flex-1 bg-white/20 rounded-t-sm hover:bg-[#FF5722] transition-colors"
+                                    style={{ height: `${Math.max(10, Math.round((point.val / maxActivityValue) * 100))}%` }}
+                                />
                             ))}
                         </div>
                     </GlassCard>
@@ -247,9 +364,9 @@ export default function AdminDashboardPage() {
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.newUsers}</h3>
                         </div>
                         <div>
-                            <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
-                                <ArrowUpRight className="w-3 h-3" />
-                                <span>+5%</span>
+                            <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 ${data.signupChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
+                                {data.signupChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                <span>{data.signupChangePct >= 0 ? '+' : ''}{data.signupChangePct}%</span>
                                 <span className="text-white/20 font-medium">{timeRange === '7d' ? 'last 7 days' : 'last 30 days'}</span>
                             </div>
                             {/* Mini Avatars */}
@@ -271,7 +388,7 @@ export default function AdminDashboardPage() {
                                 <p className="text-xs font-bold uppercase tracking-wider text-white/40">System Health</p>
                                 <Server className="w-4 h-4 text-white/20" />
                             </div>
-                            <h3 className="text-3xl font-bold text-white tracking-tight">99.9%</h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{data.systemHealth.toFixed(1)}%</h3>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                             <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden flex gap-0.5">
@@ -344,14 +461,15 @@ export default function AdminDashboardPage() {
                         <div className="flex justify-between items-start mb-6">
                             <div>
                                 <h3 className="text-sm font-bold text-white uppercase">Weekly Revenue</h3>
-                                <p className="text-xs text-white/40 mt-1">Based on subscriptions</p>
+                                <p className="text-xs text-white/40 mt-1">Succeeded transactions</p>
                             </div>
                             <div className="text-right">
                                 <span className="block text-lg font-bold text-white">
                                     {data.revenue.toLocaleString('en-IE', { style: 'currency', currency: 'EUR' })}
                                 </span>
-                                <span className="text-xs text-[#FF5722] font-bold flex items-center justify-end gap-1">
-                                    <TrendingUp className="w-3 h-3" /> +24%
+                                <span className={`text-xs font-bold flex items-center justify-end gap-1 ${data.revenueChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
+                                    {data.revenueChangePct >= 0 ? <TrendingUp className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                    {data.revenueChangePct >= 0 ? '+' : ''}{data.revenueChangePct}%
                                 </span>
                             </div>
                         </div>

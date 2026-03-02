@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
 import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon, ShoppingBagIcon } from '../../components/common/TabIcons';
@@ -36,6 +37,19 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const { profile, user, signOut, refreshProfile } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
+    const isFirstMount = useRef(true);
+
+    // Auto-refresh profile when screen comes into focus (e.g. after EditProfile)
+    useFocusEffect(
+        useCallback(() => {
+            if (isFirstMount.current) {
+                isFirstMount.current = false;
+                return;
+            }
+            refreshProfile();
+        }, [refreshProfile])
+    );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -216,8 +230,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                             </View>
                             <View style={styles.profileContent}>
                                 <View style={[styles.avatarContainer, { borderColor: tierConfig.primary }]}>
-                                    {profile?.avatarUrl ? (
-                                        <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                                    {profile?.avatarUrl && !avatarError ? (
+                                        <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} onError={() => setAvatarError(true)} />
                                     ) : (
                                         <Text style={styles.avatarText}>{userInitial}</Text>
                                     )}

@@ -277,9 +277,9 @@ export const TabNavigator: React.FC = () => {
     return (
         <Tab.Navigator
             initialRouteName="Home"
+            sceneContainerStyle={{ backgroundColor: theme.colors.background.primary }}
             screenOptions={{
                 headerShown: false,
-                sceneContainerStyle: { backgroundColor: theme.colors.background.primary },
                 tabBarStyle: [
                     styles.tabBar,
                     {

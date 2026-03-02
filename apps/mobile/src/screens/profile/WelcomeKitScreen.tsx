@@ -347,11 +347,11 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     timeline: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
     },
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         marginRight: 12,
         marginTop: 4,
     },
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     },
     timelineDate: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
 
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     },
     itemCard: {
         flexDirection: 'row',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 12,
         padding: 12,
         marginBottom: 8,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 8,
-        backgroundColor: '#2A2A2A',
+        backgroundColor: theme.colors.background.input,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     },
     itemDescription: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     itemStatusBadge: {
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     },
     upgradeText: {
         fontSize: 16,
-        color: '#888',
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         lineHeight: 24,
         marginBottom: 24,
@@ -573,13 +573,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         padding: 16,
         borderRadius: 12,
     },
     previewText: {
         fontSize: 14,
-        color: '#CCC',
+        color: theme.colors.gray[300],
     },
     upgradeButton: {
         width: '100%',
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     },
     pendingText: {
         fontSize: 16,
-        color: '#888',
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         lineHeight: 24,
     },

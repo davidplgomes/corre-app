@@ -66,7 +66,14 @@
       "Bash(xcrun simctl list devices available)",
       "Bash(wc -l /Users/webstarstudiomac1/Documents/GitHub/corre-app/apps/mobile/src/screens/loyalty/*.tsx)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); mcp=d.get\\(''mcpServers'',{}\\); print\\(json.dumps\\({k: {kk:\\(''***'' if kk==''headers'' else vv\\) for kk,vv in v.items\\(\\)} for k,v in mcp.items\\(\\)}, indent=2\\)\\)\")",
-      "Bash(SUPABASE_ACCESS_TOKEN=sbp_05a297bdfee81b37ae26f2db6d7de2237aa11fd6 npx supabase db push)"
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_05a297bdfee81b37ae26f2db6d7de2237aa11fd6 npx supabase db push)",
+      "Bash(cat /Users/webstarstudiomac1/Documents/GitHub/corre-app/apps/mobile/app.config.*)",
+      "Bash(xcrun simctl list devices booted)",
+      "Bash(xcrun simctl io 22CBC665-7E18-42AE-9CAA-9031D2158E7B screenshot /tmp/sim_screenshot_1.png)",
+      "Bash(xcrun simctl io 22CBC665-7E18-42AE-9CAA-9031D2158E7B tap 147 812)",
+      "Bash(osascript -e ':*)",
+      "Bash(xcrun simctl io booted screenshot /tmp/sim_screenshot_2.png)",
+      "Bash(# Use cliclick for precise screen clicking which cliclick || brew install cliclick 2>&1)"
     ]
   },
   "enabledMcpjsonServers": [

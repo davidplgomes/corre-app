@@ -47,6 +47,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [runningAction, setRunningAction] = useState<'purge_cache' | 'reset_analytics' | null>(null);
     const [settings, setSettings] = useState<SettingsData>(defaultSettings);
     const [systemInfo, setSystemInfo] = useState({
         version: 'v1.2.4',
@@ -87,28 +88,34 @@ export default function SettingsPage() {
             const { error: connError } = await supabase.from('users').select('id', { count: 'exact', head: true });
             setSystemInfo(prev => ({ ...prev, dbConnected: !connError }));
 
-            // Fetch settings from system_settings table
             const { data, error } = await supabase
                 .from('system_settings')
                 .select('key, value');
 
             if (error) {
-                console.warn('Settings table might not exist yet:', error);
-                // Use defaults if table doesn't exist
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
                 return;
             }
 
-            if (data && data.length > 0) {
-                const loaded: Partial<SettingsData> = {};
-                data.forEach(row => {
-                    if (row.key === 'general') loaded.general = row.value;
-                    if (row.key === 'features') loaded.features = row.value;
-                    if (row.key === 'maintenance') loaded.maintenance = row.value;
-                });
-                setSettings(prev => ({ ...prev, ...loaded }));
-            }
+            const loaded: Partial<SettingsData> = {};
+            data.forEach((row) => {
+                if (row.key === 'general' && row.value && typeof row.value === 'object') {
+                    loaded.general = row.value as SettingsData['general'];
+                }
+                if (row.key === 'features' && row.value && typeof row.value === 'object') {
+                    loaded.features = row.value as SettingsData['features'];
+                }
+                if (row.key === 'maintenance' && row.value && typeof row.value === 'object') {
+                    loaded.maintenance = row.value as SettingsData['maintenance'];
+                }
+            });
+            setSettings(prev => ({ ...prev, ...loaded }));
         } catch (error) {
             console.error('Error fetching settings:', error);
+            toast.error('Failed to load settings');
         } finally {
             setLoading(false);
         }
@@ -117,7 +124,15 @@ export default function SettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Upsert each settings category
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+
+            if (userError || !user) {
+                throw new Error('Not authenticated');
+            }
+
             const updates = [
                 { key: 'general', value: settings.general },
                 { key: 'features', value: settings.features },
@@ -130,7 +145,8 @@ export default function SettingsPage() {
                     .upsert({
                         key: update.key,
                         value: update.value,
-                        updated_at: new Date().toISOString()
+                        updated_at: new Date().toISOString(),
+                        updated_by: user.id,
                     }, { onConflict: 'key' });
 
                 if (error) throw error;
@@ -139,33 +155,55 @@ export default function SettingsPage() {
             toast.success('System settings updated successfully');
         } catch (error) {
             console.error('Save error:', error);
-            toast.error('Failed to save settings. Make sure the system_settings table exists.');
+            toast.error('Failed to save settings');
         } finally {
             setSaving(false);
         }
     };
 
-    const handlePurgeCache = async () => {
-        toast.promise(
-            new Promise(resolve => setTimeout(resolve, 1500)),
-            {
-                loading: 'Purging cache...',
-                success: 'Cache purged successfully',
-                error: 'Failed to purge cache'
+    const runAdminAction = async (
+        action: 'purge_cache' | 'reset_analytics',
+        loadingMessage: string,
+        successMessage: string
+    ) => {
+        setRunningAction(action);
+        const task = (async () => {
+            const response = await fetch('/api/admin/settings/actions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+
+            const payload = await response.json() as { error?: string };
+            if (!response.ok) {
+                throw new Error(payload.error || 'Action failed');
             }
-        );
+        })();
+
+        toast.promise(task, {
+            loading: loadingMessage,
+            success: successMessage,
+            error: (error) => (error instanceof Error ? error.message : 'Action failed'),
+        });
+
+        try {
+            await task;
+        } finally {
+            setRunningAction(null);
+        }
+    };
+
+    const handlePurgeCache = async () => {
+        await runAdminAction('purge_cache', 'Running cache purge...', 'Cache purge registered');
     };
 
     const handleResetAnalytics = async () => {
-        if (!confirm('Are you sure you want to reset all analytics data? This cannot be undone.')) return;
+        if (!confirm('Request analytics reset/rebuild now?')) return;
 
-        toast.promise(
-            new Promise(resolve => setTimeout(resolve, 2000)),
-            {
-                loading: 'Resetting analytics...',
-                success: 'Analytics data reset successfully',
-                error: 'Failed to reset analytics'
-            }
+        await runAdminAction(
+            'reset_analytics',
+            'Requesting analytics reset...',
+            'Analytics reset request registered'
         );
     };
 
@@ -327,15 +365,17 @@ export default function SettingsPage() {
                                     variant="destructive"
                                     className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50"
                                     onClick={handlePurgeCache}
+                                    disabled={runningAction !== null}
                                 >
-                                    Purge Cache
+                                    {runningAction === 'purge_cache' ? 'Purging...' : 'Purge Cache'}
                                 </Button>
                                 <Button
                                     variant="destructive"
                                     className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50"
                                     onClick={handleResetAnalytics}
+                                    disabled={runningAction !== null}
                                 >
-                                    Reset Analytics
+                                    {runningAction === 'reset_analytics' ? 'Requesting...' : 'Reset Analytics'}
                                 </Button>
                             </div>
                         </div>

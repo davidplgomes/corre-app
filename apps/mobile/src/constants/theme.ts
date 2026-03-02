@@ -267,4 +267,14 @@ export const eventStyles = {
     },
 };
 
+// Coupon category colors
+export const couponCategoryColors: Record<string, string> = {
+    fashion: '#FF6B6B',
+    health: '#4ECDC4',
+    sports: theme.colors.brand.primary,
+    apps: '#A78BFA',
+    drinks: '#38BDF8',
+    other: theme.colors.gray[500],
+};
+
 export default theme;

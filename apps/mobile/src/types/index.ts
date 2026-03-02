@@ -60,6 +60,8 @@ export interface CartItem {
         title: string;
         price: number;
         image_url: string | null;
+        allow_points_discount?: boolean;
+        max_points_discount_percent?: number;
     };
     // Flattened fields sometimes used
     name?: string;

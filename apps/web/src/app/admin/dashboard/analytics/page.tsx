@@ -62,14 +62,26 @@ export default function AdminAnalyticsPage() {
             const dateFilter = new Date();
             dateFilter.setDate(dateFilter.getDate() - daysAgo);
 
-            // Fetch basic counts
-            const [usersRes, newUsersRes, runsRes, subsRes, plansRes] = await Promise.all([
+            const rangeStartIso = dateFilter.toISOString();
+
+            // Fetch basic counts and source series
+            const [usersRes, newUsersRes, newUsersTimelineRes, runsRes, subsRes, plansRes, usersWithRolesRes] = await Promise.all([
                 supabase.from('users').select('*', { count: 'exact', head: true }),
-                supabase.from('users').select('*', { count: 'exact', head: true }).gte('created_at', dateFilter.toISOString()),
-                supabase.from('runs').select('distance_km').gte('created_at', dateFilter.toISOString()),
+                supabase.from('users').select('*', { count: 'exact', head: true }).gte('created_at', rangeStartIso),
+                supabase.from('users').select('created_at').gte('created_at', rangeStartIso),
+                supabase.from('runs').select('distance_km, created_at').gte('created_at', rangeStartIso),
                 supabase.from('subscriptions').select('plan_id, status'),
-                supabase.from('plans').select('id, price')
+                supabase.from('plans').select('id, price'),
+                supabase.from('users').select('role'),
             ]);
+
+            if (usersRes.error) throw usersRes.error;
+            if (newUsersRes.error) throw newUsersRes.error;
+            if (newUsersTimelineRes.error) throw newUsersTimelineRes.error;
+            if (runsRes.error) throw runsRes.error;
+            if (subsRes.error) throw subsRes.error;
+            if (plansRes.error) throw plansRes.error;
+            if (usersWithRolesRes.error) throw usersWithRolesRes.error;
 
             // Calculate revenue
             let revenue = 0;
@@ -83,6 +95,7 @@ export default function AdminAnalyticsPage() {
 
             // Calculate avg run distance
             const runs = runsRes.data || [];
+            const usersInRange = newUsersTimelineRes.data || [];
             const avgDistance = runs.length > 0
                 ? runs.reduce((acc, r) => acc + Number(r.distance_km || 0), 0) / runs.length
                 : 0;
@@ -97,7 +110,7 @@ export default function AdminAnalyticsPage() {
             });
 
             // Fetch role distribution
-            const { data: usersWithRoles } = await supabase.from('users').select('role');
+            const usersWithRoles = usersWithRolesRes.data;
             if (usersWithRoles) {
                 const roleCounts = usersWithRoles.reduce((acc: any, u) => {
                     acc[u.role] = (acc[u.role] || 0) + 1;
@@ -110,28 +123,54 @@ export default function AdminAnalyticsPage() {
                 ]);
             }
 
-            // Generate mock growth data (in real app, aggregate by day)
-            const growthData = [];
-            for (let i = daysAgo; i >= 0; i -= Math.ceil(daysAgo / 7)) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
+            // Growth chart from real timeline (bucketed for readability)
+            const growthData: Array<{ date: string; users: number; runs: number }> = [];
+            const bucketSize = daysAgo >= 90 ? 7 : daysAgo >= 30 ? 2 : 1;
+            let cumulativeUsers = 0;
+            for (let i = daysAgo; i >= 0; i -= bucketSize) {
+                const bucketStart = new Date();
+                bucketStart.setHours(0, 0, 0, 0);
+                bucketStart.setDate(bucketStart.getDate() - i);
+
+                const bucketEnd = new Date(bucketStart);
+                bucketEnd.setDate(bucketEnd.getDate() + bucketSize);
+
+                const usersInBucket = usersInRange.filter((u) => {
+                    const ts = new Date(u.created_at).getTime();
+                    return ts >= bucketStart.getTime() && ts < bucketEnd.getTime();
+                }).length;
+
+                const runsInBucket = runs.filter((r) => {
+                    const ts = new Date(r.created_at).getTime();
+                    return ts >= bucketStart.getTime() && ts < bucketEnd.getTime();
+                }).length;
+
+                cumulativeUsers += usersInBucket;
                 growthData.push({
-                    date: d.toLocaleDateString('en-IE', { month: 'short', day: 'numeric' }),
-                    users: Math.round((metrics.totalUsers || 100) * (1 - i / daysAgo * 0.3)),
-                    runs: Math.round(runs.length * (1 - i / daysAgo * 0.5))
+                    date: bucketStart.toLocaleDateString('en-IE', { month: 'short', day: 'numeric' }),
+                    users: cumulativeUsers,
+                    runs: runsInBucket,
                 });
             }
             setUserGrowthData(growthData);
 
-            // Weekly activity pattern (mock based on real run count)
+            // Weekly activity pattern from real run dates
+            const weekdayCounts: Record<string, number> = {
+                Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0,
+            };
+            runs.forEach((run) => {
+                const day = new Date(run.created_at).toLocaleDateString('en-IE', { weekday: 'short' });
+                if (weekdayCounts[day] !== undefined) weekdayCounts[day] += 1;
+            });
+
             setRunActivityData([
-                { day: 'Mon', runs: Math.round(runs.length * 0.12) },
-                { day: 'Tue', runs: Math.round(runs.length * 0.14) },
-                { day: 'Wed', runs: Math.round(runs.length * 0.13) },
-                { day: 'Thu', runs: Math.round(runs.length * 0.15) },
-                { day: 'Fri', runs: Math.round(runs.length * 0.11) },
-                { day: 'Sat', runs: Math.round(runs.length * 0.18) },
-                { day: 'Sun', runs: Math.round(runs.length * 0.17) }
+                { day: 'Mon', runs: weekdayCounts.Mon },
+                { day: 'Tue', runs: weekdayCounts.Tue },
+                { day: 'Wed', runs: weekdayCounts.Wed },
+                { day: 'Thu', runs: weekdayCounts.Thu },
+                { day: 'Fri', runs: weekdayCounts.Fri },
+                { day: 'Sat', runs: weekdayCounts.Sat },
+                { day: 'Sun', runs: weekdayCounts.Sun },
             ]);
 
         } catch (error) {

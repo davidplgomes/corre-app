@@ -254,7 +254,7 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
     if (shopItemIds.length > 0) {
         const { data, error: shopError } = await supabase
             .from('corre_shop_items')
-            .select('id, title, points_price, image_url, stock')
+            .select('id, title, price_cents, points_price, image_url, stock, allow_points_discount, max_points_discount_percent')
             .in('id', shopItemIds);
 
         if (!shopError && data) {
@@ -279,13 +279,22 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
     const itemsWithDetails = cartItems.map(cartItem => {
         if (cartItem.item_type === 'shop') {
             const shopItem = shopItems.find(item => item.id === cartItem.item_id);
+            const normalizedPriceCents =
+                typeof shopItem?.price_cents === 'number'
+                    ? shopItem.price_cents
+                    : (typeof shopItem?.points_price === 'number' ? shopItem.points_price : 0);
             return {
                 ...cartItem,
                 item: shopItem ? {
                     title: shopItem.title,
-                    price: shopItem.points_price / 100, // Convert points to euros (mock conversion)
+                    price: normalizedPriceCents / 100,
                     image_url: shopItem.image_url,
                     stock: shopItem.stock,
+                    allow_points_discount: shopItem.allow_points_discount !== false,
+                    max_points_discount_percent:
+                        typeof shopItem.max_points_discount_percent === 'number'
+                            ? shopItem.max_points_discount_percent
+                            : 20,
                 } : null,
             };
         } else {

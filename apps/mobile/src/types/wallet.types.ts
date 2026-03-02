@@ -50,6 +50,8 @@ export interface ShopItemDetails {
     price: number;
     image_url: string | null;
     stock: number;
+    allow_points_discount?: boolean;
+    max_points_discount_percent?: number;
 }
 
 export interface MarketplaceItemDetails {

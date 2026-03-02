@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -14,10 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../constants/theme';
+import { theme, couponCategoryColors } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -35,13 +35,7 @@ const formatExpiryDate = (dateString: string): string => {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const categoryColors: Record<string, string> = {
-    fashion: '#FF6B6B',
-    health: '#4ECDC4',
-    sports: theme.colors.brand.primary,
-    apps: '#A78BFA',
-    drinks: '#38BDF8',
-};
+const categoryColors = couponCategoryColors;
 
 export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
     const { profile, refreshProfile } = useAuth();
@@ -54,16 +48,18 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
     const [filter, setFilter] = useState<string>('all');
     const [isRedeeming, setIsRedeeming] = useState(false);
 
-    // Fetch coupons from database
-    useEffect(() => {
-        const fetchCoupons = async () => {
-            setLoading(true);
-            const data = await getPartnerCoupons();
-            setCoupons(data);
-            setLoading(false);
-        };
-        fetchCoupons();
-    }, []);
+    // Fetch coupons from database (refresh on focus)
+    useFocusEffect(
+        useCallback(() => {
+            const fetchCoupons = async () => {
+                setLoading(true);
+                const data = await getPartnerCoupons();
+                setCoupons(data);
+                setLoading(false);
+            };
+            fetchCoupons();
+        }, [])
+    );
 
     const filteredCoupons = (filter === 'all'
         ? coupons
@@ -440,6 +436,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
+        paddingBottom: 120,
     },
     couponCard: {
         flexDirection: 'row',

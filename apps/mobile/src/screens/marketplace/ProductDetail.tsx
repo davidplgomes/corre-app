@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useStripe } from '@stripe/stripe-react-native';
 import { CloseIcon } from '../../components/common/TabIcons';
 import { supabase } from '../../services/supabase/client';
-import { getWalletBalance, consumePoints } from '../../services/supabase/wallet';
+import { addToCart } from '../../services/supabase/wallet';
 import { useAuth } from '../../contexts/AuthContext';
 
 type ProductDetailProps = {
@@ -30,22 +30,29 @@ type ProductDetailProps = {
 export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { product } = route.params || {};
+    const { product, type } = route.params || {};
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     if (!product) {
         return null;
     }
 
-    const handleRedeem = async () => {
-        // Determine item type based on explicit properties
-        // Community items have price_cents (EUR), Shop items have points_price
-        const hasPointsPrice = (product.points_price !== undefined && product.points_price > 0) ||
-                               (product.points !== undefined && product.points > 0);
-        const isCommunity = !hasPointsPrice && product.price_cents !== undefined && product.price_cents > 0;
+    const isShopItem = type === 'shop';
+    const normalizedShopPriceCents =
+        typeof product.price_cents === 'number'
+            ? product.price_cents
+            : (typeof product.points_price === 'number' ? product.points_price : 0);
+    const normalizedCommunityPrice =
+        typeof product.price_cents === 'number'
+            ? product.price_cents / 100
+            : Number(product.price || 0);
+    const allowPointsDiscount = product.allow_points_discount !== false;
+    const maxPointsDiscountPercent = Number(product.max_points_discount_percent ?? 20);
+
+    const handlePrimaryAction = async () => {
         const listingId = product.id;
 
-        if (isCommunity) {
+        if (!isShopItem) {
             try {
                 // Call Edge Function
                 const { data, error } = await supabase.functions.invoke('create-marketplace-payment', {
@@ -93,49 +100,39 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
             return;
         }
 
-        // 2. If Shop Item -> Redeem with Points
-        if (!user) return;
+        if (!user?.id) {
+            Alert.alert(
+                t('common.error'),
+                t('auth.signInRequired', 'Please sign in to continue.')
+            );
+            return;
+        }
+
+        if (typeof product.stock === 'number' && product.stock <= 0) {
+            Alert.alert(
+                t('common.error'),
+                t('marketplace.outOfStock', 'This item is currently out of stock.')
+            );
+            return;
+        }
 
         try {
-            const pointsCost = product.points || 0;
-            if (pointsCost > 0) {
-                // Check balance
-                const balance = await getWalletBalance(user.id);
-                if (balance.total_available < pointsCost) {
-                    Alert.alert(t('marketplace.insufficientBalance', 'Saldo Insuficiente'), t('marketplace.needPoints', 'Você precisa de {{needed}} pontos. Seu saldo: {{balance}}').replace('{{needed}}', String(pointsCost)).replace('{{balance}}', String(balance.total_available)));
-                    return;
-                }
-
-                // Confirm redemption
-                Alert.alert(
-                    t('marketplace.confirmRedeem', 'Confirmar Resgate'),
-                    t('marketplace.redeemQuestion', 'Deseja resgatar este item por {{points}} pontos?').replace('{{points}}', String(pointsCost)),
-                    [
-                        { text: t('common.cancel', 'Cancelar'), style: 'cancel' },
-                        {
-                            text: t('common.confirm', 'Confirmar'),
-                            onPress: async () => {
-                                try {
-                                    await consumePoints(user.id, pointsCost);
-                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                    Alert.alert(t('common.success'), t('marketplace.redeemSuccess', 'Item resgatado com sucesso! Verifique seu email.'));
-                                    navigation.goBack();
-                                } catch (error: any) {
-                                    console.error('Redemption error:', error);
-                                    Alert.alert(t('common.error'), t('marketplace.redeemFailed', 'Falha ao resgatar item.'));
-                                }
-                            }
-                        }
-                    ]
-                );
-            } else {
-                // Free item or error
-                Alert.alert('Info', t('marketplace.noPointsCost', 'Este item não tem custo de pontos definido.'));
-            }
-
+            await addToCart(user.id, 'shop', product.id, 1);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+                t('common.success'),
+                t('cart.itemAdded', 'Item added to cart.'),
+                [
+                    { text: t('common.continue', 'Continue'), style: 'cancel' },
+                    {
+                        text: t('cart.viewCart', 'View Cart'),
+                        onPress: () => navigation.navigate('Cart'),
+                    },
+                ]
+            );
         } catch (error) {
-            console.error('Wallet check error:', error);
-            Alert.alert(t('common.error'), t('marketplace.balanceCheckFailed', 'Não foi possível verificar seu saldo.'));
+            console.error('Add to cart error:', error);
+            Alert.alert(t('common.error'), t('cart.addFailed', 'Failed to add item to cart.'));
         }
     };
 
@@ -173,12 +170,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                     <BlurView intensity={20} tint="dark" style={styles.contentGlass}>
                         <View style={styles.header}>
                             <View>
-                                <Text style={styles.brand}>{product.brand}</Text>
+                                <Text style={styles.brand}>{product.brand || (isShopItem ? 'CORRE SHOP' : 'COMMUNITY')}</Text>
                                 <Text style={styles.title}>{product.title}</Text>
                             </View>
                             <View style={styles.pointsBadge}>
-                                <Text style={styles.pointsValue}>{product.points_price || product.points || product.price}</Text>
-                                <Text style={styles.pointsLabel}>{(product.points_price || product.points) ? 'pts' : 'EUR'}</Text>
+                                <Text style={styles.pointsValue}>
+                                    {isShopItem
+                                        ? `€${(normalizedShopPriceCents / 100).toFixed(2)}`
+                                        : `€${normalizedCommunityPrice.toFixed(2)}`}
+                                </Text>
+                                <Text style={styles.pointsLabel}>EUR</Text>
                             </View>
                         </View>
 
@@ -201,6 +202,16 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                                 <Text style={styles.detailLabel}>{t('marketplace.availability')}</Text>
                                 <Text style={styles.detailValue}>{t('marketplace.inStock')}</Text>
                             </View>
+                            {isShopItem && (
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
+                                    <Text style={styles.detailValue}>
+                                        {allowPointsDiscount
+                                            ? `Up to ${maxPointsDiscountPercent}%`
+                                            : t('common.notAvailable', 'Not available')}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
 
                         {/* Space for bottom button */}
@@ -213,10 +224,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                     <BlurView intensity={30} tint="dark" style={styles.footerGlass}>
                         <TouchableOpacity
                             style={styles.redeemButton}
-                            onPress={handleRedeem}
+                            onPress={handlePrimaryAction}
                         >
                             <Text style={styles.redeemText}>
-                                {(product.points_price || product.points) ? t('coupons.redeem').toUpperCase() : t('marketplace.contactSeller').toUpperCase()}
+                                {isShopItem
+                                    ? t('cart.addToCart', 'ADD TO CART')
+                                    : t('marketplace.buyNow', 'BUY NOW')}
                             </Text>
                         </TouchableOpacity>
                     </BlurView>

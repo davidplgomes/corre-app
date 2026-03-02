@@ -22,6 +22,14 @@ import { getCurrentMonthLeaderboard, getUserRank } from '../../services/supabase
 import { LeaderboardEntry } from '../../types';
 import { theme, tierColors } from '../../constants/theme';
 
+const AvatarWithFallback = ({ uri, name, style }: { uri?: string; name: string; style: any }) => {
+    const [error, setError] = useState(false);
+    if (uri && !error) {
+        return <Image source={{ uri }} style={style} onError={() => setError(true)} />;
+    }
+    return <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>;
+};
+
 export const Leaderboard: React.FC = () => {
     const { t } = useTranslation();
     const { profile } = useAuth();
@@ -140,12 +148,8 @@ export const Leaderboard: React.FC = () => {
 
                             {/* Avatar */}
                             <View style={styles.avatarContainer}>
-                                <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : '#333' }]}>
-                                    {item.users?.avatar_url ? (
-                                        <Image source={{ uri: item.users.avatar_url }} style={styles.avatarImage} />
-                                    ) : (
-                                        <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-                                    )}
+                                <View style={[styles.avatar, { borderColor: isTop3 ? rankColor : theme.colors.gray[700] }]}>
+                                    <AvatarWithFallback uri={item.users?.avatar_url} name={name} style={styles.avatarImage} />
                                 </View>
                             </View>
 

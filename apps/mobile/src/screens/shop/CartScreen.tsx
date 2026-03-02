@@ -39,6 +39,8 @@ interface CartItemWithDetails {
         title: string;
         price: number;
         image_url: string | null;
+        allow_points_discount?: boolean;
+        max_points_discount_percent?: number;
     };
 }
 
@@ -138,11 +140,37 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     };
 
     const subtotal = cartItems.reduce((sum, item) => sum + (item.item?.price || 0) * item.quantity, 0);
-    const maxPointsDiscount = calculateMaxPointsDiscount(
-        subtotal * 100,
+    const subtotalCents = Math.round(subtotal * 100);
+    const membershipMaxPointsDiscount = calculateMaxPointsDiscount(
+        subtotalCents,
         profile?.membershipTier || 'free',
         availablePoints
     );
+    const itemMaxPointsDiscount = cartItems.reduce((sum, item) => {
+        const itemPriceCents = Math.round((item.item?.price || 0) * 100);
+        const lineSubtotalCents = itemPriceCents * item.quantity;
+        if (lineSubtotalCents <= 0) return sum;
+
+        if (item.item?.allow_points_discount === false) {
+            return sum;
+        }
+
+        const maxPercent = Math.max(0, Math.min(100, item.item?.max_points_discount_percent ?? 20));
+        return sum + Math.floor(lineSubtotalCents * (maxPercent / 100));
+    }, 0);
+
+    const maxPointsDiscount = Math.min(
+        membershipMaxPointsDiscount,
+        itemMaxPointsDiscount,
+        availablePoints
+    );
+
+    useEffect(() => {
+        if (pointsToUse > maxPointsDiscount) {
+            setPointsToUse(maxPointsDiscount);
+        }
+    }, [maxPointsDiscount, pointsToUse]);
+
     const pointsDiscount = Math.min(pointsToUse, maxPointsDiscount) / 100;
     const total = subtotal - pointsDiscount;
     const canUsePoints = profile?.membershipTier !== 'free';

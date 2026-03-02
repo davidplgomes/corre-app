@@ -227,7 +227,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
                                     {item.item?.image_url ? (
                                         <Image source={{ uri: item.item.image_url }} style={styles.itemImage} />
                                     ) : (
-                                        <Ionicons name="cube-outline" size={24} color="#666" />
+                                        <Ionicons name="cube-outline" size={24} color={theme.colors.text.tertiary} />
                                     )}
                                 </View>
                                 <View style={styles.itemDetails}>
@@ -308,11 +308,11 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({ navigation
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: '#0A0A0A',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     },
     orderIdLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     orderId: {
         fontSize: 18,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     },
     orderDate: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 24,
     },
 
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
 
     // Timeline
     timeline: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
     },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     timelineLine: {
         width: 2,
         height: 32,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
     },
     timelineLineComplete: {
         backgroundColor: theme.colors.brand.primary,
@@ -427,20 +427,20 @@ const styles = StyleSheet.create({
     timelineLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#666',
+        color: theme.colors.text.tertiary,
     },
     timelineLabelComplete: {
         color: '#FFF',
     },
     timelineDate: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
 
     // Items
     itemsCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         overflow: 'hidden',
     },
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 8,
-        backgroundColor: '#2A2A2A',
+        backgroundColor: theme.colors.background.input,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     },
     itemQuantity: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 4,
     },
     itemPrice: {
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
 
     // Summary
     summaryCard: {
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
     },
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     summaryValue: {
         fontSize: 14,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     // Address
     addressCard: {
         flexDirection: 'row',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: theme.colors.background.elevated,
         borderRadius: 16,
         padding: 16,
         gap: 12,
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     },
     addressLine: {
         fontSize: 14,
-        color: '#CCC',
+        color: theme.colors.gray[300],
         marginBottom: 2,
     },
 
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     },
     supportText: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
 
     // Error State

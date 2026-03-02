@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.gray[700],
         borderWidth: 2,
         borderColor: '#000', // Or match blur bg
         justifyContent: 'center',

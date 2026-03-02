@@ -16,6 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, LoadingSpinner } from '../../components/common';
@@ -25,6 +27,19 @@ import { supabase } from '../../services/supabase/client';
 
 type MarketplaceScreenProps = {
     navigation: any;
+};
+
+// Product Image with error fallback
+const ProductImage = ({ uri, style }: { uri: string; style: any }) => {
+    const [error, setError] = useState(false);
+    if (error) {
+        return (
+            <View style={[style, { alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background.elevated }]}>
+                <Ionicons name="image-outline" size={32} color={theme.colors.text.tertiary} />
+            </View>
+        );
+    }
+    return <Image source={{ uri }} style={style} resizeMode="cover" onError={() => setError(true)} />;
 };
 
 // Toggle Option Component with Glass
@@ -89,16 +104,18 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
             setCommunityItems(communityData);
         } catch (error) {
             console.error('Error loading marketplace:', error);
-            // Fallback empty if error (table might be empty)
+            Alert.alert('Error', 'Failed to load marketplace. Pull to refresh.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, []);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
     const onRefresh = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -141,9 +158,13 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
 
     const renderItem = useCallback(({ item }: { item: ShopItem | MarketplaceItem }) => {
         const isShop = viewMode === 'shop';
+        const shopPriceCents =
+            (item as ShopItem).price_cents ??
+            ((item as any).points_price ?? 0);
+        const communityPrice = Number((item as MarketplaceItem).price || 0);
         const priceLabel = isShop
-            ? `${(item as ShopItem).points_price} pts`
-            : `€${(item as MarketplaceItem).price}`;
+            ? `€${(shopPriceCents / 100).toFixed(2)}`
+            : `€${communityPrice.toFixed(2)}`;
 
         const imageUrl: string = item.image_url ?? 'https://images.unsplash.com/photo-1556906250-9632af38096b?w=500&q=80'; // Fallback
 
@@ -158,7 +179,7 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                     activeOpacity={0.8}
                 >
                     <View style={styles.imageContainer}>
-                        <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="cover" />
+                        <ProductImage uri={imageUrl} style={styles.productImage} />
                         {isShop && (item as ShopItem).stock < 5 && (
                             <View style={styles.badge}>
                                 <Text style={styles.badgeText}>{t('marketplace.fewUnits').toUpperCase()}</Text>

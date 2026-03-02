@@ -33,10 +33,12 @@ import type { ShopItem } from '@/types';
 const shopItemSchema = z.object({
     title: z.string().min(2, 'Title must be at least 2 characters').max(100, 'Title too long'),
     description: z.string().max(500, 'Description too long').nullable().optional(),
-    points_price: z.number().min(1, 'Price must be at least 1 point').max(1000000, 'Price too high'),
-    stock: z.number().min(0, 'Stock cannot be negative').max(99999, 'Stock too high'),
+    price_eur: z.coerce.number().min(0.5, 'Price must be at least €0.50').max(100000, 'Price too high'),
+    stock: z.coerce.number().min(0, 'Stock cannot be negative').max(99999, 'Stock too high'),
     image_url: z.string().url('Must be a valid URL').nullable().optional().or(z.literal('')),
-    is_active: z.boolean()
+    is_active: z.boolean(),
+    allow_points_discount: z.boolean(),
+    max_points_discount_percent: z.coerce.number().min(0, 'Min 0%').max(100, 'Max 100%'),
 });
 
 type ShopItemFormData = z.infer<typeof shopItemSchema>;
@@ -45,6 +47,26 @@ type ShopItemFormData = z.infer<typeof shopItemSchema>;
 // CONSTANTS
 // ============================================================================
 const ITEMS_PER_PAGE = 10;
+
+function resolvePriceCents(item: Partial<ShopItem>): number {
+    if (typeof item.price_cents === 'number' && Number.isFinite(item.price_cents)) {
+        return Math.max(0, Math.round(item.price_cents));
+    }
+
+    if (typeof item.points_price === 'number' && Number.isFinite(item.points_price)) {
+        const legacy = Math.max(0, Math.round(item.points_price));
+        return legacy < 1000 ? legacy * 100 : legacy;
+    }
+
+    return 0;
+}
+
+function formatMoney(cents: number): string {
+    return new Intl.NumberFormat('en-IE', {
+        style: 'currency',
+        currency: 'EUR',
+    }).format((cents || 0) / 100);
+}
 
 // ============================================================================
 // MAIN COMPONENT
@@ -81,12 +103,16 @@ export default function ShopPage() {
         defaultValues: {
             title: '',
             description: '',
-            points_price: 100,
+            price_eur: 19.99,
             stock: 10,
             image_url: '',
-            is_active: true
+            is_active: true,
+            allow_points_discount: true,
+            max_points_discount_percent: 20,
         }
     });
+
+    const allowPointsDiscount = watch('allow_points_discount');
 
     // ========================================================================
     // DATA FETCHING & AUTH
@@ -174,23 +200,28 @@ export default function ShopPage() {
         reset({
             title: '',
             description: '',
-            points_price: 100,
+            price_eur: 19.99,
             stock: 10,
             image_url: '',
-            is_active: true
+            is_active: true,
+            allow_points_discount: true,
+            max_points_discount_percent: 20,
         });
         setIsModalOpen(true);
     };
 
     const handleEdit = (item: ShopItem) => {
         setEditingItem(item);
+        const itemPriceCents = resolvePriceCents(item);
         reset({
             title: item.title,
             description: item.description || '',
-            points_price: item.points_price,
+            price_eur: Number((itemPriceCents / 100).toFixed(2)),
             stock: item.stock,
             image_url: item.image_url || '',
-            is_active: (item as any).is_active !== false
+            is_active: item.is_active !== false,
+            allow_points_discount: item.allow_points_discount ?? true,
+            max_points_discount_percent: item.max_points_discount_percent ?? 20,
         });
         setIsModalOpen(true);
     };
@@ -220,10 +251,20 @@ export default function ShopPage() {
 
         try {
             // Clean up empty strings to null
+            const priceCents = Math.max(0, Math.round(data.price_eur * 100));
             const cleanedData = {
-                ...data,
+                title: data.title,
                 description: data.description || null,
-                image_url: data.image_url || null
+                price_cents: priceCents,
+                // Kept for legacy compatibility with older clients still reading points_price.
+                points_price: priceCents,
+                stock: data.stock,
+                image_url: data.image_url || null,
+                is_active: data.is_active,
+                allow_points_discount: data.allow_points_discount,
+                max_points_discount_percent: data.allow_points_discount
+                    ? data.max_points_discount_percent
+                    : 0,
             };
 
             if (editingItem) {
@@ -259,9 +300,9 @@ export default function ShopPage() {
     // ========================================================================
     const stats = useMemo(() => ({
         total: items.length,
-        active: items.filter(i => (i as any).is_active !== false && i.stock > 0).length,
+        active: items.filter(i => i.is_active !== false && i.stock > 0).length,
         outOfStock: items.filter(i => i.stock === 0).length,
-        totalValue: items.reduce((acc, i) => acc + (i.points_price * i.stock), 0)
+        totalValueCents: items.reduce((acc, i) => acc + (resolvePriceCents(i) * i.stock), 0),
     }), [items]);
 
     // ========================================================================
@@ -303,7 +344,7 @@ export default function ShopPage() {
                         <span className="text-[#FF5722] text-xl">★</span>
                         <div>
                             <p className="text-xs text-white/40 uppercase font-bold">Inventory Value</p>
-                            <p className="text-2xl font-bold text-[#FF5722]">{stats.totalValue.toLocaleString()} pts</p>
+                            <p className="text-2xl font-bold text-[#FF5722]">{formatMoney(stats.totalValueCents)}</p>
                         </div>
                     </div>
                 </GlassCard>
@@ -403,7 +444,7 @@ export default function ShopPage() {
                                     <th className="text-left p-4 text-xs font-bold uppercase text-white/40">Product</th>
                                     <th className="text-left p-4 text-xs font-bold uppercase text-white/40">Status</th>
                                     <th className="text-left p-4 text-xs font-bold uppercase text-white/40">Stock</th>
-                                    <th className="text-left p-4 text-xs font-bold uppercase text-white/40">Price (Points)</th>
+                                    <th className="text-left p-4 text-xs font-bold uppercase text-white/40">Price</th>
                                     <th className="text-right p-4 text-xs font-bold uppercase text-white/40">Actions</th>
                                 </tr>
                             </thead>
@@ -428,8 +469,8 @@ export default function ShopPage() {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <Badge variant={item.stock > 0 ? 'default' : 'destructive'}>
-                                                {item.stock > 0 ? 'Active' : 'Out of Stock'}
+                                            <Badge variant={item.is_active && item.stock > 0 ? 'default' : 'destructive'}>
+                                                {item.is_active && item.stock > 0 ? 'Active' : (item.is_active ? 'Out of Stock' : 'Inactive')}
                                             </Badge>
                                         </td>
                                         <td className="p-4">
@@ -438,8 +479,13 @@ export default function ShopPage() {
                                             </span>
                                         </td>
                                         <td className="p-4">
-                                            <span className="font-mono text-[#FF5722] font-bold">
-                                                {item.points_price.toLocaleString()}
+                                            <span className="font-mono text-[#FF5722] font-bold block">
+                                                {formatMoney(resolvePriceCents(item))}
+                                            </span>
+                                            <span className="text-[10px] text-white/40">
+                                                {item.allow_points_discount
+                                                    ? `Points discount up to ${item.max_points_discount_percent}%`
+                                                    : 'Points discount disabled'}
                                             </span>
                                         </td>
                                         <td className="p-4">
@@ -490,13 +536,13 @@ export default function ShopPage() {
                                                 <p className="text-xs text-white/40 mt-1">{item.description || 'No description'}</p>
                                             </div>
                                             <Badge variant={item.stock > 0 ? 'default' : 'destructive'} className="flex-shrink-0">
-                                                {item.stock > 0 ? 'Active' : 'Out'}
+                                                {item.is_active && item.stock > 0 ? 'Active' : (item.is_active ? 'Out' : 'Inactive')}
                                             </Badge>
                                         </div>
                                         <div className="flex items-center justify-between mt-3">
                                             <div className="flex gap-4">
                                                 <span className="text-xs text-white/40">Stock: <strong className="text-white">{item.stock}</strong></span>
-                                                <span className="text-xs text-white/40">Price: <strong className="text-[#FF5722]">{item.points_price}</strong></span>
+                                                <span className="text-xs text-white/40">Price: <strong className="text-[#FF5722]">{formatMoney(resolvePriceCents(item))}</strong></span>
                                             </div>
                                             <div className="flex gap-1">
                                                 <button
@@ -614,16 +660,17 @@ export default function ShopPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-mono font-bold uppercase text-white/60">
-                                        Price (Points) <span className="text-red-500">*</span>
+                                        Price (EUR) <span className="text-red-500">*</span>
                                     </label>
                                     <Input
                                         type="number"
-                                        {...register('points_price', { valueAsNumber: true })}
-                                        min="1"
-                                        className={`bg-black/50 border-white/10 focus:border-[#FF5722] ${errors.points_price ? 'border-red-500' : ''}`}
+                                        step="0.01"
+                                        min="0.50"
+                                        {...register('price_eur', { valueAsNumber: true })}
+                                        className={`bg-black/50 border-white/10 focus:border-[#FF5722] ${errors.price_eur ? 'border-red-500' : ''}`}
                                     />
-                                    {errors.points_price && (
-                                        <p className="text-red-500 text-xs">{errors.points_price.message}</p>
+                                    {errors.price_eur && (
+                                        <p className="text-red-500 text-xs">{errors.price_eur.message}</p>
                                     )}
                                 </div>
                                 <div className="space-y-2">
@@ -638,6 +685,43 @@ export default function ShopPage() {
                                     />
                                     {errors.stock && (
                                         <p className="text-red-500 text-xs">{errors.stock.message}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Points Discount Controls */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-mono font-bold uppercase text-white/60">
+                                        Allow Points Discount
+                                    </label>
+                                    <label className="relative inline-flex items-center cursor-pointer h-12 px-3 bg-black/50 border border-white/10 rounded-lg">
+                                        <input
+                                            type="checkbox"
+                                            {...register('allow_points_discount')}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[13px] after:start-[14px] after:bg-white after:border-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF5722]"></div>
+                                        <span className="ms-3 text-sm text-white/80">
+                                            {allowPointsDiscount ? 'Enabled' : 'Disabled'}
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-mono font-bold uppercase text-white/60">
+                                        Max Points Discount (%)
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        disabled={!allowPointsDiscount}
+                                        {...register('max_points_discount_percent', { valueAsNumber: true })}
+                                        className={`bg-black/50 border-white/10 focus:border-[#FF5722] ${errors.max_points_discount_percent ? 'border-red-500' : ''}`}
+                                    />
+                                    {errors.max_points_discount_percent && (
+                                        <p className="text-red-500 text-xs">{errors.max_points_discount_percent.message}</p>
                                     )}
                                 </div>
                             </div>

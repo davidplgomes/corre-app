@@ -16,7 +16,7 @@ import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 import { connectStrava, isStravaConnected, getStravaStats } from '../../services/supabase/strava';
 import * as Haptics from 'expo-haptics';
-import { useOnboarding } from '../../navigation/RootNavigator';
+import { useOnboarding } from '../../contexts/OnboardingContext';
 import {
     StravaIcon,
     SyncIcon,
