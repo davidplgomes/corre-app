@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { GlassCard } from '@/components/ui/glass-card';
-import { ChevronLeft, Loader2, Calendar, MapPin, Trophy } from 'lucide-react';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
+import { ChevronLeft, Loader2, Calendar, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -33,6 +34,12 @@ export default function NewEventPage() {
 
             if (!session) {
                 toast.error("You must be logged in");
+                return;
+            }
+
+            if (!formData.location_lat || !formData.location_lng) {
+                toast.error("Please select a location from the suggestions");
+                setSubmitting(false);
                 return;
             }
 
@@ -145,49 +152,21 @@ export default function NewEventPage() {
                         />
                     </div>
 
-                    {/* Location */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Location Name</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                            <input
-                                required
-                                type="text"
-                                value={formData.location_name}
-                                onChange={e => setFormData({ ...formData, location_name: e.target.value })}
-                                placeholder="Meeting point name"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Coordinates */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Latitude</label>
-                            <input
-                                required
-                                type="number"
-                                step="any"
-                                value={formData.location_lat}
-                                onChange={e => setFormData({ ...formData, location_lat: e.target.value })}
-                                placeholder="e.g. 53.3498"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Longitude</label>
-                            <input
-                                required
-                                type="number"
-                                step="any"
-                                value={formData.location_lng}
-                                onChange={e => setFormData({ ...formData, location_lng: e.target.value })}
-                                placeholder="e.g. -6.2603"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                    </div>
+                    {/* Location with Address Autocomplete */}
+                    <AddressAutocomplete
+                        value={formData.location_name}
+                        latitude={formData.location_lat}
+                        longitude={formData.location_lng}
+                        onSelect={(address, lat, lng) => setFormData({
+                            ...formData,
+                            location_name: address,
+                            location_lat: lat,
+                            location_lng: lng
+                        })}
+                        placeholder="Search for event location..."
+                        required
+                        label="Event Location"
+                    />
 
                     {/* Actions */}
                     <div className="pt-4 flex gap-4">

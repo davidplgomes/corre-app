@@ -15,10 +15,16 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
-import { BackButton } from '../../components/common';
+import { BackButton, Button } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
-import { connectStrava, disconnectStravaComplete, getStravaConnection, StravaConnection } from '../../services/supabase/strava';
+import {
+    connectStrava,
+    disconnectStravaComplete,
+    getStravaConnection,
+    StravaConnection,
+    triggerStravaSync,
+} from '../../services/supabase/strava';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -33,6 +39,8 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
     const [stravaConnection, setStravaConnection] = React.useState<StravaConnection | null>(null);
     const stravaConnected = !!stravaConnection;
     const [stravaLoading, setStravaLoading] = React.useState(false);
+    const [stravaSyncing, setStravaSyncing] = React.useState(false);
+    const [lastSyncedAt, setLastSyncedAt] = React.useState<string | null>(null);
     const [refreshing, setRefreshing] = React.useState(false);
 
     const [privacyVisibility, setPrivacyVisibility] = React.useState<PrivacyVisibility>('friends');
@@ -70,6 +78,43 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
             setRefreshing(false);
         }
     }, [profile?.id]);
+
+    const handleManualStravaSync = async () => {
+        if (!stravaConnected || stravaSyncing) return;
+
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setStravaSyncing(true);
+
+        try {
+            const result = await triggerStravaSync();
+
+            if (!result.success) {
+                Alert.alert(t('common.error'), result.error || 'Failed to sync Strava activities');
+                return;
+            }
+
+            const activitiesSynced = result.activitiesSynced || 0;
+            const pointsAwarded = result.pointsAwarded || 0;
+            setLastSyncedAt(new Date().toISOString());
+
+            if (activitiesSynced === 0) {
+                Alert.alert(t('common.success'), 'No new activities found on Strava.');
+                return;
+            }
+
+            Alert.alert(
+                t('common.success'),
+                pointsAwarded > 0
+                    ? `${activitiesSynced} activities synced. You earned ${pointsAwarded} points.`
+                    : `${activitiesSynced} activities synced successfully.`
+            );
+        } catch (error) {
+            console.error('Manual Strava sync error:', error);
+            Alert.alert(t('common.error'), 'Failed to sync Strava activities');
+        } finally {
+            setStravaSyncing(false);
+        }
+    };
 
     const handleStravaToggle = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -256,6 +301,23 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
                             <Text style={styles.stravaAttributionText}>Powered by </Text>
                             <Text style={styles.stravaAttributionBrand}>Strava</Text>
                         </View>
+                        {stravaConnected && (
+                            <>
+                                <Button
+                                    title={stravaSyncing ? t('strava.syncing', 'Syncing...') : t('strava.syncNow', 'Sync Now')}
+                                    onPress={handleManualStravaSync}
+                                    loading={stravaSyncing}
+                                    disabled={stravaLoading || stravaSyncing}
+                                    size="small"
+                                    style={styles.stravaSyncButton}
+                                />
+                                {lastSyncedAt && (
+                                    <Text style={styles.stravaLastSync}>
+                                        {t('strava.lastSync', 'Last synced')}: {new Date(lastSyncedAt).toLocaleString()}
+                                    </Text>
+                                )}
+                            </>
+                        )}
                     </View>
 
                     {/* Language Section */}
@@ -577,5 +639,14 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
         color: '#FC4C02', // Strava orange
+    },
+    stravaSyncButton: {
+        marginTop: 8,
+    },
+    stravaLastSync: {
+        marginTop: 8,
+        textAlign: 'center',
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.45)',
     },
 });

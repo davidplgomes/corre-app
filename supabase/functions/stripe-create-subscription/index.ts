@@ -25,6 +25,89 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+type MembershipTier = "free" | "pro" | "club";
+const MANAGEABLE_SUB_STATUSES = ["active", "trialing", "past_due", "unpaid", "incomplete"] as const;
+
+const normalizeTier = (value: string | null | undefined): MembershipTier | null => {
+    if (!value) return null;
+    const normalized = value.toLowerCase().trim();
+    if (["club", "premium", "elite"].includes(normalized)) return "club";
+    if (["pro", "plus", "monthly", "annual", "yearly", "anual"].includes(normalized)) return "pro";
+    if (normalized === "free") return "free";
+    return null;
+};
+
+const inferTierFromText = (value: string | null | undefined): MembershipTier | null => {
+    if (!value) return null;
+    const normalized = value.toLowerCase();
+    if (normalized.includes("club") || normalized.includes("premium")) return "club";
+    if (normalized.includes("pro")) return "pro";
+    return null;
+};
+
+const getPlanSnapshotFromPriceId = async (
+    priceId: string
+): Promise<{ planName: string; tier: MembershipTier }> => {
+    const price = await stripe.prices.retrieve(priceId, { expand: ["product"] });
+    const product = typeof price.product === "string"
+        ? await stripe.products.retrieve(price.product)
+        : price.product;
+
+    const metadataTier =
+        normalizeTier(price.metadata?.membership_tier) ||
+        normalizeTier(price.metadata?.tier) ||
+        normalizeTier(product?.metadata?.membership_tier) ||
+        normalizeTier(product?.metadata?.tier);
+
+    const inferredTier =
+        inferTierFromText(price.nickname) ||
+        inferTierFromText(product?.name) ||
+        inferTierFromText(price.id);
+
+    const tier = metadataTier || inferredTier || "pro";
+    const planName = product?.name || price.nickname || "Pro";
+
+    return { planName, tier };
+};
+
+const getPaymentIntentClientSecretFromSubscription = (
+    subscription: Stripe.Subscription
+): string | undefined => {
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice | null;
+    const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent | null;
+    return paymentIntent?.client_secret || undefined;
+};
+
+const upsertSubscriptionRecord = async (
+    supabase: ReturnType<typeof createClient>,
+    userId: string,
+    stripeCustomerId: string,
+    subscription: Stripe.Subscription,
+    planId: string,
+    planName: string
+) => {
+    const { error } = await supabase
+        .from("subscriptions")
+        .upsert({
+            user_id: userId,
+            stripe_customer_id: stripeCustomerId,
+            stripe_subscription_id: subscription.id,
+            plan_id: planId,
+            plan_name: planName,
+            status: subscription.status,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+        }, {
+            onConflict: "stripe_subscription_id",
+        });
+
+    if (error) {
+        console.error("[stripe-create-subscription] Database upsert error:", error);
+    }
+};
+
 Deno.serve(async (req: Request) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -59,7 +142,9 @@ Deno.serve(async (req: Request) => {
         }
 
         const body = await req.json();
-        const { action, priceId, subscriptionId } = body;
+        const action = typeof body?.action === "string" ? body.action : "create";
+        const priceId = typeof body?.priceId === "string" ? body.priceId : undefined;
+        const subscriptionId = typeof body?.subscriptionId === "string" ? body.subscriptionId : undefined;
 
         // ─── Cancel Subscription ────────────────────────────
         if (action === "cancel" && subscriptionId) {
@@ -68,6 +153,34 @@ Deno.serve(async (req: Request) => {
             });
 
             // Update local DB
+            await supabase
+                .from("subscriptions")
+                .update({
+                    cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                    status: updatedSubscription.status,
+                    current_period_start: new Date(updatedSubscription.current_period_start * 1000).toISOString(),
+                    current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("stripe_subscription_id", subscriptionId)
+                .eq("user_id", user.id);
+
+            return new Response(JSON.stringify({
+                success: true,
+                status: updatedSubscription.status,
+                cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+                current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+            }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // ─── Resume Subscription Cancellation ───────────────
+        if (action === "resume" && subscriptionId) {
+            const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+                cancel_at_period_end: false,
+            });
+
             await supabase
                 .from("subscriptions")
                 .update({
@@ -127,7 +240,118 @@ Deno.serve(async (req: Request) => {
             console.log("[stripe-create-subscription] Created customer:", stripeCustomerId);
         }
 
-        // Create the subscription
+        const planSnapshot = await getPlanSnapshotFromPriceId(priceId);
+
+        const { data: existingManageableSub, error: existingManageableSubError } = await supabase
+            .from("subscriptions")
+            .select("stripe_subscription_id")
+            .eq("user_id", user.id)
+            .not("stripe_subscription_id", "is", null)
+            .in("status", [...MANAGEABLE_SUB_STATUSES])
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (existingManageableSubError) {
+            console.warn(
+                "[stripe-create-subscription] Could not look up existing manageable subscription:",
+                existingManageableSubError
+            );
+        }
+
+        if (existingManageableSub?.stripe_subscription_id) {
+            console.log(
+                "[stripe-create-subscription] Found manageable subscription, updating in place:",
+                existingManageableSub.stripe_subscription_id
+            );
+
+            try {
+                const existingStripeSubscription = await stripe.subscriptions.retrieve(
+                    existingManageableSub.stripe_subscription_id,
+                    { expand: ["latest_invoice.payment_intent"] }
+                );
+
+                const currentItem = existingStripeSubscription.items.data[0];
+                if (!currentItem) {
+                    throw new Error("Existing subscription has no subscription item to update");
+                }
+
+                const currentPriceId = currentItem.price?.id;
+                if (currentPriceId === priceId && !existingStripeSubscription.cancel_at_period_end) {
+                    await upsertSubscriptionRecord(
+                        supabase,
+                        user.id,
+                        stripeCustomerId,
+                        existingStripeSubscription,
+                        priceId,
+                        planSnapshot.planName
+                    );
+
+                    if (["active", "trialing"].includes(existingStripeSubscription.status)) {
+                        await supabase
+                            .from("users")
+                            .update({ membership_tier: planSnapshot.tier })
+                            .eq("id", user.id);
+                    }
+
+                    return new Response(
+                        JSON.stringify({
+                            subscriptionId: existingStripeSubscription.id,
+                            clientSecret: getPaymentIntentClientSecretFromSubscription(existingStripeSubscription),
+                        }),
+                        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                    );
+                }
+
+                const updatedSubscription = await stripe.subscriptions.update(
+                    existingStripeSubscription.id,
+                    {
+                        cancel_at_period_end: false,
+                        payment_behavior: "default_incomplete",
+                        payment_settings: { save_default_payment_method: "on_subscription" },
+                        proration_behavior: "create_prorations",
+                        items: [
+                            {
+                                id: currentItem.id,
+                                price: priceId,
+                            },
+                        ],
+                        expand: ["latest_invoice.payment_intent"],
+                    }
+                );
+
+                await upsertSubscriptionRecord(
+                    supabase,
+                    user.id,
+                    stripeCustomerId,
+                    updatedSubscription,
+                    priceId,
+                    planSnapshot.planName
+                );
+
+                if (["active", "trialing"].includes(updatedSubscription.status)) {
+                    await supabase
+                        .from("users")
+                        .update({ membership_tier: planSnapshot.tier })
+                        .eq("id", user.id);
+                }
+
+                return new Response(
+                    JSON.stringify({
+                        subscriptionId: updatedSubscription.id,
+                        clientSecret: getPaymentIntentClientSecretFromSubscription(updatedSubscription),
+                    }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            } catch (manageError) {
+                console.warn(
+                    "[stripe-create-subscription] Existing subscription update failed; creating a new subscription:",
+                    manageError
+                );
+            }
+        }
+
+        // Create a new subscription only when no manageable existing subscription was found.
         console.log("[stripe-create-subscription] Creating subscription with priceId:", priceId);
         const subscription = await stripe.subscriptions.create({
             customer: stripeCustomerId,
@@ -138,38 +362,29 @@ Deno.serve(async (req: Request) => {
         });
         console.log("[stripe-create-subscription] Subscription created:", subscription.id, "status:", subscription.status);
 
-        const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
-        const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent;
-        console.log("[stripe-create-subscription] Payment intent:", paymentIntent?.id, "status:", paymentIntent?.status);
+        await upsertSubscriptionRecord(
+            supabase,
+            user.id,
+            stripeCustomerId,
+            subscription,
+            priceId,
+            planSnapshot.planName
+        );
 
-        // Upsert subscription in our DB
-        console.log("[stripe-create-subscription] Upserting subscription to database");
-        const { error: upsertError } = await supabase
-            .from("subscriptions")
-            .upsert({
-                user_id: user.id,
-                stripe_customer_id: stripeCustomerId,
-                stripe_subscription_id: subscription.id,
-                plan_id: priceId,
-                plan_name: subscription.items.data[0]?.plan?.nickname || "Pro",
-                status: subscription.status,
-                cancel_at_period_end: subscription.cancel_at_period_end,
-                current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-                updated_at: new Date().toISOString(),
-            }, {
-                onConflict: "stripe_subscription_id",
-            });
-
-        if (upsertError) {
-            console.error("[stripe-create-subscription] Database upsert error:", upsertError);
-            // Don't fail the request - subscription was created in Stripe
+        if (["active", "trialing"].includes(subscription.status)) {
+            const { error: tierUpdateError } = await supabase
+                .from("users")
+                .update({ membership_tier: planSnapshot.tier })
+                .eq("id", user.id);
+            if (tierUpdateError) {
+                console.warn("[stripe-create-subscription] Failed to sync user tier:", tierUpdateError);
+            }
         }
 
         return new Response(
             JSON.stringify({
                 subscriptionId: subscription.id,
-                clientSecret: paymentIntent?.client_secret,
+                clientSecret: getPaymentIntentClientSecretFromSubscription(subscription),
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

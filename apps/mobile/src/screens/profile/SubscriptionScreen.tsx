@@ -133,6 +133,7 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 .from('subscriptions')
                 .select('status')
                 .eq('user_id', userId)
+                .order('updated_at', { ascending: false })
                 .order('created_at', { ascending: false })
                 .limit(1);
 
@@ -291,6 +292,42 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 }
             ]
         );
+    };
+
+    const handleResumeSubscription = async () => {
+        if (!currentSubscription?.stripeSubscriptionId) return;
+
+        setLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        try {
+            const response = await SubscriptionsApi.resumeSubscription(
+                currentSubscription.stripeSubscriptionId
+            );
+
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+
+            await refreshProfile();
+            await fetchData();
+
+            Alert.alert(
+                t('subscription.resumed', 'Subscription Resumed'),
+                t(
+                    'subscription.resumedMessage',
+                    'Cancellation removed. Your subscription will renew normally on the next billing date.'
+                )
+            );
+        } catch (error) {
+            console.error('Resume subscription error:', error);
+            Alert.alert(
+                t('common.error'),
+                error instanceof Error ? error.message : t('subscription.resumeFailed', 'Failed to resume subscription')
+            );
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleContactSupport = () => {
@@ -480,11 +517,18 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         <TouchableOpacity
                             style={[styles.resubscribeButton, { backgroundColor: accentColor }]}
                             onPress={() => {
-                                // Find the matching plan and resubscribe
+                                if (currentSubscription?.stripeSubscriptionId) {
+                                    void handleResumeSubscription();
+                                    return;
+                                }
+
+                                // Fallback: if no Stripe subscription id is present, create new subscription
                                 const matchingPlan = plans.find(p =>
                                     p.name.toLowerCase().includes(planName.toLowerCase())
                                 );
-                                if (matchingPlan) handleSubscribe(matchingPlan);
+                                if (matchingPlan) {
+                                    void handleSubscribe(matchingPlan);
+                                }
                             }}
                             activeOpacity={0.8}
                         >

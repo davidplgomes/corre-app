@@ -18,8 +18,8 @@ import { CardField, useStripe } from '@stripe/stripe-react-native';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, LoadingSpinner, BackButton } from '../../components/common';
-import { clearCart, consumePoints, getAvailablePoints } from '../../services/supabase/wallet';
-import { createPaymentIntent, confirmPayment as storePaymentIntent, calculateMaxPointsDiscount } from '../../services/payments';
+import { clearCart } from '../../services/supabase/wallet';
+import { createShopPaymentSession } from '../../services/payments';
 import { supabase } from '../../services/supabase/client';
 import { ShippingAddress } from '../../types';
 
@@ -38,7 +38,7 @@ interface CheckoutScreenProps {
 export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, route }) => {
     const { cartItems, subtotal, pointsToUse, total } = route.params;
     const { t } = useTranslation();
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
     const { confirmPayment } = useStripe();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState<'shipping' | 'payment' | 'confirmation'>('shipping');
@@ -113,59 +113,7 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
     const handlePlaceOrder = async () => {
         if (!user?.id) return;
 
-        const trustedSubtotal = cartItems.reduce(
-            (sum, item) => sum + (item?.item?.price || 0) * (item?.quantity || 0),
-            0
-        );
-        const trustedSubtotalCents = Math.round(trustedSubtotal * 100);
-        const availablePoints = await getAvailablePoints(user.id);
-        const requestedPointsToUse = Math.max(0, Math.floor(Number(pointsToUse) || 0));
-        const membershipMaxPointsAllowed = calculateMaxPointsDiscount(
-            trustedSubtotalCents,
-            profile?.membershipTier || 'free',
-            availablePoints
-        );
-        const itemMaxPointsAllowed = cartItems.reduce((sum, item) => {
-            const itemPriceCents = Math.round((item?.item?.price || 0) * 100);
-            const quantity = Math.max(0, Number(item?.quantity) || 0);
-            const lineSubtotalCents = itemPriceCents * quantity;
-            if (lineSubtotalCents <= 0) return sum;
-
-            if (item?.item?.allow_points_discount === false) {
-                return sum;
-            }
-
-            const maxPercent = Math.max(
-                0,
-                Math.min(100, Number(item?.item?.max_points_discount_percent ?? 20))
-            );
-            return sum + Math.floor(lineSubtotalCents * (maxPercent / 100));
-        }, 0);
-
-        const maxPointsAllowed = Math.min(
-            membershipMaxPointsAllowed,
-            itemMaxPointsAllowed,
-            availablePoints
-        );
-        const trustedPointsToUse = Math.min(requestedPointsToUse, maxPointsAllowed);
-        const cashAmountCents = trustedSubtotalCents - trustedPointsToUse;
-
-        if (trustedPointsToUse !== requestedPointsToUse) {
-            Alert.alert(
-                t('checkout.pointsAdjusted', 'Points adjusted'),
-                t('checkout.pointsAdjustedMessage', 'Points were adjusted to the maximum discount allowed for this order.')
-            );
-        }
-
-        if (cashAmountCents <= 0) {
-            Alert.alert(
-                t('common.error'),
-                t('checkout.pointsCannotCoverFullAmount', 'Points can only be used for a partial discount. A cash payment is still required.')
-            );
-            return;
-        }
-
-        if (cashAmountCents > 0 && !cardComplete) {
+        if (!cardComplete) {
             Alert.alert(t('common.error'), t('checkout.enterCard', 'Please enter complete card details'));
             return;
         }
@@ -173,76 +121,58 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
         setLoading(true);
         let orderId: string | null = null;
         try {
-            // Create order in database
-            const { data: order, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    user_id: user.id,
-                    total_amount: trustedSubtotal,
-                    points_used: trustedPointsToUse,
-                    cash_amount: cashAmountCents / 100,
-                    status: 'pending',
-                    shipping_address: shippingAddress,
-                })
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-            orderId = order.id;
-
-            // Create order items
-            const orderItems = cartItems.map(item => ({
-                order_id: order.id,
-                item_type: item.item_type,
-                item_id: item.item_id,
-                quantity: item.quantity,
-                unit_price: item.item?.price || 0,
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(orderItems);
-
-            if (itemsError) throw itemsError;
-
-            // Create payment intent using trusted final cash total (partial points discount applied).
-            const paymentIntent = await createPaymentIntent(
-                user.id,
-                cashAmountCents,
-                trustedPointsToUse
+            // Create a server-authoritative checkout session.
+            const checkoutSession = await createShopPaymentSession(
+                shippingAddress,
+                pointsToUse
             );
 
-            if (!paymentIntent) {
-                throw new Error('Failed to create payment');
+            if (!checkoutSession.success || !checkoutSession.data) {
+                throw new Error(checkoutSession.error || 'Failed to create checkout session');
             }
 
-            // Store payment intent ID (webhook will update status)
-            const { success, error: paymentError } = await storePaymentIntent(
-                paymentIntent.id,
-                order.id
-            );
+            const { data: sessionData } = checkoutSession;
+            orderId = sessionData.orderId;
 
-            if (!success) {
-                throw new Error(paymentError || 'Payment confirmation failed');
+            if (sessionData.pointsApproved !== pointsToUse) {
+                Alert.alert(
+                    t('checkout.pointsAdjusted', 'Points adjusted'),
+                    t(
+                        'checkout.pointsAdjustedMessage',
+                        'Points were adjusted to the maximum discount allowed for this order.'
+                    )
+                );
             }
 
             // Confirm payment with Stripe using the card data
-            const { error: stripeError } = await confirmPayment(paymentIntent.clientSecret, {
+            const { error: stripeError } = await confirmPayment(sessionData.clientSecret, {
                 paymentMethodType: 'Card',
             });
 
             if (stripeError) {
-                // Update order status to failed
-                await supabase
-                    .from('orders')
-                    .update({ status: 'payment_failed' })
-                    .eq('id', order.id);
+                if (stripeError.code === 'Canceled') {
+                    if (orderId) {
+                        const { error: cancelError } = await supabase.functions.invoke('cancel-shop-payment', {
+                            body: { orderId },
+                        });
+
+                        if (cancelError) {
+                            console.warn('Failed to cancel checkout order on backend:', cancelError);
+                        }
+                    }
+
+                    Alert.alert(
+                        t('checkout.paymentCancelled', 'Payment cancelled'),
+                        t('checkout.paymentCancelledMessage', 'Your checkout was cancelled and no charge was made.')
+                    );
+                    return;
+                }
 
                 throw new Error(stripeError.message || 'Payment failed');
             }
 
             // Wait for webhook to confirm payment (polls every 2s for up to 30s)
-            const finalStatus = await pollOrderStatus(order.id);
+            const finalStatus = await pollOrderStatus(orderId);
 
             if (finalStatus === 'payment_failed') {
                 throw new Error('Payment was declined. Please try a different payment method.');
@@ -264,11 +194,6 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                     ]
                 );
                 return;
-            }
-
-            // Payment confirmed! Consume points and clear cart
-            if (trustedPointsToUse > 0) {
-                await consumePoints(user.id, trustedPointsToUse);
             }
 
             // Clear cart

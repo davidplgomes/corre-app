@@ -15,6 +15,7 @@ export default function PartnerPlacesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [togglingId, setTogglingId] = useState<string | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchPlaces = async () => {
@@ -43,7 +44,12 @@ export default function PartnerPlacesPage() {
     );
 
     const handleDelete = async (placeId: string) => {
-        if (!confirm('Delete this place? This cannot be undone.')) return;
+        if (confirmDeleteId !== placeId) {
+            setConfirmDeleteId(placeId);
+            setTimeout(() => setConfirmDeleteId(prev => prev === placeId ? null : prev), 3000);
+            return;
+        }
+        setConfirmDeleteId(null);
         setDeletingId(placeId);
         try {
             await deletePlace(placeId);
@@ -126,64 +132,76 @@ export default function PartnerPlacesPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredPlaces.map((place) => (
-                        <GlassCard key={place.id} className="group p-0 flex flex-col h-full hover:border-[#FF5722]/30 cursor-pointer transition-all">
-                            {/* Image / Placeholder */}
-                            <div className="h-48 w-full bg-white/5 relative overflow-hidden">
-                                {place.image_url ? (
-                                    <img
-                                        src={place.image_url}
-                                        alt={place.name}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-white/10">
-                                        <MapPin className="w-12 h-12" />
+                    {filteredPlaces.map((place) => {
+                        const searchQuery = [place.name, place.address].filter(Boolean).join(', ');
+                        const mapsUrl = searchQuery
+                            ? `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`
+                            : null;
+                        return (
+                            <div key={place.id} onClick={() => mapsUrl && window.open(mapsUrl, '_blank')}>
+                                <GlassCard className="group p-0 flex flex-col h-full hover:border-[#FF5722]/30 cursor-pointer transition-all">
+                                    {/* Image / Placeholder */}
+                                    <div className="h-48 w-full bg-white/5 relative overflow-hidden">
+                                        {place.image_url ? (
+                                            <img
+                                                src={place.image_url}
+                                                alt={place.name}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                            />
+                                        ) : null}
+                                        <div className={`w-full h-full flex items-center justify-center text-white/10 ${place.image_url ? 'absolute inset-0 -z-10' : ''}`}>
+                                            <MapPin className="w-12 h-12" />
+                                        </div>
+                                        <div className="absolute top-4 right-4">
+                                            <div className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider ${place.is_active ? 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/20' : 'bg-white/10 text-white/40 border border-white/10'
+                                                }`}>
+                                                {place.is_active ? 'Active' : 'Inactive'}
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                                <div className="absolute top-4 right-4">
-                                    <div className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider ${place.is_active ? 'bg-[#22c55e]/20 text-[#22c55e] border border-[#22c55e]/20' : 'bg-white/10 text-white/40 border border-white/10'
-                                        }`}>
-                                        {place.is_active ? 'Active' : 'Inactive'}
+
+                                    <div className="p-6 flex-1 flex flex-col">
+                                        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#FF5722] transition-colors">{place.name}</h3>
+                                        <p className="text-sm text-white/60 mb-4 line-clamp-2 flex-1">{place.description || 'No description provided.'}</p>
+
+                                        <div className="flex items-center gap-2 text-xs text-white/40 mt-auto pt-4 border-t border-white/5">
+                                            <MapPin className="w-3 h-3" />
+                                            <span className="truncate">{place.address || 'No address'}</span>
+                                        </div>
+
+                                        <div className="flex gap-2 pt-4 mt-2" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => window.location.href = `/partner/dashboard/places/${place.id}/edit`}
+                                                className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                            >
+                                                <Pencil className="w-3 h-3" />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggle(place)}
+                                                disabled={togglingId === place.id}
+                                                className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                                            >
+                                                {togglingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : place.is_active ? <ToggleRight className="w-3 h-3 text-green-400" /> : <ToggleLeft className="w-3 h-3" />}
+                                                {place.is_active ? 'Deactivate' : 'Activate'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(place.id)}
+                                                disabled={deletingId === place.id}
+                                                className={`h-8 flex items-center justify-center gap-1 rounded-lg transition-colors disabled:opacity-50 ${confirmDeleteId === place.id
+                                                    ? 'px-3 bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-bold'
+                                                    : 'w-8 text-red-400/70 hover:text-red-400 bg-white/5 hover:bg-red-500/10'
+                                                    }`}
+                                            >
+                                                {deletingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : confirmDeleteId === place.id ? 'Confirm?' : <Trash2 className="w-3 h-3" />}
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                </GlassCard>
                             </div>
-
-                            <div className="p-6 flex-1 flex flex-col">
-                                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#FF5722] transition-colors">{place.name}</h3>
-                                <p className="text-sm text-white/60 mb-4 line-clamp-2 flex-1">{place.description || 'No description provided.'}</p>
-
-                                <div className="flex items-center gap-2 text-xs text-white/40 mt-auto pt-4 border-t border-white/5">
-                                    <MapPin className="w-3 h-3" />
-                                    <span className="truncate">{place.address || 'No address'}</span>
-                                </div>
-
-                                <div className="flex gap-2 pt-4 mt-2">
-                                    <Link href={`/partner/dashboard/places/${place.id}/edit`} className="flex-1">
-                                        <button className="w-full h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-                                            <Pencil className="w-3 h-3" />
-                                            Edit
-                                        </button>
-                                    </Link>
-                                    <button
-                                        onClick={() => handleToggle(place)}
-                                        disabled={togglingId === place.id}
-                                        className="flex-1 h-8 flex items-center justify-center gap-1.5 text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {togglingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : place.is_active ? <ToggleRight className="w-3 h-3 text-green-400" /> : <ToggleLeft className="w-3 h-3" />}
-                                        {place.is_active ? 'Deactivate' : 'Activate'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(place.id)}
-                                        disabled={deletingId === place.id}
-                                        className="h-8 w-8 flex items-center justify-center text-red-400/70 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {deletingId === place.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                                    </button>
-                                </div>
-                            </div>
-                        </GlassCard>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

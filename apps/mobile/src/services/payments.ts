@@ -1,7 +1,7 @@
 // Stripe Payment Service for Corre App
 // Handles subscription management and one-time payments
-import { Alert } from 'react-native';
 import { supabase } from './supabase/client';
+import { ShippingAddress } from '../types';
 
 // Stripe configuration
 // In production, these would come from environment variables
@@ -31,6 +31,15 @@ export interface PaymentIntent {
     currency: string;
 }
 
+export interface ShopPaymentSession {
+    orderId: string;
+    paymentIntentId: string;
+    clientSecret: string;
+    subtotalCents: number;
+    pointsApproved: number;
+    cashAmountCents: number;
+}
+
 /**
  * Initialize Stripe SDK
  * Should be called at app startup
@@ -58,6 +67,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
             .select('*')
             .eq('user_id', userId)
             .in('status', ['active', 'trialing'])
+            .order('updated_at', { ascending: false })
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -156,6 +166,49 @@ export async function cancelSubscription(userId: string, subscriptionId: string)
         return {
             success: false,
             error: error.message || 'Failed to cancel subscription'
+        };
+    }
+}
+
+/**
+ * Create server-authoritative shop checkout session.
+ * The backend computes totals and points discounts from cart data.
+ */
+export async function createShopPaymentSession(
+    shippingAddress: ShippingAddress,
+    pointsToUse: number
+): Promise<{ success: boolean; data?: ShopPaymentSession; error?: string }> {
+    try {
+        const { data, error } = await supabase.functions.invoke('create-shop-payment', {
+            body: {
+                shipping_address: shippingAddress,
+                points_to_use: Math.max(0, Math.floor(Number(pointsToUse) || 0)),
+            },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (!data?.orderId || !data?.clientSecret || !data?.paymentIntentId) {
+            throw new Error('Invalid checkout session response');
+        }
+
+        return {
+            success: true,
+            data: {
+                orderId: data.orderId,
+                paymentIntentId: data.paymentIntentId,
+                clientSecret: data.clientSecret,
+                subtotalCents: Number(data.subtotalCents) || 0,
+                pointsApproved: Number(data.pointsApproved) || 0,
+                cashAmountCents: Number(data.cashAmountCents) || 0,
+            },
+        };
+    } catch (error: any) {
+        console.error('Create shop payment session error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to create checkout session',
         };
     }
 }

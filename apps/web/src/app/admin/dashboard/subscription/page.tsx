@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase"
 import { GlassCard } from "@/components/ui/glass-card"
 import { AdminTable } from "@/components/ui/admin-table"
 import { Button } from "@/components/ui/button"
-import { ArrowUpRight, Download, RefreshCw, Loader2, XCircle, RotateCcw } from "lucide-react"
+import { ArrowUpRight, Download, RefreshCw, Loader2, XCircle, RotateCcw, ArrowRightLeft } from "lucide-react"
 import { toast } from "sonner"
 
 type StripeProduct = {
@@ -15,6 +15,7 @@ type StripeProduct = {
     amount: number
     currency: string
     interval: string
+    metadata?: Record<string, string>
 }
 
 type SubscriptionRow = {
@@ -45,14 +46,68 @@ type DashboardStats = {
     ltv: number
 }
 
+type SubscriptionTier = "free" | "pro" | "club"
+type PaidTier = Exclude<SubscriptionTier, "free">
+type CatalogByTier = Partial<Record<PaidTier, StripeProduct>>
+type CatalogByPriceId = Record<string, StripeProduct>
+
 const ACTIVE_STATUSES = new Set(["active", "trialing"])
 const CANCELED_STATUSES = new Set(["canceled", "cancelled", "unpaid", "incomplete_expired"])
 const CANCELABLE_STATUSES = new Set(["active", "trialing", "past_due"])
 const RESUMABLE_STATUSES = new Set(["active", "trialing", "past_due"])
+const PLAN_CHANGEABLE_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"])
+
+const normalizeTier = (value: string | null | undefined): SubscriptionTier | null => {
+    if (!value) return null
+    const normalized = value.toLowerCase().trim()
+    if (["club", "premium", "elite"].includes(normalized)) return "club"
+    if (["pro", "plus", "monthly", "annual", "yearly", "anual"].includes(normalized)) return "pro"
+    if (normalized === "free") return "free"
+    return null
+}
+
+const inferTierFromText = (value: string | null | undefined): SubscriptionTier | null => {
+    if (!value) return null
+    const normalized = value.toLowerCase()
+    if (normalized.includes("club") || normalized.includes("premium")) return "club"
+    if (normalized.includes("pro")) return "pro"
+    return null
+}
+
+const resolveTierForProduct = (product: StripeProduct): PaidTier | null => {
+    const metadataTier =
+        normalizeTier(product.metadata?.membership_tier) ||
+        normalizeTier(product.metadata?.tier)
+
+    if (metadataTier === "club" || metadataTier === "pro") {
+        return metadataTier
+    }
+
+    const inferredTier = inferTierFromText(product.name) || inferTierFromText(product.priceId)
+    if (inferredTier === "club" || inferredTier === "pro") {
+        return inferredTier
+    }
+
+    return null
+}
+
+const resolveTierForSubscriptionRow = (item: SubscriptionRow): SubscriptionTier => {
+    const directTier = normalizeTier(item.user_tier)
+    if (directTier) return directTier
+
+    const inferredTier =
+        inferTierFromText(item.catalog_plan_name) ||
+        inferTierFromText(item.plan_name) ||
+        inferTierFromText(item.plan_id)
+
+    return inferredTier || "free"
+}
 
 export default function SubscriptionPage() {
     const supabase = useMemo(() => createClient(), [])
     const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([])
+    const [catalogByPriceId, setCatalogByPriceId] = useState<CatalogByPriceId>({})
+    const [catalogByTier, setCatalogByTier] = useState<CatalogByTier>({})
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [mutatingByStripeSubscriptionId, setMutatingByStripeSubscriptionId] = useState<Record<string, boolean>>({})
@@ -92,9 +147,11 @@ export default function SubscriptionPage() {
                         current_period_end,
                         cancel_at_period_end,
                         created_at,
+                        updated_at,
                         stripe_customer_id,
                         stripe_subscription_id
                     `)
+                    .order("updated_at", { ascending: false })
                     .order("created_at", { ascending: false }),
                 supabase.functions.invoke("stripe-sync-products"),
             ])
@@ -104,7 +161,23 @@ export default function SubscriptionPage() {
             }
 
             const products: StripeProduct[] = Array.isArray(productsResult.data) ? productsResult.data : []
-            const catalogByPriceId = new Map(products.map((p) => [p.priceId, p]))
+            const catalogByPriceIdRecord: CatalogByPriceId = {}
+            const catalogByTierRecord: CatalogByTier = {}
+
+            for (const product of products) {
+                catalogByPriceIdRecord[product.priceId] = product
+
+                const tier = resolveTierForProduct(product)
+                if (tier) {
+                    const existing = catalogByTierRecord[tier]
+                    if (!existing || product.amount < existing.amount) {
+                        catalogByTierRecord[tier] = product
+                    }
+                }
+            }
+
+            setCatalogByPriceId(catalogByPriceIdRecord)
+            setCatalogByTier(catalogByTierRecord)
             const subs = subsResult.data ?? []
 
             const userIds = [...new Set(subs.map((s) => s.user_id).filter(Boolean))]
@@ -132,7 +205,7 @@ export default function SubscriptionPage() {
 
             const mapped: SubscriptionRow[] = subs.map((s) => {
                 const user = usersById.get(s.user_id)
-                const product = s.plan_id ? catalogByPriceId.get(s.plan_id) : undefined
+                const product = s.plan_id ? catalogByPriceIdRecord[s.plan_id] : undefined
 
                 return {
                     ...s,
@@ -309,6 +382,114 @@ export default function SubscriptionPage() {
         } catch (error) {
             console.error("Error resuming cancellation:", error)
             toast.error(error instanceof Error ? error.message : "Failed to resume subscription")
+        } finally {
+            setMutatingByStripeSubscriptionId((prev) => {
+                const next = { ...prev }
+                delete next[subscriptionId]
+                return next
+            })
+        }
+    }
+
+    const canChangePlan = (item: SubscriptionRow) => {
+        if (!item.stripe_subscription_id) return false
+        const status = (item.status || "").toLowerCase()
+        if (!PLAN_CHANGEABLE_STATUSES.has(status)) return false
+
+        const currentTier = resolveTierForSubscriptionRow(item)
+        if (currentTier === "club") {
+            return Boolean(catalogByTier.pro)
+        }
+
+        return Boolean(catalogByTier.club || catalogByTier.pro)
+    }
+
+    const getPlanChangeTarget = (item: SubscriptionRow): { tier: PaidTier; product: StripeProduct } | null => {
+        if (!canChangePlan(item)) return null
+
+        const currentTier = resolveTierForSubscriptionRow(item)
+        if (currentTier === "club" && catalogByTier.pro) {
+            return { tier: "pro", product: catalogByTier.pro }
+        }
+
+        if (catalogByTier.club && currentTier !== "club") {
+            return { tier: "club", product: catalogByTier.club }
+        }
+
+        if (catalogByTier.pro && currentTier !== "pro") {
+            return { tier: "pro", product: catalogByTier.pro }
+        }
+
+        return null
+    }
+
+    const handleChangePlan = async (item: SubscriptionRow, target: { tier: PaidTier; product: StripeProduct }) => {
+        const subscriptionId = item.stripe_subscription_id
+        if (!subscriptionId) return
+
+        setMutatingByStripeSubscriptionId((prev) => ({ ...prev, [subscriptionId]: true }))
+
+        try {
+            const response = await fetch("/api/admin/subscriptions/change-plan", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subscriptionId,
+                    priceId: target.product.priceId,
+                }),
+            })
+
+            const payload = await response.json() as {
+                error?: string
+                details?: string
+                status?: string
+                cancel_at_period_end?: boolean
+                plan_id?: string
+                plan_name?: string
+                user_tier?: string | null
+                alreadyOnPlan?: boolean
+            }
+
+            if (!response.ok) {
+                throw new Error(payload.error || "Failed to change plan")
+            }
+
+            const nextPlanId = payload.plan_id || target.product.priceId
+            const nextProduct = catalogByPriceId[nextPlanId]
+
+            setSubscriptions((prev) => {
+                const updated = prev.map((row) => {
+                    if (row.stripe_subscription_id !== subscriptionId) {
+                        return row
+                    }
+
+                    return {
+                        ...row,
+                        status: payload.status || row.status,
+                        cancel_at_period_end: payload.cancel_at_period_end ?? row.cancel_at_period_end,
+                        plan_id: nextPlanId,
+                        plan_name: payload.plan_name || nextProduct?.name || row.plan_name,
+                        catalog_plan_name: nextProduct?.name || payload.plan_name || row.catalog_plan_name,
+                        catalog_amount: typeof nextProduct?.amount === "number"
+                            ? nextProduct.amount / 100
+                            : row.catalog_amount,
+                        catalog_currency: nextProduct?.currency || row.catalog_currency,
+                        user_tier: payload.user_tier || row.user_tier,
+                    }
+                })
+
+                setStats(buildStats(updated))
+                return updated
+            })
+
+            if (payload.alreadyOnPlan) {
+                toast.success("Subscriber is already on this plan")
+            } else {
+                toast.success(`Plan updated to ${payload.plan_name || target.product.name}`)
+            }
+        } catch (error) {
+            console.error("Error changing plan:", error)
+            toast.error(error instanceof Error ? error.message : "Failed to change plan")
         } finally {
             setMutatingByStripeSubscriptionId((prev) => {
                 const next = { ...prev }
@@ -551,6 +732,7 @@ export default function SubscriptionPage() {
 
                             const isMutating = !!mutatingByStripeSubscriptionId[item.stripe_subscription_id]
                             const actions: ReactNode[] = []
+                            const planChangeTarget = getPlanChangeTarget(item)
 
                             if (item.cancel_at_period_end) {
                                 if (!canResumeCancel(item)) {
@@ -592,6 +774,25 @@ export default function SubscriptionPage() {
                                     >
                                         {isMutating ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
                                         <span className="ml-1">Cancel At End</span>
+                                    </Button>
+                                )
+                            }
+
+                            if (planChangeTarget) {
+                                actions.push(
+                                    <Button
+                                        key={`plan-${planChangeTarget.tier}`}
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={isMutating}
+                                        onClick={(event) => {
+                                            event.stopPropagation()
+                                            void handleChangePlan(item, planChangeTarget)
+                                        }}
+                                        className="text-xs"
+                                    >
+                                        {isMutating ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3" />}
+                                        <span className="ml-1">{planChangeTarget.tier === "club" ? "Move to Club" : "Move to Pro"}</span>
                                     </Button>
                                 )
                             }

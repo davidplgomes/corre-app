@@ -15,6 +15,25 @@ function getServiceClient() {
     });
 }
 
+async function logAdminAction(
+    adminClient: any,
+    actorId: string,
+    action: string,
+    details: Record<string, unknown>
+) {
+    const { error } = await adminClient
+        .from('admin_action_logs' as any)
+        .insert({
+            actor_id: actorId,
+            action,
+            details,
+        } as any);
+
+    if (error) {
+        console.warn('Failed to write admin action log:', error.message);
+    }
+}
+
 type RefundResponse = {
     id: string;
     status?: string;
@@ -94,6 +113,16 @@ export async function POST(request: Request) {
         }
 
         if (latestTxn.status === 'refunded') {
+            await logAdminAction(
+                adminClient,
+                user.id,
+                'subscription.refund',
+                {
+                    subscription_id: subscriptionId,
+                    transaction_id: latestTxn.id,
+                    already_refunded: true,
+                }
+            );
             return NextResponse.json({
                 success: true,
                 alreadyRefunded: true,
@@ -172,6 +201,19 @@ export async function POST(request: Request) {
         if (updateTxnError) {
             return NextResponse.json({ error: updateTxnError.message }, { status: 500 });
         }
+
+        await logAdminAction(
+            adminClient,
+            user.id,
+            'subscription.refund',
+            {
+                subscription_id: subscriptionId,
+                transaction_id: latestTxn.id,
+                stripe_refund_id: stripeRefund.id,
+                amount: stripeRefund.amount ?? latestTxn.amount,
+                currency: latestTxn.currency,
+            }
+        );
 
         return NextResponse.json({
             success: true,

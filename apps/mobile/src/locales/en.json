@@ -584,7 +584,10 @@
     "failedToLoad": "Failed to load subscription plans. Please try again later.",
     "success": "Success! 🎉",
     "successMessage": "You are now subscribed to {{plan}}!\n\nYour subscription is now active.",
-    "failedToProcess": "Failed to process subscription"
+    "failedToProcess": "Failed to process subscription",
+    "resumed": "Subscription Resumed",
+    "resumedMessage": "Cancellation removed. Your subscription will renew normally on the next billing date.",
+    "resumeFailed": "Failed to resume subscription"
   },
   "runTracker": {
     "run": "RUN",
@@ -699,7 +702,9 @@
     "enterAddress": "Please enter your address",
     "enterCity": "Please enter your city",
     "enterPostal": "Please enter your postal code",
-    "enterCard": "Please enter complete card details"
+    "enterCard": "Please enter complete card details",
+    "paymentCancelled": "Payment cancelled",
+    "paymentCancelledMessage": "Your checkout was cancelled and no charge was made."
   },
   "strava": {
     "connectTitle": "Connect Strava",

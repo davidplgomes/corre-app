@@ -22,6 +22,103 @@ const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+type MembershipTier = "free" | "pro" | "club";
+
+const normalizeTier = (value: string | null | undefined): MembershipTier | null => {
+    if (!value) return null;
+    const normalized = value.toLowerCase().trim();
+    if (["club", "premium", "elite"].includes(normalized)) return "club";
+    if (["pro", "plus", "monthly", "annual", "yearly", "anual"].includes(normalized)) return "pro";
+    if (normalized === "free") return "free";
+    return null;
+};
+
+const inferTierFromText = (value: string | null | undefined): MembershipTier | null => {
+    if (!value) return null;
+    const normalized = value.toLowerCase();
+    if (normalized.includes("club") || normalized.includes("premium")) return "club";
+    if (normalized.includes("pro")) return "pro";
+    return null;
+};
+
+const resolveSubscriptionPlanSnapshot = async (
+    subscription: Stripe.Subscription
+): Promise<{ priceId: string | null; planName: string | null; tier: MembershipTier }> => {
+    const item = subscription.items.data[0];
+    const price = item?.price;
+    const priceId = price?.id || null;
+
+    let product: Stripe.Product | null = null;
+    if (price?.product && typeof price.product !== "string") {
+        product = price.product;
+    } else if (price?.product && typeof price.product === "string") {
+        try {
+            product = await stripe.products.retrieve(price.product);
+        } catch (error) {
+            console.warn("Could not retrieve Stripe product for tier mapping:", error);
+        }
+    }
+
+    const metadataTier =
+        normalizeTier(price?.metadata?.membership_tier) ||
+        normalizeTier(price?.metadata?.tier) ||
+        normalizeTier(product?.metadata?.membership_tier) ||
+        normalizeTier(product?.metadata?.tier);
+
+    const inferredTier =
+        inferTierFromText(price?.nickname || null) ||
+        inferTierFromText(product?.name || null) ||
+        inferTierFromText(priceId);
+
+    const tier = metadataTier || inferredTier || "pro";
+    const planName = product?.name || price?.nickname || null;
+
+    return { priceId, planName, tier };
+};
+
+const refundShopOrderPointsIfNeeded = async (
+    supabase: ReturnType<typeof createClient>,
+    order: {
+        id: string;
+        user_id: string | null;
+        points_used: number | null;
+        points_consumed_at: string | null;
+        points_refunded_at: string | null;
+    },
+    reason: string
+): Promise<boolean> => {
+    const pointsUsed = Number(order.points_used || 0);
+    if (!order.user_id || pointsUsed <= 0) return false;
+    if (!order.points_consumed_at) return false;
+    if (order.points_refunded_at) return false;
+
+    const { error: refundError } = await supabase.rpc("add_points_with_ttl", {
+        p_user_id: order.user_id,
+        p_points: pointsUsed,
+        p_source_type: "purchase_refund",
+        p_source_id: order.id,
+        p_description: `Refund: ${reason}`,
+    });
+
+    if (refundError) {
+        console.error(`Failed to refund points for order ${order.id}:`, refundError);
+        return false;
+    }
+
+    const { error: markRefundedError } = await supabase
+        .from("orders")
+        .update({ points_refunded_at: new Date().toISOString() })
+        .eq("id", order.id)
+        .is("points_refunded_at", null);
+
+    if (markRefundedError) {
+        console.error(`Failed to mark points_refunded_at for order ${order.id}:`, markRefundedError);
+        return false;
+    }
+
+    return true;
+};
+
 Deno.serve(async (req: Request) => {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
@@ -48,12 +145,18 @@ Deno.serve(async (req: Request) => {
                 const customerId = invoice.customer as string;
                 const subscriptionId = invoice.subscription as string;
 
-                // Find user by stripe_customer_id
-                const { data: sub } = await supabase
+                let subQuery = supabase
                     .from("subscriptions")
                     .select("user_id, id")
-                    .eq("stripe_customer_id", customerId)
-                    .single();
+                    .limit(1);
+
+                if (subscriptionId) {
+                    subQuery = subQuery.eq("stripe_subscription_id", subscriptionId);
+                } else {
+                    subQuery = subQuery.eq("stripe_customer_id", customerId);
+                }
+
+                const { data: sub } = await subQuery.maybeSingle();
 
                 if (sub) {
                     await supabase
@@ -74,9 +177,7 @@ Deno.serve(async (req: Request) => {
 
             case "customer.subscription.updated": {
                 const subscription = event.data.object as Stripe.Subscription;
-
-                // Get the price ID to determine the correct tier
-                const priceId = subscription.items.data[0]?.price?.id;
+                const planSnapshot = await resolveSubscriptionPlanSnapshot(subscription);
 
                 const { data: sub } = await supabase
                     .from("subscriptions")
@@ -85,49 +186,25 @@ Deno.serve(async (req: Request) => {
                         cancel_at_period_end: subscription.cancel_at_period_end,
                         current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
                         current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-                        plan_id: priceId, // Store the price ID for reference
+                        plan_id: planSnapshot.priceId || "free",
+                        ...(planSnapshot.planName ? { plan_name: planSnapshot.planName } : {}),
                     })
                     .eq("stripe_subscription_id", subscription.id)
                     .select("user_id")
                     .single();
 
                 if (sub?.user_id) {
-                    let newTier = "free";
+                    let newTier: MembershipTier = "free";
                     if (["active", "trialing"].includes(subscription.status)) {
-                        // Map price ID to tier - check product metadata or price ID naming
-                        const priceLower = priceId?.toLowerCase() || "";
-                        if (priceLower.includes("club")) {
-                            newTier = "club";
-                        } else if (priceLower.includes("pro")) {
-                            newTier = "pro";
-                        } else {
-                            // Fallback: check product name from Stripe
-                            const productId = subscription.items.data[0]?.price?.product;
-                            if (productId && typeof productId === "string") {
-                                try {
-                                    const product = await stripe.products.retrieve(productId);
-                                    const productName = product.name?.toLowerCase() || "";
-                                    if (productName.includes("club")) {
-                                        newTier = "club";
-                                    } else if (productName.includes("pro")) {
-                                        newTier = "pro";
-                                    } else {
-                                        newTier = "pro"; // Default paid tier
-                                    }
-                                } catch (e) {
-                                    console.warn("Could not fetch product, defaulting to pro:", e);
-                                    newTier = "pro";
-                                }
-                            } else {
-                                newTier = "pro"; // Default paid tier
-                            }
-                        }
+                        newTier = planSnapshot.tier;
                     }
                     await supabase
                         .from("users")
                         .update({ membership_tier: newTier })
                         .eq("id", sub.user_id);
-                    console.log(`Updated user ${sub.user_id} tier to ${newTier} (price: ${priceId}) via subscription.updated`);
+                    console.log(
+                        `Updated user ${sub.user_id} tier to ${newTier} (price: ${planSnapshot.priceId}, plan: ${planSnapshot.planName}) via subscription.updated`
+                    );
                 }
 
                 break;
@@ -160,12 +237,20 @@ Deno.serve(async (req: Request) => {
             case "invoice.payment_failed": {
                 const invoice = event.data.object as Stripe.Invoice;
                 const customerId = invoice.customer as string;
+                const subscriptionId = invoice.subscription as string;
 
-                const { data: sub } = await supabase
+                let subQuery = supabase
                     .from("subscriptions")
                     .select("user_id, id")
-                    .eq("stripe_customer_id", customerId)
-                    .single();
+                    .limit(1);
+
+                if (subscriptionId) {
+                    subQuery = subQuery.eq("stripe_subscription_id", subscriptionId);
+                } else {
+                    subQuery = subQuery.eq("stripe_customer_id", customerId);
+                }
+
+                const { data: sub } = await subQuery.maybeSingle();
 
                 if (sub) {
                     await supabase
@@ -248,10 +333,13 @@ Deno.serve(async (req: Request) => {
                 break;
             }
 
-            case "payment_intent.payment_failed": {
+            case "payment_intent.payment_failed":
+            case "payment_intent.canceled": {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
                 const paymentType = paymentIntent.metadata.type;
-                const failureMsg = paymentIntent.last_payment_error?.message || "Payment failed";
+                const failureMsg =
+                    paymentIntent.last_payment_error?.message ||
+                    (event.type === "payment_intent.canceled" ? "Payment canceled" : "Payment failed");
 
                 if (paymentType === "marketplace_order") {
                     // ─── Marketplace Payment Failed ───
@@ -284,7 +372,7 @@ Deno.serve(async (req: Request) => {
 
                     const { data: order } = await supabase
                         .from("orders")
-                        .select("id, user_id, points_used")
+                        .select("id, user_id, points_used, points_consumed_at, points_refunded_at")
                         .eq("stripe_payment_intent_id", paymentIntent.id)
                         .single();
 
@@ -297,21 +385,15 @@ Deno.serve(async (req: Request) => {
                             })
                             .eq("id", order.id);
 
-                        // Refund points if they were used
-                        if (order.points_used && order.points_used > 0) {
-                            await supabase.rpc("add_points_with_ttl", {
-                                p_user_id: order.user_id,
-                                p_points: order.points_used,
-                                p_source_type: "purchase_refund",
-                                p_source_id: order.id,
-                                p_description: "Refund: Payment failed",
-                            });
-                            console.log(`Shop order ${order.id} failed, ${order.points_used} points refunded`);
+                        // Refund points once, only if this order already consumed them.
+                        const refunded = await refundShopOrderPointsIfNeeded(supabase, order, failureMsg);
+                        if (refunded) {
+                            console.log(`Shop order ${order.id} failed/canceled, points refunded`);
                         } else {
-                            console.log(`Shop order ${order.id} marked as failed (no points to refund)`);
+                            console.log(`Shop order ${order.id} marked as failed/canceled (no points refund needed)`);
                         }
                     } else {
-                        console.warn(`No shop order found for failed payment_intent: ${paymentIntent.id}`);
+                        console.warn(`No shop order found for failed/canceled payment_intent: ${paymentIntent.id}`);
                     }
                 }
                 break;
@@ -325,7 +407,7 @@ Deno.serve(async (req: Request) => {
                 // Try shop orders first
                 const { data: shopOrder } = await supabase
                     .from("orders")
-                    .select("id")
+                    .select("id, user_id, points_used, points_consumed_at, points_refunded_at")
                     .eq("stripe_payment_intent_id", piId)
                     .single();
 
@@ -334,7 +416,13 @@ Deno.serve(async (req: Request) => {
                         .from("orders")
                         .update({ status: "refunded" })
                         .eq("id", shopOrder.id);
-                    console.log(`Shop order ${shopOrder.id} marked as refunded`);
+
+                    const refunded = await refundShopOrderPointsIfNeeded(supabase, shopOrder, "Charge refunded");
+                    if (refunded) {
+                        console.log(`Shop order ${shopOrder.id} marked as refunded and points refunded`);
+                    } else {
+                        console.log(`Shop order ${shopOrder.id} marked as refunded`);
+                    }
                     break;
                 }
 

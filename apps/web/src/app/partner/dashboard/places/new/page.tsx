@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { getPartnerProfileIdByUserId } from '@/lib/services/places';
 import { GlassCard } from '@/components/ui/glass-card';
-import { ChevronLeft, Loader2, Upload, MapPin } from 'lucide-react';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -90,47 +92,22 @@ export default function NewPlacePage() {
                         />
                     </div>
 
-                    {/* Address */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Address</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                            <input
-                                required
-                                type="text"
-                                value={formData.address}
-                                onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Full street address"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Coordinates Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Latitude</label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={formData.latitude}
-                                onChange={e => setFormData({ ...formData, latitude: e.target.value })}
-                                placeholder="e.g. 53.3498"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Longitude</label>
-                            <input
-                                type="number"
-                                step="any"
-                                value={formData.longitude}
-                                onChange={e => setFormData({ ...formData, longitude: e.target.value })}
-                                placeholder="e.g. -6.2603"
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                    </div>
+                    {/* Address with Autocomplete */}
+                    <AddressAutocomplete
+                        value={formData.address}
+                        latitude={formData.latitude}
+                        longitude={formData.longitude}
+                        onSelect={(address, lat, lng, photoUrl) => setFormData({
+                            ...formData,
+                            address: address,
+                            latitude: lat,
+                            longitude: lng,
+                            image_url: photoUrl || formData.image_url
+                        })}
+                        placeholder="Search for the place address..."
+                        required
+                        label="Address"
+                    />
 
                     {/* Description */}
                     <div className="space-y-2">
@@ -144,21 +121,11 @@ export default function NewPlacePage() {
                         />
                     </div>
 
-                    {/* Image URL */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Cover Image URL</label>
-                        <div className="relative">
-                            <Upload className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                            <input
-                                type="url"
-                                value={formData.image_url}
-                                onChange={e => setFormData({ ...formData, image_url: e.target.value })}
-                                placeholder="https://..."
-                                className="w-full h-12 bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 text-white focus:outline-none focus:border-[#FF5722]/50 transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                        <p className="text-[10px] text-white/40">Provide a direct link to an image (e.g. Unsplash, Imgur)</p>
-                    </div>
+                    {/* Cover Image Upload */}
+                    <ImageUpload
+                        value={formData.image_url}
+                        onChange={(url) => setFormData({ ...formData, image_url: url })}
+                    />
 
                     {/* Actions */}
                     <div className="pt-4 flex gap-4">

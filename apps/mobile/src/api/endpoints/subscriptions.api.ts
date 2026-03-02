@@ -39,6 +39,7 @@ class SubscriptionsApiClass {
                 .from('subscriptions')
                 .select('*')
                 .eq('user_id', userId)
+                .order('updated_at', { ascending: false })
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -86,6 +87,16 @@ class SubscriptionsApiClass {
         return apiClient.invokeFunction<void>(
             'stripe-create-subscription',
             { action: 'cancel', subscriptionId }
+        );
+    }
+
+    /** Resume a subscription that is scheduled to cancel at period end */
+    async resumeSubscription(subscriptionId: string): Promise<ApiResponse<void>> {
+        logger.info('SUBSCRIPTION', `Resuming subscription: ${subscriptionId}`);
+
+        return apiClient.invokeFunction<void>(
+            'stripe-create-subscription',
+            { action: 'resume', subscriptionId }
         );
     }
 

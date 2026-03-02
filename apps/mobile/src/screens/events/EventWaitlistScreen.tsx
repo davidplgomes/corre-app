@@ -11,50 +11,40 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner, Button, BackButton } from '../../components/common';
-import { supabase } from '../../services/supabase/client';
+import {
+    getUserWaitlistEntries,
+    leaveWaitlistEntry,
+    claimWaitlistSpot,
+    WaitlistEntry,
+    WaitlistStatus,
+} from '../../services/supabase/waitlist';
 import * as Haptics from 'expo-haptics';
 
 interface EventWaitlistScreenProps {
     navigation: any;
 }
 
-interface WaitlistEntry {
-    id: string;
-    event_id: string;
-    user_id: string;
-    position: number;
-    joined_at: string;
-    notified_at: string | null;
-    status: 'waiting' | 'notified' | 'expired' | 'registered';
-    event: {
-        id: string;
-        title: string;
-        event_datetime: string;
-        location: string;
-        max_participants: number;
-        current_participants: number;
-    };
-}
-
 const WaitlistCard = ({
     entry,
-    onLeave
+    onLeave,
+    onClaim,
+    actionLoading,
 }: {
     entry: WaitlistEntry;
     onLeave: () => void;
+    onClaim: () => void;
+    actionLoading: boolean;
 }) => {
     const eventDate = new Date(entry.event.event_datetime);
     const isPast = eventDate < new Date();
 
-    const statusConfig = {
+    const statusConfig: Record<WaitlistStatus, { color: string; label: string; icon: string }> = {
         waiting: { color: '#F59E0B', label: 'Waiting', icon: 'time-outline' },
-        notified: { color: '#10B981', label: 'Spot Available!', icon: 'checkmark-circle-outline' },
+        claimable: { color: '#10B981', label: 'Spot Available!', icon: 'checkmark-circle-outline' },
         expired: { color: '#EF4444', label: 'Expired', icon: 'close-circle-outline' },
-        registered: { color: '#6366F1', label: 'Registered', icon: 'checkmark-done-outline' },
     };
 
     const status = statusConfig[entry.status];
@@ -88,26 +78,32 @@ const WaitlistCard = ({
                 </View>
                 <View style={styles.detailRow}>
                     <Ionicons name="location-outline" size={16} color="#888" />
-                    <Text style={styles.detailText} numberOfLines={1}>{entry.event.location}</Text>
+                    <Text style={styles.detailText} numberOfLines={1}>{entry.event.location_name}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Ionicons name="people-outline" size={16} color="#888" />
                     <Text style={styles.detailText}>
-                        {entry.event.current_participants}/{entry.event.max_participants} registered
+                        {entry.event.current_participants} registered
                     </Text>
                 </View>
             </View>
 
             <View style={styles.cardActions}>
-                {entry.status === 'notified' && (
+                {entry.status === 'claimable' && (
                     <Button
                         title="Claim Spot"
-                        onPress={() => Alert.alert('Success', 'Navigating to event registration...')}
+                        onPress={onClaim}
+                        loading={actionLoading}
+                        disabled={actionLoading}
                         style={styles.claimButton}
                     />
                 )}
                 {entry.status === 'waiting' && !isPast && (
-                    <TouchableOpacity style={styles.leaveButton} onPress={onLeave}>
+                    <TouchableOpacity
+                        style={[styles.leaveButton, actionLoading && styles.leaveButtonDisabled]}
+                        onPress={onLeave}
+                        disabled={actionLoading}
+                    >
                         <Ionicons name="exit-outline" size={18} color="#EF4444" />
                         <Text style={styles.leaveText}>Leave Waitlist</Text>
                     </TouchableOpacity>
@@ -126,41 +122,24 @@ const WaitlistCard = ({
 };
 
 export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ navigation }) => {
-    const { t } = useTranslation();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
     const [filter, setFilter] = useState<'all' | 'active' | 'past'>('active');
+    const [actionLoadingEntryId, setActionLoadingEntryId] = useState<string | null>(null);
 
     const loadWaitlist = useCallback(async () => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            setWaitlistEntries([]);
+            setLoading(false);
+            setRefreshing(false);
+            return;
+        }
 
         try {
-            const { data, error } = await supabase
-                .from('event_waitlist')
-                .select(`
-                    id,
-                    event_id,
-                    user_id,
-                    position,
-                    joined_at,
-                    notified_at,
-                    status,
-                    event:events (
-                        id,
-                        title,
-                        event_datetime,
-                        location,
-                        max_participants,
-                        current_participants
-                    )
-                `)
-                .eq('user_id', user.id)
-                .order('joined_at', { ascending: false });
-
-            if (error) throw error;
-            setWaitlistEntries((data as unknown as WaitlistEntry[]) || []);
+            const entries = await getUserWaitlistEntries(user.id);
+            setWaitlistEntries(entries);
         } catch (error) {
             console.error('Error loading waitlist:', error);
         } finally {
@@ -189,21 +168,62 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const { error } = await supabase
-                                .from('event_waitlist')
-                                .delete()
-                                .eq('id', entryId);
-
-                            if (error) throw error;
+                            setActionLoadingEntryId(entryId);
+                            const result = await leaveWaitlistEntry(entryId);
+                            if (!result.success) {
+                                Alert.alert('Error', result.message || 'Failed to leave waitlist');
+                                return;
+                            }
                             setWaitlistEntries(prev => prev.filter(e => e.id !== entryId));
                         } catch (error) {
                             console.error('Error leaving waitlist:', error);
                             Alert.alert('Error', 'Failed to leave waitlist');
+                        } finally {
+                            setActionLoadingEntryId(null);
                         }
                     },
                 },
             ]
         );
+    };
+
+    const handleClaimSpot = async (entry: WaitlistEntry) => {
+        try {
+            setActionLoadingEntryId(entry.id);
+            const result = await claimWaitlistSpot(entry.id);
+
+            if (!result.success) {
+                const friendlyMessage = result.code === 'WAITLIST_NOT_READY'
+                    ? 'Your spot is not ready to claim yet.'
+                    : result.code === 'EVENT_ALREADY_STARTED'
+                        ? 'This event has already started.'
+                        : (result.message || 'Could not claim your spot right now.');
+                Alert.alert('Unable to claim spot', friendlyMessage);
+                return;
+            }
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert(
+                'Spot claimed',
+                result.already_registered
+                    ? 'You are already registered for this event.'
+                    : 'You have been moved from waitlist to participants.',
+                [
+                    {
+                        text: 'View Event',
+                        onPress: () => navigation.navigate('EventDetail', { eventId: entry.event.id }),
+                    },
+                    { text: 'OK' },
+                ]
+            );
+
+            await loadWaitlist();
+        } catch (error) {
+            console.error('Error claiming waitlist spot:', error);
+            Alert.alert('Error', 'Failed to claim your spot');
+        } finally {
+            setActionLoadingEntryId(null);
+        }
     };
 
     const filteredEntries = waitlistEntries.filter(entry => {
@@ -272,7 +292,7 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
                         </Text>
                         <Button
                             title="Browse Events"
-                            onPress={() => navigation.navigate('Events')}
+                            onPress={() => navigation.navigate('EventList')}
                             style={styles.browseButton}
                         />
                     </View>
@@ -286,6 +306,8 @@ export const EventWaitlistScreen: React.FC<EventWaitlistScreenProps> = ({ naviga
                                 key={entry.id}
                                 entry={entry}
                                 onLeave={() => handleLeaveWaitlist(entry.id)}
+                                onClaim={() => handleClaimSpot(entry)}
+                                actionLoading={actionLoadingEntryId === entry.id}
                             />
                         ))}
                     </>
@@ -436,6 +458,9 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#EF4444',
+    },
+    leaveButtonDisabled: {
+        opacity: 0.5,
     },
     leaveText: {
         fontSize: 14,

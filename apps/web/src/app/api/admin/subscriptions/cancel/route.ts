@@ -15,6 +15,25 @@ function getServiceClient() {
     });
 }
 
+async function logAdminAction(
+    adminClient: any,
+    actorId: string,
+    action: string,
+    details: Record<string, unknown>
+) {
+    const { error } = await adminClient
+        .from('admin_action_logs' as any)
+        .insert({
+            actor_id: actorId,
+            action,
+            details,
+        } as any);
+
+    if (error) {
+        console.warn('Failed to write admin action log:', error.message);
+    }
+}
+
 export async function POST(request: Request) {
     try {
         const supabase = await createServerSupabaseClient();
@@ -67,6 +86,16 @@ export async function POST(request: Request) {
         }
 
         if (sub.cancel_at_period_end) {
+            await logAdminAction(
+                adminClient,
+                user.id,
+                'subscription.cancel_scheduled',
+                {
+                    subscription_id: subscriptionId,
+                    already_canceled: true,
+                    status: sub.status,
+                }
+            );
             return NextResponse.json({
                 success: true,
                 alreadyCanceled: true,
@@ -112,6 +141,17 @@ export async function POST(request: Request) {
         if (updateError) {
             return NextResponse.json({ error: updateError.message }, { status: 500 });
         }
+
+        await logAdminAction(
+            adminClient,
+            user.id,
+            'subscription.cancel_scheduled',
+            {
+                subscription_id: subscriptionId,
+                status: nextStatus,
+                cancel_at_period_end: stripeJson.cancel_at_period_end ?? true,
+            }
+        );
 
         return NextResponse.json({
             success: true,

@@ -10,9 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button, Input, ErrorMessage, ShakeView, ShakeViewRef, LanguageSelector } from '../../components/common';
 import { Screen } from '../../components/common/Screen';
-import { GoogleIcon, AppleIcon } from '../../components/auth/AuthIcons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { signIn } from '../../services/supabase/auth';
 import { validateField } from '../../utils/validation';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -144,24 +142,6 @@ export const Login: React.FC<LoginScreenProps> = ({ navigation }) => {
                         style={styles.loginButton}
                     />
 
-                    <View style={styles.divider}>
-                        <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
-                        <View style={styles.dividerLine} />
-                    </View>
-
-                    <View style={styles.socialButtons}>
-                        <TouchableOpacity style={[styles.socialButton, styles.appleButton]} onPress={() => Haptics.selectionAsync()}>
-                            <AppleIcon size={20} color="#FFFFFF" />
-                            <Text style={styles.appleButtonText}>{t('auth.continueWithApple')}</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={() => Haptics.selectionAsync()}>
-                            <GoogleIcon size={20} />
-                            <Text style={styles.googleButtonText}>{t('auth.continueWithGoogle')}</Text>
-                        </TouchableOpacity>
-                    </View>
-
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>{t('auth.dontHaveAccount')}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -275,57 +255,6 @@ const styles = StyleSheet.create({
     },
     loginButton: {
         marginBottom: theme.spacing[8],
-    },
-    divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing[6],
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: theme.colors.border.default,
-    },
-    dividerText: {
-        paddingHorizontal: theme.spacing[4],
-        fontSize: theme.typography.size.caption,
-        color: theme.colors.text.tertiary,
-        textTransform: 'uppercase',
-        letterSpacing: theme.typography.letterSpacing.wider,
-    },
-    socialButtons: {
-        gap: theme.spacing[3],
-        marginBottom: theme.spacing[8],
-    },
-    socialButton: {
-        flexDirection: 'row',
-        height: 50,
-        borderRadius: theme.radius.md, // Match main buttons (12px)
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: theme.spacing[3],
-        borderWidth: 1,
-    },
-    appleButton: {
-        backgroundColor: '#000000',
-        borderColor: theme.colors.border.default,
-    },
-    appleButtonText: {
-        fontSize: theme.typography.size.bodyMD,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: '#FFFFFF',
-    },
-    googleButton: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#FFFFFF',
-    },
-    googleButtonText: {
-        fontSize: theme.typography.size.bodyMD,
-        fontWeight: theme.typography.weight.semibold as any,
-        color: '#000000',
-    },
-    socialIcon: {
-        fontSize: 24,
     },
     footer: {
         flexDirection: 'row',

@@ -366,18 +366,24 @@ export const getStravaPointsTotal = async (): Promise<number> => {
 export const triggerStravaSync = async (): Promise<{
     success: boolean;
     activitiesSynced?: number;
+    pointsAwarded?: number;
     error?: string
 }> => {
     try {
         const { data, error } = await supabase.functions.invoke('strava-sync', {
-            body: { action: 'manual_sync' }
+            body: {
+                action: 'manual_sync',
+                per_page: 30,
+                days_back: 21,
+            }
         });
 
         if (error) throw error;
 
         return {
             success: true,
-            activitiesSynced: data?.activities_synced || 0
+            activitiesSynced: data?.activities_synced || 0,
+            pointsAwarded: data?.points_awarded || 0,
         };
     } catch (error: any) {
         // If the function doesn't exist yet, return a helpful message
@@ -390,7 +396,7 @@ export const triggerStravaSync = async (): Promise<{
         }
 
         console.error('Error triggering Strava sync:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'Could not sync Strava activities' };
     }
 };
 

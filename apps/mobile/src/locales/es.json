@@ -584,7 +584,10 @@
     "failedToLoad": "Error al cargar los planes de suscripción. Inténtalo de nuevo más tarde.",
     "success": "¡Éxito! 🎉",
     "successMessage": "¡Ahora estás suscrito a {{plan}}!\n\nTu suscripción está activa.",
-    "failedToProcess": "Error al procesar la suscripción"
+    "failedToProcess": "Error al procesar la suscripción",
+    "resumed": "Suscripción Reanudada",
+    "resumedMessage": "Se quitó la cancelación. Tu suscripción se renovará normalmente en la próxima fecha de cobro.",
+    "resumeFailed": "Error al reanudar la suscripción"
   },
   "runTracker": {
     "run": "CARRERA",
@@ -699,7 +702,9 @@
     "enterAddress": "Por favor ingresa tu dirección",
     "enterCity": "Por favor ingresa tu ciudad",
     "enterPostal": "Por favor ingresa tu código postal",
-    "enterCard": "Por favor ingresa los detalles completos de la tarjeta"
+    "enterCard": "Por favor ingresa los detalles completos de la tarjeta",
+    "paymentCancelled": "Pago cancelado",
+    "paymentCancelledMessage": "Tu checkout fue cancelado y no se realizó ningún cobro."
   },
   "strava": {
     "connectTitle": "Conectar Strava",

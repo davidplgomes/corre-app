@@ -584,7 +584,10 @@
     "failedToLoad": "Falha ao carregar planos de assinatura. Tente novamente mais tarde.",
     "success": "Sucesso! 🎉",
     "successMessage": "Você agora está inscrito em {{plan}}!\n\nSua assinatura está ativa.",
-    "failedToProcess": "Falha ao processar assinatura"
+    "failedToProcess": "Falha ao processar assinatura",
+    "resumed": "Assinatura Reativada",
+    "resumedMessage": "O cancelamento foi removido. Sua assinatura será renovada normalmente na próxima cobrança.",
+    "resumeFailed": "Falha ao reativar assinatura"
   },
   "runTracker": {
     "run": "CORRIDA",
@@ -699,7 +702,9 @@
     "enterAddress": "Por favor insira seu endereço",
     "enterCity": "Por favor insira sua cidade",
     "enterPostal": "Por favor insira seu código postal",
-    "enterCard": "Por favor insira os detalhes completos do cartão"
+    "enterCard": "Por favor insira os detalhes completos do cartão",
+    "paymentCancelled": "Pagamento cancelado",
+    "paymentCancelledMessage": "Seu checkout foi cancelado e nenhuma cobrança foi feita."
   },
   "strava": {
     "connectTitle": "Conectar Strava",

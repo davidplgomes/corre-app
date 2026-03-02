@@ -35,11 +35,14 @@ public_functions=(
 protected_functions=(
   stripe-create-subscription
   create-payment-intent
+  create-shop-payment
+  cancel-shop-payment
   create-marketplace-payment
   stripe-connect-onboarding
   release-marketplace-funds
   send-guest-pass-email
   stripe-sync-products
+  strava-sync
 )
 
 echo "Deploying public webhook/callback functions (no JWT verification)..."

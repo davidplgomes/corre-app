@@ -9,17 +9,16 @@ import {
     ImageBackground,
     RefreshControl,
     ActivityIndicator,
-    Image,
     Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { TrophyIcon, ShareIcon, CheckCircleIcon } from '../../components/common/TabIcons';
+import { ShareIcon, CheckCircleIcon } from '../../components/common/TabIcons';
+import { getEventResults, EventResultsData } from '../../services/supabase/eventResults';
 
 type EventResultsProps = {
     navigation: any;
@@ -31,93 +30,40 @@ type EventResultsProps = {
     };
 };
 
-interface Participant {
-    id: string;
-    name: string;
-    avatarUrl: string | null;
-    position: number;
-    time: string;
-    pace: string;
-    points: number;
-    isCurrentUser: boolean;
-}
-
-interface EventResultData {
-    id: string;
-    title: string;
-    date: string;
-    location: string;
-    distance: string;
-    totalParticipants: number;
-    coverImage: string | null;
-    userResult: {
-        position: number;
-        time: string;
-        pace: string;
-        points: number;
-        personalBest: boolean;
-    } | null;
-    topFinishers: Participant[];
-    allParticipants: Participant[];
-}
-
 const EVENT_PURPLE = '#7C3AED';
 
 export const EventResults: React.FC<EventResultsProps> = ({ navigation, route }) => {
     const { eventId, eventTitle } = route.params;
-    const { t } = useTranslation();
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [eventData, setEventData] = useState<EventResultData | null>(null);
+    const [eventData, setEventData] = useState<EventResultsData | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showAllParticipants, setShowAllParticipants] = useState(false);
 
     const loadEventResults = useCallback(async () => {
         try {
-            // In a real app, this would fetch from the API
-            // For now, we'll simulate with mock data
-            await new Promise(resolve => setTimeout(resolve, 500));
+            setErrorMessage(null);
+            const results = await getEventResults(eventId, user?.id);
 
-            const mockData: EventResultData = {
-                id: eventId,
-                title: eventTitle || 'Morning Run Event',
-                date: new Date().toISOString(),
-                location: 'Ibirapuera Park, Sao Paulo',
-                distance: '5K',
-                totalParticipants: 45,
-                coverImage: null,
-                userResult: user ? {
-                    position: 12,
-                    time: '24:35',
-                    pace: "4'55\"/km",
-                    points: 150,
-                    personalBest: true,
-                } : null,
-                topFinishers: [
-                    { id: '1', name: 'Maria Silva', avatarUrl: null, position: 1, time: '18:42', pace: "3'44\"/km", points: 500, isCurrentUser: false },
-                    { id: '2', name: 'Carlos Santos', avatarUrl: null, position: 2, time: '19:15', pace: "3'51\"/km", points: 400, isCurrentUser: false },
-                    { id: '3', name: 'Ana Costa', avatarUrl: null, position: 3, time: '19:58', pace: "3'59\"/km", points: 300, isCurrentUser: false },
-                ],
-                allParticipants: Array.from({ length: 10 }, (_, i) => ({
-                    id: `p${i + 4}`,
-                    name: `Runner ${i + 4}`,
-                    avatarUrl: null,
-                    position: i + 4,
-                    time: `${20 + Math.floor(i / 2)}:${(i * 7) % 60}`.padStart(5, '0'),
-                    pace: `${4 + Math.floor(i / 3)}'${(i * 11) % 60}"`.padStart(6, '0') + '/km',
-                    points: Math.max(100 - i * 10, 10),
-                    isCurrentUser: i === 8,
-                })),
-            };
+            if (!results) {
+                setEventData(null);
+                setErrorMessage('Event not found');
+                return;
+            }
 
-            setEventData(mockData);
+            setEventData({
+                ...results,
+                title: results.title || eventTitle || 'Event',
+            });
         } catch (error) {
             console.error('Error loading event results:', error);
+            setErrorMessage('Unable to load event results. Pull to retry.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [eventId, eventTitle, user]);
+    }, [eventId, eventTitle, user?.id]);
 
     useEffect(() => {
         loadEventResults();
@@ -134,8 +80,12 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
 
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
+            const shareMessage = eventData.userResult
+                ? `I finished ${eventData.userResult.position}${getOrdinalSuffix(eventData.userResult.position)} in the ${eventData.title} with a time of ${eventData.userResult.time}! #CorreApp #Running`
+                : `Event results for ${eventData.title} are live on Corre! #CorreApp #Running`;
+
             await Share.share({
-                message: `I finished ${eventData.userResult?.position || ''}${getOrdinalSuffix(eventData.userResult?.position || 0)} in the ${eventData.title} with a time of ${eventData.userResult?.time}! #CorreApp #Running`,
+                message: shareMessage,
             });
         } catch (error) {
             console.error('Error sharing:', error);
@@ -158,13 +108,9 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
         });
     };
 
-    const getMedalEmoji = (position: number): string => {
-        switch (position) {
-            case 1: return '🥇';
-            case 2: return '🥈';
-            case 3: return '🥉';
-            default: return '';
-        }
+    const getParticipantInitial = (name?: string): string => {
+        if (!name) return '•';
+        return name.charAt(0).toUpperCase();
     };
 
     if (loading) {
@@ -178,7 +124,16 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
     if (!eventData) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Event not found</Text>
+                <Text style={styles.errorText}>{errorMessage || 'Event not found'}</Text>
+                <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() => {
+                        setLoading(true);
+                        loadEventResults();
+                    }}
+                >
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
             </View>
         );
     }
@@ -225,14 +180,14 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
                         {/* Event Info */}
                         <BlurView intensity={25} tint="dark" style={styles.eventCard}>
                             <View style={styles.eventBadge}>
-                                <Text style={styles.eventBadgeText}>{eventData.distance}</Text>
+                                <Text style={styles.eventBadgeText}>{eventData.badgeLabel}</Text>
                             </View>
                             <Text style={styles.eventTitle}>{eventData.title}</Text>
                             <Text style={styles.eventDate}>{formatDate(eventData.date)}</Text>
                             <Text style={styles.eventLocation}>{eventData.location}</Text>
                             <View style={styles.participantsRow}>
                                 <Text style={styles.participantsCount}>
-                                    {eventData.totalParticipants} runners
+                                    {eventData.totalFinishers} finishers / {eventData.totalParticipants} participants
                                 </Text>
                                 <CheckCircleIcon size={16} color={theme.colors.success} />
                                 <Text style={styles.completedText}>Completed</Text>
@@ -281,71 +236,79 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
 
                         {/* Podium */}
                         <Text style={styles.sectionTitle}>PODIUM</Text>
-                        <View style={styles.podiumContainer}>
-                            {/* Second Place */}
-                            <View style={[styles.podiumSpot, styles.podiumSecond]}>
-                                <View style={styles.podiumAvatar}>
-                                    <Text style={styles.avatarInitial}>
-                                        {eventData.topFinishers[1]?.name.charAt(0)}
+                        {eventData.topFinishers.length === 0 ? (
+                            <BlurView intensity={20} tint="dark" style={styles.emptyPodiumCard}>
+                                <Text style={styles.emptyPodiumText}>No check-ins yet.</Text>
+                            </BlurView>
+                        ) : (
+                            <View style={styles.podiumContainer}>
+                                {/* Second Place */}
+                                <View style={[styles.podiumSpot, styles.podiumSecond]}>
+                                    <View style={styles.podiumAvatar}>
+                                        <Text style={styles.avatarInitial}>
+                                            {getParticipantInitial(eventData.topFinishers[1]?.name)}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.podiumMedal}>🥈</Text>
+                                    <Text style={styles.podiumName} numberOfLines={1}>
+                                        {eventData.topFinishers[1]?.name || '---'}
                                     </Text>
+                                    <Text style={styles.podiumTime}>{eventData.topFinishers[1]?.time || '--:--'}</Text>
+                                    <View style={[styles.podiumBlock, { height: 60 }]}>
+                                        <Text style={styles.podiumPosition}>2</Text>
+                                    </View>
                                 </View>
-                                <Text style={styles.podiumMedal}>🥈</Text>
-                                <Text style={styles.podiumName} numberOfLines={1}>
-                                    {eventData.topFinishers[1]?.name}
-                                </Text>
-                                <Text style={styles.podiumTime}>{eventData.topFinishers[1]?.time}</Text>
-                                <View style={[styles.podiumBlock, { height: 60 }]}>
-                                    <Text style={styles.podiumPosition}>2</Text>
-                                </View>
-                            </View>
 
-                            {/* First Place */}
-                            <View style={[styles.podiumSpot, styles.podiumFirst]}>
-                                <View style={[styles.podiumAvatar, styles.podiumAvatarFirst]}>
-                                    <Text style={styles.avatarInitial}>
-                                        {eventData.topFinishers[0]?.name.charAt(0)}
+                                {/* First Place */}
+                                <View style={[styles.podiumSpot, styles.podiumFirst]}>
+                                    <View style={[styles.podiumAvatar, styles.podiumAvatarFirst]}>
+                                        <Text style={styles.avatarInitial}>
+                                            {getParticipantInitial(eventData.topFinishers[0]?.name)}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.podiumMedal}>🥇</Text>
+                                    <Text style={styles.podiumName} numberOfLines={1}>
+                                        {eventData.topFinishers[0]?.name || '---'}
                                     </Text>
+                                    <Text style={styles.podiumTime}>{eventData.topFinishers[0]?.time || '--:--'}</Text>
+                                    <View style={[styles.podiumBlock, styles.podiumBlockFirst, { height: 80 }]}>
+                                        <Text style={styles.podiumPosition}>1</Text>
+                                    </View>
                                 </View>
-                                <Text style={styles.podiumMedal}>🥇</Text>
-                                <Text style={styles.podiumName} numberOfLines={1}>
-                                    {eventData.topFinishers[0]?.name}
-                                </Text>
-                                <Text style={styles.podiumTime}>{eventData.topFinishers[0]?.time}</Text>
-                                <View style={[styles.podiumBlock, styles.podiumBlockFirst, { height: 80 }]}>
-                                    <Text style={styles.podiumPosition}>1</Text>
-                                </View>
-                            </View>
 
-                            {/* Third Place */}
-                            <View style={[styles.podiumSpot, styles.podiumThird]}>
-                                <View style={styles.podiumAvatar}>
-                                    <Text style={styles.avatarInitial}>
-                                        {eventData.topFinishers[2]?.name.charAt(0)}
+                                {/* Third Place */}
+                                <View style={[styles.podiumSpot, styles.podiumThird]}>
+                                    <View style={styles.podiumAvatar}>
+                                        <Text style={styles.avatarInitial}>
+                                            {getParticipantInitial(eventData.topFinishers[2]?.name)}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.podiumMedal}>🥉</Text>
+                                    <Text style={styles.podiumName} numberOfLines={1}>
+                                        {eventData.topFinishers[2]?.name || '---'}
                                     </Text>
-                                </View>
-                                <Text style={styles.podiumMedal}>🥉</Text>
-                                <Text style={styles.podiumName} numberOfLines={1}>
-                                    {eventData.topFinishers[2]?.name}
-                                </Text>
-                                <Text style={styles.podiumTime}>{eventData.topFinishers[2]?.time}</Text>
-                                <View style={[styles.podiumBlock, { height: 45 }]}>
-                                    <Text style={styles.podiumPosition}>3</Text>
+                                    <Text style={styles.podiumTime}>{eventData.topFinishers[2]?.time || '--:--'}</Text>
+                                    <View style={[styles.podiumBlock, { height: 45 }]}>
+                                        <Text style={styles.podiumPosition}>3</Text>
+                                    </View>
                                 </View>
                             </View>
-                        </View>
+                        )}
 
                         {/* All Finishers */}
-                        <TouchableOpacity
-                            style={styles.showAllButton}
-                            onPress={() => {
-                                Haptics.selectionAsync();
-                                setShowAllParticipants(!showAllParticipants);
-                            }}
-                        >
-                            <Text style={styles.showAllText}>
-                                {showAllParticipants ? 'HIDE ALL FINISHERS' : 'VIEW ALL FINISHERS'}
-                            </Text>
-                        </TouchableOpacity>
+                        {eventData.allParticipants.length > 0 && (
+                            <TouchableOpacity
+                                style={styles.showAllButton}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setShowAllParticipants(!showAllParticipants);
+                                }}
+                            >
+                                <Text style={styles.showAllText}>
+                                    {showAllParticipants ? 'HIDE ALL FINISHERS' : 'VIEW ALL FINISHERS'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
 
                         {showAllParticipants && (
                             <BlurView intensity={20} tint="dark" style={styles.allFinishersCard}>
@@ -358,10 +321,10 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
                                             index < eventData.allParticipants.length - 1 && styles.finisherRowBorder
                                         ]}
                                     >
-                                        <Text style={styles.finisherPosition}>{participant.position}</Text>
+                                        <Text style={styles.finisherPosition}>{participant.position || '-'}</Text>
                                         <View style={styles.finisherAvatar}>
                                             <Text style={styles.finisherAvatarText}>
-                                                {participant.name.charAt(0)}
+                                                {getParticipantInitial(participant.name)}
                                             </Text>
                                         </View>
                                         <Text style={[
@@ -374,6 +337,14 @@ export const EventResults: React.FC<EventResultsProps> = ({ navigation, route })
                                         <Text style={styles.finisherTime}>{participant.time}</Text>
                                     </View>
                                 ))}
+                            </BlurView>
+                        )}
+
+                        {!showAllParticipants && eventData.allParticipants.length === 0 && (
+                            <BlurView intensity={20} tint="dark" style={styles.allFinishersCard}>
+                                <View style={styles.emptyFinishersContainer}>
+                                    <Text style={styles.emptyFinishersText}>No finishers yet.</Text>
+                                </View>
                             </BlurView>
                         )}
                     </ScrollView>
@@ -397,6 +368,19 @@ const styles = StyleSheet.create({
     errorText: {
         color: 'rgba(255,255,255,0.5)',
         fontSize: 16,
+        marginBottom: 16,
+    },
+    retryButton: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.25)',
+    },
+    retryButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '700',
     },
     backgroundImage: {
         flex: 1,
@@ -593,6 +577,19 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         paddingHorizontal: 10,
     },
+    emptyPodiumCard: {
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+    },
+    emptyPodiumText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 14,
+        fontWeight: '600',
+    },
     podiumSpot: {
         flex: 1,
         alignItems: 'center',
@@ -726,6 +723,15 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: 'rgba(255,255,255,0.5)',
+    },
+    emptyFinishersContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyFinishersText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 
