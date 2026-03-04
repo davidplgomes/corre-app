@@ -157,5 +157,118 @@
         "features": "Features",
         "plans": "Plans",
         "app": "App"
+    },
+    "AdminDashboard": {
+        "title": "Overview",
+        "location": "Dublin, IE",
+        "toast": {
+            "loadError": "Failed to load dashboard data",
+            "switchRange": "Switched to Last {days} Days view",
+            "reportDownloaded": "Report downloaded successfully",
+            "reportFailed": "Failed to generate report"
+        },
+        "range": {
+            "lastDays": "Last {days} Days",
+            "lastDaysLower": "last {days} days"
+        },
+        "actions": {
+            "generating": "Generating...",
+            "generateReport": "Generate Report",
+            "viewSchedule": "View Schedule"
+        },
+        "metrics": {
+            "totalRevenue": "Total Revenue",
+            "activeRunners": "Active Runners",
+            "newSignups": "New Signups",
+            "systemHealth": "System Health",
+            "avgLatency": "{value} avg latency"
+        },
+        "labels": {
+            "vsLastPeriod": "vs last period",
+            "tba": "TBA",
+            "pointsShort": "pts"
+        },
+        "sections": {
+            "liveActivity": {
+                "title": "Live Activity",
+                "description": "Real-time user engagement across tracked events.",
+                "runners": "Runners",
+                "spectators": "Spectators"
+            },
+            "weeklyRevenue": {
+                "title": "Weekly Revenue",
+                "subtitle": "Succeeded transactions"
+            },
+            "upcomingEvents": {
+                "title": "Upcoming Events"
+            }
+        },
+        "empty": {
+            "noScheduledEvents": "No scheduled events found in database."
+        },
+        "csv": {
+            "metric": "Metric",
+            "value": "Value",
+            "generatedAt": "Generated At",
+            "totalUsers": "Total Users",
+            "newUsersPeriod": "New Users (Period)",
+            "activeRunners": "Active Runners",
+            "totalRevenue": "Total Revenue",
+            "upcomingEvent": "Upcoming Event"
+        }
+    },
+    "PartnerDashboard": {
+        "title": "Overview",
+        "portal": "Partner Portal",
+        "toast": {
+            "loadError": "Failed to load dashboard data",
+            "switchRange": "Switched to Last {days} Days view"
+        },
+        "range": {
+            "lastDays": "Last {days} Days"
+        },
+        "actions": {
+            "createCoupon": "Create Coupon",
+            "viewAll": "View All",
+            "viewSchedule": "View Schedule"
+        },
+        "metrics": {
+            "totalRedemptions": "Total Redemptions",
+            "activeCoupons": "Active Coupons",
+            "upcomingEvents": "Upcoming Events",
+            "totalPlaces": "Total Places"
+        },
+        "labels": {
+            "views": "Views",
+            "analytics": "Analytics",
+            "upcoming": "Upcoming",
+            "manageLocations": "Manage locations",
+            "freebie": "Freebie",
+            "fixedOff": "€{value} Off",
+            "percentOff": "{value}% Off",
+            "uses": "{count} uses",
+            "tba": "TBA"
+        },
+        "sections": {
+            "engagement": {
+                "title": "Engagement",
+                "description": "Interactions with your coupons and events.",
+                "redemptions": "Redemptions"
+            },
+            "yourPlaces": {
+                "title": "Your Places"
+            },
+            "activeCoupons": {
+                "title": "Active Coupons"
+            },
+            "upcomingEvents": {
+                "title": "Upcoming Events"
+            }
+        },
+        "empty": {
+            "noPlaces": "No places added yet.",
+            "noCoupons": "No active coupons.",
+            "noEvents": "No scheduled events found."
+        }
     }
 }

@@ -7,6 +7,7 @@ export interface EventData {
   eventType: EventType;
   pointsValue: number;
   eventDatetime: Date;
+  maxParticipants?: number | null;
   locationLat: number;
   locationLng: number;
   locationName: string | null;

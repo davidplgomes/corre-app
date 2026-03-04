@@ -157,5 +157,118 @@
         "features": "Funcionalidades",
         "plans": "Planes",
         "app": "App"
+    },
+    "AdminDashboard": {
+        "title": "Resumen",
+        "location": "Dublín, IE",
+        "toast": {
+            "loadError": "Error al cargar los datos del dashboard",
+            "switchRange": "Cambiado a vista de los últimos {days} días",
+            "reportDownloaded": "Informe descargado correctamente",
+            "reportFailed": "Error al generar el informe"
+        },
+        "range": {
+            "lastDays": "Últimos {days} Días",
+            "lastDaysLower": "últimos {days} días"
+        },
+        "actions": {
+            "generating": "Generando...",
+            "generateReport": "Generar Informe",
+            "viewSchedule": "Ver Agenda"
+        },
+        "metrics": {
+            "totalRevenue": "Ingresos Totales",
+            "activeRunners": "Corredores Activos",
+            "newSignups": "Nuevos Registros",
+            "systemHealth": "Salud del Sistema",
+            "avgLatency": "{value} latencia media"
+        },
+        "labels": {
+            "vsLastPeriod": "vs periodo anterior",
+            "tba": "POR DEFINIR",
+            "pointsShort": "pts"
+        },
+        "sections": {
+            "liveActivity": {
+                "title": "Actividad en Vivo",
+                "description": "Participación de usuarios en tiempo real en los eventos rastreados.",
+                "runners": "Corredores",
+                "spectators": "Espectadores"
+            },
+            "weeklyRevenue": {
+                "title": "Ingresos Semanales",
+                "subtitle": "Transacciones aprobadas"
+            },
+            "upcomingEvents": {
+                "title": "Próximos Eventos"
+            }
+        },
+        "empty": {
+            "noScheduledEvents": "No se encontraron eventos programados en la base de datos."
+        },
+        "csv": {
+            "metric": "Métrica",
+            "value": "Valor",
+            "generatedAt": "Generado En",
+            "totalUsers": "Usuarios Totales",
+            "newUsersPeriod": "Nuevos Usuarios (Periodo)",
+            "activeRunners": "Corredores Activos",
+            "totalRevenue": "Ingresos Totales",
+            "upcomingEvent": "Próximo Evento"
+        }
+    },
+    "PartnerDashboard": {
+        "title": "Resumen",
+        "portal": "Portal de Partner",
+        "toast": {
+            "loadError": "Error al cargar los datos del dashboard",
+            "switchRange": "Cambiado a vista de los últimos {days} días"
+        },
+        "range": {
+            "lastDays": "Últimos {days} Días"
+        },
+        "actions": {
+            "createCoupon": "Crear Cupón",
+            "viewAll": "Ver Todo",
+            "viewSchedule": "Ver Agenda"
+        },
+        "metrics": {
+            "totalRedemptions": "Canjes Totales",
+            "activeCoupons": "Cupones Activos",
+            "upcomingEvents": "Próximos Eventos",
+            "totalPlaces": "Total de Locales"
+        },
+        "labels": {
+            "views": "Vistas",
+            "analytics": "Analítica",
+            "upcoming": "Próximamente",
+            "manageLocations": "Gestionar locales",
+            "freebie": "Regalo",
+            "fixedOff": "€{value} OFF",
+            "percentOff": "{value}% OFF",
+            "uses": "{count} usos",
+            "tba": "POR DEFINIR"
+        },
+        "sections": {
+            "engagement": {
+                "title": "Interacción",
+                "description": "Interacciones con tus cupones y eventos.",
+                "redemptions": "Canjes"
+            },
+            "yourPlaces": {
+                "title": "Tus Locales"
+            },
+            "activeCoupons": {
+                "title": "Cupones Activos"
+            },
+            "upcomingEvents": {
+                "title": "Próximos Eventos"
+            }
+        },
+        "empty": {
+            "noPlaces": "Aún no hay locales añadidos.",
+            "noCoupons": "No hay cupones activos.",
+            "noEvents": "No se encontraron eventos programados."
+        }
     }
 }

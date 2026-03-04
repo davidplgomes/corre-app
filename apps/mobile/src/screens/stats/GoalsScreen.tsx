@@ -1,224 +1,165 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    StatusBar,
-    ImageBackground,
-    RefreshControl,
     ActivityIndicator,
-    TextInput,
-    Modal,
     Alert,
+    ImageBackground,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
-import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { getUserRuns } from '../../services/supabase/runs';
-import { getStravaActivities } from '../../services/supabase/strava';
-import { PlusIcon, CheckIcon } from '../../components/common/TabIcons';
+import {
+    archiveUserGoal,
+    GoalProgress,
+    GoalType,
+    getGoalProgress,
+    getUserGoals,
+    goalTypeDefinitions,
+    upsertUserGoal,
+} from '../../services/supabase/goals';
+import { useAuth } from '../../contexts/AuthContext';
 
 type GoalsScreenProps = {
     navigation: any;
 };
 
-interface Goal {
-    id: string;
-    type: 'weekly_distance' | 'weekly_runs' | 'monthly_distance' | 'streak';
-    target: number;
-    current: number;
-    emoji: string;
-    title: string;
-    unit: string;
-}
-
-const PRESET_GOALS = [
-    { type: 'weekly_distance', targets: [10, 20, 30, 50], emoji: '🎯', title: 'Weekly Distance', unit: 'km' },
-    { type: 'weekly_runs', targets: [2, 3, 4, 5], emoji: '🏃', title: 'Weekly Runs', unit: 'runs' },
-    { type: 'monthly_distance', targets: [50, 100, 150, 200], emoji: '📅', title: 'Monthly Distance', unit: 'km' },
-    { type: 'streak', targets: [7, 14, 30, 60], emoji: '🔥', title: 'Day Streak', unit: 'days' },
-];
-
-const COMMUNITY_CHALLENGES = [
-    {
-        id: 'feb_challenge',
-        title: 'February 100K',
-        description: 'Run 100km this month',
-        target: 100,
-        emoji: '❄️',
-        participants: 234,
-        endDate: '2026-02-28',
-    },
-    {
-        id: 'consistency',
-        title: 'Consistency King',
-        description: 'Run at least 3 times per week for 4 weeks',
-        target: 12,
-        emoji: '👑',
-        participants: 156,
-        endDate: '2026-03-15',
-    },
-    {
-        id: 'speed_demon',
-        title: 'Speed Demon',
-        description: 'Beat your 5K PR this month',
-        target: 1,
-        emoji: '⚡',
-        participants: 89,
-        endDate: '2026-02-28',
-    },
-];
+const GOAL_ORDER: GoalType[] = ['weekly_distance', 'weekly_runs', 'monthly_distance', 'streak'];
 
 export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [goals, setGoals] = useState<Goal[]>([]);
-    const [showGoalModal, setShowGoalModal] = useState(false);
-    const [selectedGoalType, setSelectedGoalType] = useState<string | null>(null);
-    const [customTarget, setCustomTarget] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [goals, setGoals] = useState<GoalProgress[]>([]);
+    const [showModal, setShowModal] = useState(false);
+    const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+    const [selectedType, setSelectedType] = useState<GoalType>('weekly_distance');
+    const [targetInput, setTargetInput] = useState('20');
+    const [customTitle, setCustomTitle] = useState('');
 
-    const calculateProgress = useCallback(async () => {
-        if (!user?.id) return;
+    const usedGoalTypes = useMemo(() => new Set(goals.map((goal) => goal.goal_type)), [goals]);
+
+    const loadGoals = useCallback(async () => {
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
 
         try {
-            const [manualRuns, stravaActivities] = await Promise.all([
-                getUserRuns(user.id).catch(() => []),
-                getStravaActivities(100).catch(() => []),
-            ]);
+            const userGoals = await getUserGoals(user.id);
+            const goalProgress = await getGoalProgress(user.id, userGoals);
 
-            const allActivities = [
-                ...manualRuns.map((run: any) => ({
-                    date: new Date(run.created_at || run.started_at),
-                    distance: run.distance_km || 0,
-                })),
-                ...stravaActivities.map((activity: any) => ({
-                    date: new Date(activity.start_date),
-                    distance: (activity.distance_meters || 0) / 1000,
-                })),
-            ];
+            const sorted = [...goalProgress].sort((a, b) => {
+                const aIndex = GOAL_ORDER.indexOf(a.goal_type);
+                const bIndex = GOAL_ORDER.indexOf(b.goal_type);
+                return aIndex - bIndex;
+            });
 
-            // Calculate weekly stats
-            const now = new Date();
-            const weekStart = new Date(now);
-            weekStart.setDate(now.getDate() - now.getDay());
-            weekStart.setHours(0, 0, 0, 0);
-
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-            const weeklyActivities = allActivities.filter(a => a.date >= weekStart);
-            const monthlyActivities = allActivities.filter(a => a.date >= monthStart);
-
-            const weeklyDistance = weeklyActivities.reduce((sum, a) => sum + a.distance, 0);
-            const weeklyRuns = weeklyActivities.length;
-            const monthlyDistance = monthlyActivities.reduce((sum, a) => sum + a.distance, 0);
-
-            // Calculate streak
-            let streak = 0;
-            const sortedByDate = [...allActivities].sort((a, b) => b.date.getTime() - a.date.getTime());
-            let checkDate = new Date();
-            checkDate.setHours(0, 0, 0, 0);
-
-            for (let i = 0; i < 365; i++) {
-                const hasActivity = sortedByDate.some(a => {
-                    const actDate = new Date(a.date);
-                    actDate.setHours(0, 0, 0, 0);
-                    return actDate.getTime() === checkDate.getTime();
-                });
-                if (hasActivity) {
-                    streak++;
-                    checkDate.setDate(checkDate.getDate() - 1);
-                } else if (i === 0) {
-                    checkDate.setDate(checkDate.getDate() - 1);
-                } else {
-                    break;
-                }
-            }
-
-            // Create default goals (in a real app, these would be stored in DB)
-            const defaultGoals: Goal[] = [
-                {
-                    id: 'weekly_distance',
-                    type: 'weekly_distance',
-                    target: 20,
-                    current: weeklyDistance,
-                    emoji: '🎯',
-                    title: 'Weekly Distance',
-                    unit: 'km',
-                },
-                {
-                    id: 'weekly_runs',
-                    type: 'weekly_runs',
-                    target: 3,
-                    current: weeklyRuns,
-                    emoji: '🏃',
-                    title: 'Weekly Runs',
-                    unit: 'runs',
-                },
-                {
-                    id: 'monthly_distance',
-                    type: 'monthly_distance',
-                    target: 100,
-                    current: monthlyDistance,
-                    emoji: '📅',
-                    title: 'Monthly Distance',
-                    unit: 'km',
-                },
-                {
-                    id: 'streak',
-                    type: 'streak',
-                    target: 7,
-                    current: streak,
-                    emoji: '🔥',
-                    title: 'Day Streak',
-                    unit: 'days',
-                },
-            ];
-
-            setGoals(defaultGoals);
+            setGoals(sorted);
         } catch (error) {
-            console.error('Error calculating progress:', error);
+            console.error('Error loading goals:', error);
+            Alert.alert(t('common.error'), t('errors.unknownError'));
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user?.id]);
+    }, [user?.id, t]);
 
-    useEffect(() => {
-        calculateProgress();
-    }, [calculateProgress]);
+    useFocusEffect(
+        useCallback(() => {
+            loadGoals();
+        }, [loadGoals])
+    );
 
     const onRefresh = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
-        calculateProgress();
-    }, [calculateProgress]);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        loadGoals();
+    }, [loadGoals]);
 
-    const handleJoinChallenge = (challengeId: string) => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const openCreateModal = () => {
+        const defaultType = GOAL_ORDER.find((type) => !usedGoalTypes.has(type)) || 'weekly_distance';
+        const def = goalTypeDefinitions[defaultType];
+
+        setEditingGoalId(null);
+        setSelectedType(defaultType);
+        setTargetInput('20');
+        setCustomTitle(def.title);
+        setShowModal(true);
+    };
+
+    const openEditModal = (goal: GoalProgress) => {
+        setEditingGoalId(goal.id);
+        setSelectedType(goal.goal_type);
+        setTargetInput(String(goal.target_value));
+        setCustomTitle(goal.title);
+        setShowModal(true);
+    };
+
+    const handleSaveGoal = async () => {
+        if (!user?.id || saving) return;
+
+        const target = Number(targetInput.replace(',', '.'));
+        if (!Number.isFinite(target) || target <= 0) {
+            Alert.alert(t('common.error'), t('validation.invalidNumber', 'Enter a valid target value.'));
+            return;
+        }
+
+        if (!editingGoalId && usedGoalTypes.has(selectedType)) {
+            Alert.alert(t('common.error'), t('goals.typeAlreadyExists', 'You already have this goal type. Edit it instead.'));
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await upsertUserGoal(user.id, selectedType, target, customTitle.trim());
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setShowModal(false);
+            await loadGoals();
+        } catch (error: any) {
+            console.error('Error saving goal:', error);
+            Alert.alert(t('common.error'), error?.message || t('errors.unknownError'));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleArchiveGoal = (goal: GoalProgress) => {
+        if (!user?.id) return;
+
         Alert.alert(
-            'Challenge Joined!',
-            'You have successfully joined this challenge. Good luck!',
-            [{ text: 'OK' }]
+            t('goals.removeGoal', 'Remove goal?'),
+            t('goals.removeGoalDescription', 'This goal will be removed from your profile.'),
+            [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                    text: t('common.remove', 'Remove'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await archiveUserGoal(goal.id, user.id);
+                            await loadGoals();
+                        } catch (error) {
+                            console.error('Error removing goal:', error);
+                            Alert.alert(t('common.error'), t('errors.unknownError'));
+                        }
+                    },
+                },
+            ]
         );
-    };
-
-    const getProgressPercentage = (current: number, target: number): number => {
-        return Math.min((current / target) * 100, 100);
-    };
-
-    const getDaysRemaining = (endDate: string): number => {
-        const end = new Date(endDate);
-        const now = new Date();
-        const diff = end.getTime() - now.getTime();
-        return Math.ceil(diff / (1000 * 60 * 60 * 24));
     };
 
     if (loading) {
@@ -240,152 +181,159 @@ export const GoalsScreen: React.FC<GoalsScreenProps> = ({ navigation }) => {
                 <View style={styles.overlay} />
 
                 <SafeAreaView style={styles.safeArea} edges={['top']}>
-                    {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.headerLeft}>
-                            <BackButton onPress={() => {
-                                Haptics.selectionAsync();
-                                navigation.goBack();
-                            }} />
+                            <BackButton
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    navigation.goBack();
+                                }}
+                            />
                             <View style={styles.headerTitles}>
-                                <Text style={styles.headerLabel}>YOUR</Text>
-                                <Text style={styles.headerTitle}>GOALS</Text>
+                                <Text style={styles.headerLabel}>{t('profile.your', 'YOUR')}</Text>
+                                <Text style={styles.headerTitle}>{t('goals.title', 'GOALS')}</Text>
                             </View>
                         </View>
+                        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
+                            <Text style={styles.addButtonText}>{t('goals.addGoal', 'ADD')}</Text>
+                        </TouchableOpacity>
                     </View>
 
                     <ScrollView
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.scrollContent}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={onRefresh}
-                                tintColor="#FFF"
-                            />
-                        }
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
                     >
-                        {/* Personal Goals */}
-                        <Text style={styles.sectionTitle}>PERSONAL GOALS</Text>
+                        {goals.length === 0 ? (
+                            <BlurView intensity={20} tint="dark" style={styles.emptyCard}>
+                                <Text style={styles.emptyTitle}>{t('goals.emptyTitle', 'No goals yet')}</Text>
+                                <Text style={styles.emptySubtitle}>
+                                    {t('goals.emptySubtitle', 'Create your first goal and track it from Strava activity sync.')}
+                                </Text>
+                                <TouchableOpacity style={styles.primaryButton} onPress={openCreateModal}>
+                                    <Text style={styles.primaryButtonText}>{t('goals.createFirst', 'CREATE FIRST GOAL')}</Text>
+                                </TouchableOpacity>
+                            </BlurView>
+                        ) : (
+                            goals.map((goal) => {
+                                const def = goalTypeDefinitions[goal.goal_type];
+                                const progressLabel = goal.goal_type.includes('distance')
+                                    ? `${goal.current_value.toFixed(1)} / ${Number(goal.target_value).toFixed(1)} ${goal.unit}`
+                                    : `${Math.round(goal.current_value)} / ${Math.round(Number(goal.target_value))} ${goal.unit}`;
 
-                        {goals.map((goal) => {
-                            const progress = getProgressPercentage(goal.current, goal.target);
-                            const isComplete = progress >= 100;
-
-                            return (
-                                <BlurView
-                                    key={goal.id}
-                                    intensity={25}
-                                    tint="dark"
-                                    style={[styles.goalCard, isComplete && styles.goalCardComplete]}
-                                >
-                                    <View style={styles.goalHeader}>
-                                        <View style={styles.goalLeft}>
-                                            <View style={[
-                                                styles.goalIconContainer,
-                                                isComplete && styles.goalIconComplete
-                                            ]}>
-                                                <Text style={styles.goalEmoji}>{goal.emoji}</Text>
+                                return (
+                                    <BlurView key={goal.id} intensity={25} tint="dark" style={styles.goalCard}>
+                                        <View style={styles.goalHeader}>
+                                            <View style={styles.goalHeaderLeft}>
+                                                <Text style={styles.goalEmoji}>{def.emoji}</Text>
+                                                <View>
+                                                    <Text style={styles.goalTitle}>{goal.title}</Text>
+                                                    <Text style={styles.goalProgressLabel}>{progressLabel}</Text>
+                                                </View>
                                             </View>
-                                            <View>
-                                                <Text style={styles.goalTitle}>{goal.title}</Text>
-                                                <Text style={styles.goalProgress}>
-                                                    {goal.type.includes('distance')
-                                                        ? goal.current.toFixed(1)
-                                                        : goal.current
-                                                    } / {goal.target} {goal.unit}
+                                            <Text style={styles.goalPercent}>{Math.round(goal.progress_percent)}%</Text>
+                                        </View>
+
+                                        <View style={styles.progressTrack}>
+                                            <View
+                                                style={[
+                                                    styles.progressFill,
+                                                    {
+                                                        width: `${goal.progress_percent}%`,
+                                                        backgroundColor: goal.completed
+                                                            ? theme.colors.success
+                                                            : theme.colors.brand.primary,
+                                                    },
+                                                ]}
+                                            />
+                                        </View>
+
+                                        <View style={styles.goalActions}>
+                                            <TouchableOpacity onPress={() => openEditModal(goal)}>
+                                                <Text style={styles.goalActionText}>{t('common.edit')}</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity onPress={() => handleArchiveGoal(goal)}>
+                                                <Text style={[styles.goalActionText, styles.goalActionDanger]}>
+                                                    {t('common.remove', 'Remove')}
                                                 </Text>
-                                            </View>
+                                            </TouchableOpacity>
                                         </View>
-                                        {isComplete ? (
-                                            <View style={styles.completeBadge}>
-                                                <CheckIcon size={16} color="#000" />
-                                            </View>
-                                        ) : (
-                                            <Text style={styles.percentageText}>{Math.round(progress)}%</Text>
-                                        )}
-                                    </View>
-
-                                    {/* Progress Bar */}
-                                    <View style={styles.progressBarContainer}>
-                                        <View
-                                            style={[
-                                                styles.progressBar,
-                                                {
-                                                    width: `${progress}%`,
-                                                    backgroundColor: isComplete
-                                                        ? theme.colors.success
-                                                        : theme.colors.brand.primary
-                                                }
-                                            ]}
-                                        />
-                                    </View>
-                                </BlurView>
-                            );
-                        })}
-
-                        {/* Community Challenges */}
-                        <View style={styles.challengeHeader}>
-                            <Text style={styles.sectionTitle}>COMMUNITY CHALLENGES</Text>
-                            <View style={styles.liveBadge}>
-                                <View style={styles.liveDot} />
-                                <Text style={styles.liveText}>LIVE</Text>
-                            </View>
-                        </View>
-
-                        {COMMUNITY_CHALLENGES.map((challenge) => {
-                            const daysLeft = getDaysRemaining(challenge.endDate);
-
-                            return (
-                                <BlurView
-                                    key={challenge.id}
-                                    intensity={20}
-                                    tint="dark"
-                                    style={styles.challengeCard}
-                                >
-                                    <View style={styles.challengeTop}>
-                                        <View style={styles.challengeIconContainer}>
-                                            <Text style={styles.challengeEmoji}>{challenge.emoji}</Text>
-                                        </View>
-                                        <View style={styles.challengeInfo}>
-                                            <Text style={styles.challengeTitle}>{challenge.title}</Text>
-                                            <Text style={styles.challengeDescription}>{challenge.description}</Text>
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.challengeStats}>
-                                        <View style={styles.challengeStat}>
-                                            <Text style={styles.challengeStatValue}>{challenge.participants}</Text>
-                                            <Text style={styles.challengeStatLabel}>runners</Text>
-                                        </View>
-                                        <View style={styles.challengeStat}>
-                                            <Text style={[styles.challengeStatValue, { color: '#F59E0B' }]}>
-                                                {daysLeft}
-                                            </Text>
-                                            <Text style={styles.challengeStatLabel}>days left</Text>
-                                        </View>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={styles.joinButton}
-                                        onPress={() => handleJoinChallenge(challenge.id)}
-                                    >
-                                        <Text style={styles.joinButtonText}>JOIN CHALLENGE</Text>
-                                    </TouchableOpacity>
-                                </BlurView>
-                            );
-                        })}
-
-                        {/* Motivation Quote */}
-                        <BlurView intensity={15} tint="dark" style={styles.quoteCard}>
-                            <Text style={styles.quoteText}>
-                                "The only bad workout is the one that didn't happen."
-                            </Text>
-                            <Text style={styles.quoteAuthor}>— Unknown Runner</Text>
-                        </BlurView>
+                                    </BlurView>
+                                );
+                            })
+                        )}
                     </ScrollView>
                 </SafeAreaView>
             </ImageBackground>
+
+            <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalSheet}>
+                        <Text style={styles.modalTitle}>
+                            {editingGoalId ? t('goals.editGoal', 'Edit Goal') : t('goals.newGoal', 'New Goal')}
+                        </Text>
+
+                        <Text style={styles.modalLabel}>{t('goals.goalType', 'Goal Type')}</Text>
+                        <View style={styles.typeGrid}>
+                            {GOAL_ORDER.map((type) => {
+                                const def = goalTypeDefinitions[type];
+                                const blocked = editingGoalId
+                                    ? type !== selectedType
+                                    : usedGoalTypes.has(type) && type !== selectedType;
+                                return (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.typeButton,
+                                            selectedType === type && styles.typeButtonActive,
+                                            blocked && styles.typeButtonDisabled,
+                                        ]}
+                                        disabled={blocked}
+                                        onPress={() => {
+                                            setSelectedType(type);
+                                            if (!customTitle.trim()) {
+                                                setCustomTitle(def.title);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={styles.typeButtonText}>{def.emoji} {def.title}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={styles.modalLabel}>{t('goals.goalName', 'Goal Name')}</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={customTitle}
+                            onChangeText={setCustomTitle}
+                            placeholder={goalTypeDefinitions[selectedType].title}
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                        />
+
+                        <Text style={styles.modalLabel}>{t('goals.targetValue', 'Target Value')}</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={targetInput}
+                            onChangeText={setTargetInput}
+                            keyboardType="decimal-pad"
+                            placeholder="20"
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowModal(false)}>
+                                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.modalSave} onPress={handleSaveGoal} disabled={saving}>
+                                <Text style={styles.modalSaveText}>
+                                    {saving ? t('common.saving', 'Saving...') : t('common.save', 'Save')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -413,8 +361,6 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
     },
-
-    // Header
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -443,215 +389,207 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: '#FFF',
     },
-
+    addButton: {
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.brand.primary,
+        backgroundColor: `${theme.colors.brand.primary}1F`,
+    },
+    addButtonText: {
+        color: theme.colors.brand.primary,
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 1,
+    },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom: 100,
+        paddingBottom: 120,
+        gap: 12,
     },
-
-    // Section Title
-    sectionTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: 'rgba(255,255,255,0.5)',
-        letterSpacing: 2,
-        marginBottom: 16,
-        marginTop: 8,
-    },
-
-    // Goal Cards
-    goalCard: {
+    emptyCard: {
         borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
+        padding: 20,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
         overflow: 'hidden',
     },
-    goalCardComplete: {
-        borderColor: 'rgba(16, 185, 129, 0.5)',
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#FFF',
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.65)',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    primaryButton: {
+        backgroundColor: theme.colors.brand.primary,
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    primaryButtonText: {
+        color: '#000',
+        fontWeight: '800',
+        fontSize: 12,
+        letterSpacing: 1,
+    },
+    goalCard: {
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        overflow: 'hidden',
     },
     goalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 14,
+        marginBottom: 10,
     },
-    goalLeft: {
+    goalHeaderLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-    },
-    goalIconContainer: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    goalIconComplete: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        gap: 10,
     },
     goalEmoji: {
-        fontSize: 22,
-    },
-    goalTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#FFF',
-        marginBottom: 2,
-    },
-    goalProgress: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.5)',
-    },
-    percentageText: {
-        fontSize: 18,
-        fontWeight: '900',
-        color: theme.colors.brand.primary,
-    },
-    completeBadge: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: theme.colors.success,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    progressBarContainer: {
-        height: 6,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    progressBar: {
-        height: '100%',
-        borderRadius: 3,
-    },
-
-    // Challenge Header
-    challengeHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 16,
-    },
-    liveBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 6,
-    },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#EF4444',
-    },
-    liveText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#EF4444',
-    },
-
-    // Challenge Cards
-    challengeCard: {
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        overflow: 'hidden',
-    },
-    challengeTop: {
-        flexDirection: 'row',
-        gap: 14,
-        marginBottom: 14,
-    },
-    challengeIconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    challengeEmoji: {
         fontSize: 24,
     },
-    challengeInfo: {
-        flex: 1,
-    },
-    challengeTitle: {
+    goalTitle: {
         fontSize: 16,
-        fontWeight: '800',
+        fontWeight: '700',
         color: '#FFF',
-        marginBottom: 4,
     },
-    challengeDescription: {
+    goalProgressLabel: {
+        marginTop: 2,
+        color: 'rgba(255,255,255,0.6)',
         fontSize: 13,
-        color: 'rgba(255,255,255,0.5)',
-        lineHeight: 18,
     },
-    challengeStats: {
-        flexDirection: 'row',
-        gap: 24,
-        marginBottom: 14,
-        paddingTop: 14,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.08)',
-    },
-    challengeStat: {
-        alignItems: 'center',
-    },
-    challengeStatValue: {
+    goalPercent: {
         fontSize: 18,
         fontWeight: '900',
         color: theme.colors.brand.primary,
     },
-    challengeStatLabel: {
-        fontSize: 11,
-        color: 'rgba(255,255,255,0.4)',
-        marginTop: 2,
-    },
-    joinButton: {
-        backgroundColor: theme.colors.brand.primary,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    joinButtonText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#000',
-        letterSpacing: 1,
-    },
-
-    // Quote Card
-    quoteCard: {
-        borderRadius: 16,
-        padding: 24,
-        marginTop: 8,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+    progressTrack: {
+        height: 6,
+        borderRadius: 3,
         overflow: 'hidden',
-        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.12)',
     },
-    quoteText: {
-        fontSize: 16,
-        fontStyle: 'italic',
-        color: 'rgba(255,255,255,0.7)',
-        textAlign: 'center',
-        lineHeight: 24,
+    progressFill: {
+        height: 6,
+        borderRadius: 3,
+    },
+    goalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 16,
+        marginTop: 12,
+    },
+    goalActionText: {
+        color: 'rgba(255,255,255,0.75)',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    goalActionDanger: {
+        color: '#EF4444',
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'flex-end',
+    },
+    modalSheet: {
+        backgroundColor: '#0E0E0E',
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    modalTitle: {
+        color: '#FFF',
+        fontSize: 20,
+        fontWeight: '800',
         marginBottom: 12,
     },
-    quoteAuthor: {
+    modalLabel: {
+        color: 'rgba(255,255,255,0.6)',
         fontSize: 12,
-        color: 'rgba(255,255,255,0.4)',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 6,
+        marginTop: 8,
+    },
+    typeGrid: {
+        gap: 8,
+        marginBottom: 6,
+    },
+    typeButton: {
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    typeButtonActive: {
+        borderColor: theme.colors.brand.primary,
+        backgroundColor: `${theme.colors.brand.primary}24`,
+    },
+    typeButtonDisabled: {
+        opacity: 0.45,
+    },
+    typeButtonText: {
+        color: '#FFF',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    input: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        color: '#FFF',
+        paddingHorizontal: 12,
+        paddingVertical: 11,
+        fontSize: 14,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 10,
+        marginTop: 20,
+    },
+    modalCancel: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        paddingVertical: 11,
+        paddingHorizontal: 16,
+    },
+    modalCancelText: {
+        color: '#FFF',
+        fontWeight: '700',
+        fontSize: 13,
+    },
+    modalSave: {
+        borderRadius: 10,
+        backgroundColor: theme.colors.brand.primary,
+        paddingVertical: 11,
+        paddingHorizontal: 18,
+    },
+    modalSaveText: {
+        color: '#000',
+        fontWeight: '800',
+        fontSize: 13,
     },
 });
 

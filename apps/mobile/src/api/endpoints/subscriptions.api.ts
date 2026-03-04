@@ -6,7 +6,13 @@
 import { apiClient } from '../ApiClient';
 import { logger } from '../../services/logging/Logger';
 import { ApiResponse } from '../../types/api.types';
-import { SubscriptionInfo, TransactionRecord, StripeProductDisplay, CreateSubscriptionRequest } from '../../types/subscription.types';
+import {
+    SubscriptionInfo,
+    TransactionRecord,
+    StripeProductDisplay,
+    CreateSubscriptionRequest,
+    CreateSubscriptionResponse,
+} from '../../types/subscription.types';
 
 class SubscriptionsApiClass {
     private static instance: SubscriptionsApiClass;
@@ -24,9 +30,40 @@ class SubscriptionsApiClass {
     async getProducts(): Promise<ApiResponse<StripeProductDisplay[]>> {
         logger.info('SUBSCRIPTION', 'Fetching available products');
 
-        return apiClient.invokeFunction<StripeProductDisplay[]>(
-            'stripe-sync-products'
-        );
+        return apiClient.query<StripeProductDisplay[]>('subscriptions.getProducts', async () => {
+            const supabase = apiClient.getSupabaseClient();
+            const { data, error } = await supabase.functions.invoke('stripe-sync-products', {
+                body: {},
+            });
+
+            if (error) {
+                logger.warn('SUBSCRIPTION', 'stripe-sync-products unavailable', {
+                    message: error.message,
+                });
+                return {
+                    data: null,
+                    error: {
+                        message: error.message || 'Unable to load subscription plans',
+                        code: 'STRIPE_PRODUCTS_UNAVAILABLE',
+                    },
+                };
+            }
+
+            if (!Array.isArray(data)) {
+                logger.warn('SUBSCRIPTION', 'stripe-sync-products returned invalid payload shape', {
+                    payloadType: typeof data,
+                });
+                return {
+                    data: null,
+                    error: {
+                        message: 'Invalid subscription plans payload',
+                        code: 'INVALID_PRODUCTS_PAYLOAD',
+                    },
+                };
+            }
+
+            return { data: data as StripeProductDisplay[], error: null };
+        });
     }
 
     /** Get current subscription for user */
@@ -71,10 +108,10 @@ class SubscriptionsApiClass {
     }
 
     /** Create a new subscription via Stripe edge function */
-    async createSubscription(request: CreateSubscriptionRequest): Promise<ApiResponse<{ subscriptionId: string; clientSecret?: string }>> {
+    async createSubscription(request: CreateSubscriptionRequest): Promise<ApiResponse<CreateSubscriptionResponse>> {
         logger.info('SUBSCRIPTION', 'Creating subscription', { priceId: request.priceId });
 
-        return apiClient.invokeFunction<{ subscriptionId: string; clientSecret?: string }>(
+        return apiClient.invokeFunction<CreateSubscriptionResponse>(
             'stripe-create-subscription',
             { priceId: request.priceId }
         );

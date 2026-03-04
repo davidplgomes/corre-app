@@ -7,6 +7,7 @@ import { apiClient } from '../ApiClient';
 import { logger } from '../../services/logging/Logger';
 import { ApiResponse } from '../../types/api.types';
 import { Event, EventParticipant } from '../../types/database.types';
+import { JoinEventResult } from '../../services/supabase/events';
 
 class EventsApiClass {
     private static instance: EventsApiClass;
@@ -69,18 +70,37 @@ class EventsApiClass {
     }
 
     /** Join an event */
-    async joinEvent(eventId: string, userId: string): Promise<ApiResponse<EventParticipant>> {
+    async joinEvent(eventId: string, userId: string): Promise<ApiResponse<JoinEventResult>> {
         logger.info('API', `joinEvent: ${eventId}`, { userId });
 
-        return apiClient.query<EventParticipant>('events.join', async () => {
+        return apiClient.query<JoinEventResult>('events.join', async () => {
             const supabase = apiClient.getSupabaseClient();
-            const { data, error } = await supabase
-                .from('event_participants')
-                .insert({ event_id: eventId, user_id: userId })
-                .select()
-                .single();
+            const { data, error } = await supabase.rpc('join_event_or_waitlist', {
+                p_event_id: eventId,
+            });
 
-            return { data, error };
+            // Fallback for local environments that do not yet have RPC deployed.
+            if (error?.code === '42883') {
+                const { error: fallbackError } = await supabase
+                    .from('event_participants')
+                    .insert({ event_id: eventId, user_id: userId });
+
+                if (fallbackError) {
+                    return { data: null, error: fallbackError };
+                }
+
+                return {
+                    data: {
+                        success: true,
+                        joined: true,
+                        waitlisted: false,
+                        event_id: eventId,
+                    },
+                    error: null,
+                };
+            }
+
+            return { data: data as JoinEventResult, error };
         });
     }
 

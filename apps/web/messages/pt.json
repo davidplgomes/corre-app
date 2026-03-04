@@ -157,5 +157,118 @@
         "features": "Funcionalidades",
         "plans": "Planos",
         "app": "App"
+    },
+    "AdminDashboard": {
+        "title": "Visão Geral",
+        "location": "Dublin, IE",
+        "toast": {
+            "loadError": "Falha ao carregar dados do dashboard",
+            "switchRange": "Alterado para visualização dos últimos {days} dias",
+            "reportDownloaded": "Relatório baixado com sucesso",
+            "reportFailed": "Falha ao gerar relatório"
+        },
+        "range": {
+            "lastDays": "Últimos {days} Dias",
+            "lastDaysLower": "últimos {days} dias"
+        },
+        "actions": {
+            "generating": "Gerando...",
+            "generateReport": "Gerar Relatório",
+            "viewSchedule": "Ver Agenda"
+        },
+        "metrics": {
+            "totalRevenue": "Receita Total",
+            "activeRunners": "Corredores Ativos",
+            "newSignups": "Novos Cadastros",
+            "systemHealth": "Saúde do Sistema",
+            "avgLatency": "{value} de latência média"
+        },
+        "labels": {
+            "vsLastPeriod": "vs período anterior",
+            "tba": "A DEFINIR",
+            "pointsShort": "pts"
+        },
+        "sections": {
+            "liveActivity": {
+                "title": "Atividade em Tempo Real",
+                "description": "Engajamento dos usuários em tempo real nos eventos monitorados.",
+                "runners": "Corredores",
+                "spectators": "Espectadores"
+            },
+            "weeklyRevenue": {
+                "title": "Receita Semanal",
+                "subtitle": "Transações aprovadas"
+            },
+            "upcomingEvents": {
+                "title": "Próximos Eventos"
+            }
+        },
+        "empty": {
+            "noScheduledEvents": "Nenhum evento agendado encontrado no banco de dados."
+        },
+        "csv": {
+            "metric": "Métrica",
+            "value": "Valor",
+            "generatedAt": "Gerado Em",
+            "totalUsers": "Total de Usuários",
+            "newUsersPeriod": "Novos Usuários (Período)",
+            "activeRunners": "Corredores Ativos",
+            "totalRevenue": "Receita Total",
+            "upcomingEvent": "Próximo Evento"
+        }
+    },
+    "PartnerDashboard": {
+        "title": "Visão Geral",
+        "portal": "Portal do Parceiro",
+        "toast": {
+            "loadError": "Falha ao carregar dados do dashboard",
+            "switchRange": "Alterado para visualização dos últimos {days} dias"
+        },
+        "range": {
+            "lastDays": "Últimos {days} Dias"
+        },
+        "actions": {
+            "createCoupon": "Criar Cupom",
+            "viewAll": "Ver Todos",
+            "viewSchedule": "Ver Agenda"
+        },
+        "metrics": {
+            "totalRedemptions": "Total de Resgates",
+            "activeCoupons": "Cupons Ativos",
+            "upcomingEvents": "Próximos Eventos",
+            "totalPlaces": "Total de Locais"
+        },
+        "labels": {
+            "views": "Visualizações",
+            "analytics": "Analytics",
+            "upcoming": "Em breve",
+            "manageLocations": "Gerenciar locais",
+            "freebie": "Brinde",
+            "fixedOff": "€{value} OFF",
+            "percentOff": "{value}% OFF",
+            "uses": "{count} usos",
+            "tba": "A DEFINIR"
+        },
+        "sections": {
+            "engagement": {
+                "title": "Engajamento",
+                "description": "Interações com seus cupons e eventos.",
+                "redemptions": "Resgates"
+            },
+            "yourPlaces": {
+                "title": "Seus Locais"
+            },
+            "activeCoupons": {
+                "title": "Cupons Ativos"
+            },
+            "upcomingEvents": {
+                "title": "Próximos Eventos"
+            }
+        },
+        "empty": {
+            "noPlaces": "Nenhum local cadastrado ainda.",
+            "noCoupons": "Nenhum cupom ativo.",
+            "noEvents": "Nenhum evento agendado encontrado."
+        }
     }
 }

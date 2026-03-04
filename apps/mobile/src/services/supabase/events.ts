@@ -1,6 +1,33 @@
 import { supabase } from './client';
 import { Event, EventParticipant } from '../../types';
 
+export interface JoinEventResult {
+    success: boolean;
+    joined: boolean;
+    waitlisted: boolean;
+    event_id?: string;
+    position?: number;
+    code?: string;
+    message?: string;
+    already_joined?: boolean;
+    already_waitlisted?: boolean;
+}
+
+const parseJoinEventResult = (data: unknown): JoinEventResult => {
+    const parsed = (data || {}) as JoinEventResult;
+    return {
+        success: !!parsed.success,
+        joined: !!parsed.joined,
+        waitlisted: !!parsed.waitlisted,
+        event_id: parsed.event_id,
+        position: parsed.position,
+        code: parsed.code,
+        message: parsed.message,
+        already_joined: !!parsed.already_joined,
+        already_waitlisted: !!parsed.already_waitlisted,
+    };
+};
+
 /**
  * Create a new event
  */
@@ -142,34 +169,47 @@ export const deleteEvent = async (eventId: string): Promise<void> => {
     }
 };
 
-/**
- * Join an event
- */
-/**
- * Join an event
- */
 export const joinEvent = async (
     eventId: string,
     userId: string
-): Promise<EventParticipant> => {
+): Promise<JoinEventResult> => {
     try {
-        const { data, error } = await supabase
-            .from('event_participants')
-            .insert({
-                event_id: eventId,
-                user_id: userId,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Check for 'Social' achievement
-        import('./achievements').then(({ checkAndUnlockAchievement }) => {
-            checkAndUnlockAchievement(userId, 'event_joined');
+        const { data, error } = await supabase.rpc('join_event_or_waitlist', {
+            p_event_id: eventId,
         });
 
-        return data;
+        if (error) {
+            // Backward-compatible fallback if RPC is not available yet in local environments.
+            if (error.code === '42883') {
+                const { error: fallbackError } = await supabase
+                    .from('event_participants')
+                    .insert({
+                        event_id: eventId,
+                        user_id: userId,
+                    });
+
+                if (fallbackError) throw fallbackError;
+                return {
+                    success: true,
+                    joined: true,
+                    waitlisted: false,
+                    event_id: eventId,
+                };
+            }
+
+            throw error;
+        }
+
+        const result = parseJoinEventResult(data);
+
+        if (result.success && result.joined) {
+            // Check for 'Social' achievement
+            import('./achievements').then(({ checkAndUnlockAchievement }) => {
+                checkAndUnlockAchievement(userId, 'event_joined');
+            });
+        }
+
+        return result;
     } catch (error) {
         console.error('Error joining event:', error);
         throw error;

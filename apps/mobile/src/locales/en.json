@@ -36,9 +36,13 @@
     "skip": "Skip",
     "skipForNow": "Skip for now",
     "saveChanges": "Save Changes",
+    "saving": "Saving...",
     "all": "All",
     "active": "Active",
-    "removed": "Removed"
+    "removed": "Removed",
+    "remove": "Remove",
+    "manage": "Manage",
+    "retry": "Retry"
   },
   "auth": {
     "login": "Login",
@@ -164,8 +168,14 @@
     "beTheFirst": "Be the first",
     "joinTheCrew": "Join the crew",
     "allPaces": "All paces",
+    "capacitySummary": "{{count}} spots left of {{max}}",
     "participate": "Join",
+    "joinWaitlist": "Join Waitlist",
     "leaveEventButton": "Leave Event",
+    "waitlistJoinedTitle": "Added to waitlist",
+    "waitlistJoinedDescription": "This event is full. You are now #{{position}} in the waitlist.",
+    "viewWaitlist": "View Waitlist",
+    "eventAlreadyStarted": "This event has already started.",
     "runs": "Runs",
     "streetRun": "Street Run",
     "morningRun": "Morning Run",
@@ -242,7 +252,11 @@
     "xpLevel": "XP (LEVEL)",
     "nextLevelLabel": "NEXT LEVEL",
     "xpTo": "XP to",
-    "noActivity": "No recent activity"
+    "noActivity": "No recent activity",
+    "purchaseAmount": "PURCHASE AMOUNT (€)",
+    "applyDiscount": "APPLY DISCOUNT",
+    "originalAmount": "Original",
+    "finalAmount": "Final"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -374,6 +388,8 @@
     "notifications": "Notifications",
     "guestPass": "Guest Pass",
     "welcomeKit": "Welcome Kit",
+    "availablePoints": "Available Points",
+    "currentXP": "Current XP",
     "neighborhood": "Neighborhood",
     "monthPoints": "Month Points",
     "lifetimePoints": "Lifetime Points",
@@ -395,7 +411,10 @@
     "removeFriend": "Remove Friend",
     "confirmRemove": "Are you sure you want to remove this friend?",
     "suggested": "Suggested Friends",
-    "nowFriends": "You are now friends!"
+    "nowFriends": "You are now friends!",
+    "requestAccepted": "Friend request accepted.",
+    "requestRejected": "Friend request rejected.",
+    "requestActionFailed": "Could not update friend request. Please try again."
   },
   "achievements": {
     "firstRun": "First Run",
@@ -473,6 +492,7 @@
     "notifications": "Notifications",
     "enableNotifications": "Enable Notifications",
     "notificationsDescription": "Receive alerts for events and activities",
+    "notificationsSaveError": "Could not update notification settings. Please try again.",
     "darkMode": "Dark Mode",
     "privacy": "Privacy",
     "termsOfUse": "Terms of Use",
@@ -482,6 +502,19 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "comingSoon": "Coming Soon"
+  },
+  "notificationsCenter": {
+    "your": "Your",
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "unread": "Unread",
+    "total": "Total",
+    "emptyTitle": "No notifications",
+    "emptySubtitle": "You're all caught up! New notifications will appear here.",
+    "justNow": "Just now",
+    "minuteShort": "{{count}}m",
+    "hourShort": "{{count}}h",
+    "dayShort": "{{count}}d"
   },
   "userProfile": {
     "title": "Profile",
@@ -576,6 +609,9 @@
     "mostPopular": "MOST POPULAR",
     "premium": "PREMIUM",
     "perMonth": "/month",
+    "perYear": "/year",
+    "xpMonthlyDiscount": "{{percent}}% XP monthly discount applied",
+    "xpDiscountConfirmation": "Your {{percent}}% XP monthly discount was applied.",
     "subscribe": "Subscribe to",
     "viewPlans": "📊 View Plans",
     "compareFeatures": "📋 Compare Features",
@@ -601,6 +637,21 @@
     "newRun": "NEW RUN",
     "pointsByDistance": "POINTS BY DISTANCE"
   },
+  "goals": {
+    "title": "Goals",
+    "addGoal": "Add Goal",
+    "newGoal": "New Goal",
+    "editGoal": "Edit Goal",
+    "goalType": "Goal Type",
+    "goalName": "Goal Name",
+    "targetValue": "Target Value",
+    "emptyTitle": "No goals yet",
+    "emptySubtitle": "Create your first goal and track it from synced Strava activities.",
+    "createFirst": "Create First Goal",
+    "removeGoal": "Remove goal?",
+    "removeGoalDescription": "This goal will be removed from your profile.",
+    "typeAlreadyExists": "You already have this goal type. Edit it instead."
+  },
   "shop": {
     "orderHistory": "Order History",
     "noOrdersYet": "Your order history will appear here after your first purchase.",
@@ -615,10 +666,35 @@
     "title": "Partner Coupons"
   },
   "welcomeKit": {
-    "kitBeingPrepared": "Kit Being Prepared"
+    "kitBeingPrepared": "Kit Being Prepared",
+    "title": "Welcome Kit",
+    "clubTitle": "Club Welcome Kit",
+    "clubDescription": "Upgrade to Corre Club to receive an exclusive welcome kit with premium running gear!",
+    "upgradeToClub": "Upgrade to Club",
+    "pendingDescription": "Your welcome kit is being prepared! You'll receive a notification when it ships.",
+    "kitStatus": "Kit Status",
+    "progressDelivered": "{{percent}}% delivered",
+    "trackShipment": "Track Shipment",
+    "timeline": "Timeline",
+    "orderCreated": "Order Created",
+    "pending": "Pending",
+    "contents": "Kit Contents",
+    "invalidTrackingUrl": "Unable to open tracking link right now.",
+    "preview": {
+      "shirt": "Technical T-Shirt",
+      "bag": "Running Bag",
+      "bottle": "Water Bottle"
+    },
+    "status": {
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered"
+    }
   },
   "guestPass": {
-    "inviteGuest": "Invite a Guest"
+    "inviteGuest": "Invite a Guest",
+    "title": "Guest Pass",
+    "noUpcomingEvents": "No upcoming events are available right now."
   },
   "runs": {
     "run": "Run",
@@ -739,6 +815,11 @@
     "benefit2Desc": "Get rewarded for every run",
     "benefit3Title": "Climb leaderboards",
     "benefit3Desc": "Compete with the community",
-    "syncReady": "Your Strava activities will sync automatically"
+    "syncReady": "Your Strava activities will sync automatically",
+    "syncFailed": "Failed to sync Strava activities",
+    "noNewActivities": "No new activities found on Strava.",
+    "syncSuccess": "{{count}} activities synced successfully.",
+    "syncSuccessWithPoints": "{{count}} activities synced. You earned {{points}} points.",
+    "syncSuccessWithPointsAndXp": "{{count}} activities synced. You earned {{points}} points and {{xp}} XP."
   }
 }

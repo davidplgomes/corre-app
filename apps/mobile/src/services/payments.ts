@@ -309,20 +309,15 @@ export async function getSavedPaymentMethods(userId: string): Promise<any[]> {
 }
 
 /**
- * Calculate maximum points that can be used for purchase
- * Pro and Club can use up to 20% of item value
+ * Calculate maximum points that can be used for purchase.
+ * Points usage is independent from plan tier; all users follow the same cap.
  */
 export function calculateMaxPointsDiscount(
     totalAmount: number,
-    userTier: string,
+    _userTier: string,
     availablePoints: number
 ): number {
-    // Free users cannot use points
-    if (userTier === 'free') {
-        return 0;
-    }
-
-    // Pro and Club can use up to 20% of the value
+    // All users can use up to 20% of the subtotal with points.
     const maxPointsPercent = Math.floor(totalAmount * 0.20);
 
     // Return the lesser of max allowed and available points

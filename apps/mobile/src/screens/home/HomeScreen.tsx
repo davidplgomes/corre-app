@@ -11,6 +11,7 @@ import { getFeedPosts } from '../../services/supabase/feed';
 import { getWeatherForEvent, getCurrentLocationWeather, formatWeather } from '../../services/weather';
 import { PlanType } from '../../types/subscription.types';
 import { Skeleton } from '../../components/common';
+import { toCanonicalTier } from '../../constants/tiers';
 import {
     CalendarIcon,
     CardIcon,
@@ -65,12 +66,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
     // Use membership tier directly from profile (synced with database)
     // Map legacy tiers to current plan types for display
-    const rawTier = profile?.membershipTier || 'free';
-    const userPlan: PlanType = rawTier === 'club' || rawTier === 'baixa_pace' || rawTier === 'parceiros'
-        ? 'club'
-        : rawTier === 'pro' || rawTier === 'basico'
-            ? 'pro'
-            : 'free';
+    const userPlan: PlanType = toCanonicalTier(profile?.membershipTier);
 
     const loadData = useCallback(async () => {
         try {

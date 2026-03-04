@@ -31,8 +31,6 @@ const STATUS_CONFIG: Record<string, { color: string; label: string; emoji: strin
     processing: { color: '#8B5CF6', label: 'PREPARING', emoji: '⚙️' },
     ready_for_pickup: { color: '#6366F1', label: 'READY', emoji: '🏪' },
     picked_up: { color: '#10B981', label: 'PICKED UP', emoji: '✅' },
-    shipped: { color: '#6366F1', label: 'SHIPPED', emoji: '📦' },
-    delivered: { color: '#10B981', label: 'DELIVERED', emoji: '✅' },
     cancelled: { color: '#EF4444', label: 'CANCELLED', emoji: '✕' },
     canceled: { color: '#EF4444', label: 'CANCELLED', emoji: '✕' },
     payment_failed: { color: '#EF4444', label: 'FAILED', emoji: '⚠️' },
@@ -40,8 +38,16 @@ const STATUS_CONFIG: Record<string, { color: string; label: string; emoji: strin
     disputed: { color: '#F97316', label: 'DISPUTED', emoji: '⚖️' },
 };
 
+const normalizeOrderStatus = (status: string): string => {
+    const normalized = status.toLowerCase();
+    if (normalized === 'shipped') return 'ready_for_pickup';
+    if (normalized === 'delivered') return 'picked_up';
+    if (normalized === 'canceled') return 'cancelled';
+    return normalized;
+};
+
 const OrderCard = ({ order, onPress }: { order: Order; onPress: () => void }) => {
-    const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+    const config = STATUS_CONFIG[normalizeOrderStatus(order.status)] || STATUS_CONFIG.pending;
     const chargedAmount = Number(order.cash_amount ?? order.total_amount ?? 0);
 
     const formatDate = (date: string) => {
@@ -134,8 +140,10 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
 
     const stats = {
         total: orders.length,
-        pickedUp: orders.filter(o => ['picked_up', 'delivered'].includes(o.status)).length,
-        active: orders.filter(o => ['pending', 'paid', 'processing', 'ready_for_pickup', 'shipped', 'disputed'].includes(o.status)).length,
+        pickedUp: orders.filter((order) => normalizeOrderStatus(order.status) === 'picked_up').length,
+        active: orders.filter((order) =>
+            ['pending', 'paid', 'processing', 'ready_for_pickup', 'disputed'].includes(normalizeOrderStatus(order.status))
+        ).length,
     };
 
     if (loading) {

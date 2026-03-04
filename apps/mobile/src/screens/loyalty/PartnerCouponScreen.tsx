@@ -17,7 +17,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { theme, tierColors } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner, BackButton } from '../../components/common';
-import { supabase } from '../../services/supabase/client';
+import { getPartnerCoupons } from '../../services/supabase/coupons';
 
 interface PartnerCouponScreenProps {
     navigation: any;
@@ -154,42 +154,36 @@ export const PartnerCouponScreen: React.FC<PartnerCouponScreenProps> = ({ naviga
         if (!user?.id) return;
 
         try {
-            let query = supabase
-                .from('partner_coupons')
-                .select(`
-                    id,
-                    partner_id,
-                    code,
-                    discount_percent,
-                    valid_until,
-                    max_uses,
-                    current_uses,
-                    is_active,
-                    partner:partners (
-                        id,
-                        name,
-                        logo_url,
-                        category,
-                        address
-                    )
-                `)
-                .gte('valid_until', new Date().toISOString())
-                .eq('is_active', true)
-                .order('discount_percent', { ascending: false });
+            const rawCoupons = await getPartnerCoupons();
+            const filteredCoupons = route.params?.partnerId
+                ? rawCoupons.filter((coupon) => coupon.id === route.params?.partnerId)
+                : rawCoupons;
 
-            // Filter by partner if specified
-            if (route.params?.partnerId) {
-                query = query.eq('partner_id', route.params.partnerId);
-            }
+            const transformedData: PartnerCoupon[] = filteredCoupons.map((coupon) => {
+                const normalizedDiscount =
+                    coupon.discount_type === 'percentage'
+                        ? Math.max(0, Math.round(Number(coupon.discount_value || 0)))
+                        : 0;
 
-            const { data, error } = await query;
+                return {
+                    id: coupon.id,
+                    partner_id: coupon.id,
+                    code: coupon.code,
+                    discount_percent: normalizedDiscount,
+                    valid_until: coupon.expires_at,
+                    max_uses: coupon.stock_limit ?? 9999,
+                    current_uses: coupon.redeemed_count ?? 0,
+                    is_active: coupon.is_active,
+                    partner: {
+                        id: coupon.id,
+                        name: coupon.partner || t('coupons.partnerDefault', 'Partner'),
+                        logo_url: coupon.image_url,
+                        category: coupon.category || 'other',
+                        address: '',
+                    },
+                };
+            });
 
-            if (error) throw error;
-            // Handle Supabase relation which may return array - transform to expected shape
-            const transformedData = (data || []).map(item => ({
-                ...item,
-                partner: Array.isArray(item.partner) ? item.partner[0] : item.partner
-            })).filter(item => item.partner) as PartnerCoupon[];
             setCoupons(transformedData);
         } catch (error) {
             console.error('Error loading coupons:', error);

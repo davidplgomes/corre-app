@@ -89,9 +89,40 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
         if (!profile?.id) return;
         setActionLoading(true);
         try {
-            await joinEvent(eventId, profile.id);
+            const result = await joinEvent(eventId, profile.id);
+
+            if (!result.success) {
+                const friendlyMessage =
+                    result.code === 'EVENT_ALREADY_STARTED'
+                        ? t('events.eventAlreadyStarted', 'This event has already started.')
+                        : result.message || t('errors.unknownError');
+                Alert.alert(t('common.error'), friendlyMessage);
+                return;
+            }
+
+            if (result.waitlisted) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                setHasJoined(false);
+                Alert.alert(
+                    t('events.waitlistJoinedTitle', 'Added to waitlist'),
+                    t('events.waitlistJoinedDescription', {
+                        position: result.position ?? '?',
+                        defaultValue: `This event is full. You are now #${result.position ?? '?'} in the waitlist.`,
+                    }),
+                    [
+                        {
+                            text: t('events.viewWaitlist', 'View waitlist'),
+                            onPress: () => navigation.navigate('EventWaitlist'),
+                        },
+                        { text: t('common.ok', 'OK') },
+                    ]
+                );
+                await loadEventData();
+                return;
+            }
+
             setHasJoined(true);
-            loadEventData();
+            await loadEventData();
         } catch (error) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             console.error('Error joining event:', error);
@@ -142,6 +173,9 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
     const dateStr = formatEventDate(eventDate, i18n.language);
     const timeStr = eventDate.toLocaleTimeString(i18n.language === 'pt' ? 'pt-BR' : 'en-US', { hour: '2-digit', minute: '2-digit' });
     const city = event.location_name?.split(',')[0] || 'CITY';
+    const maxParticipants = event.max_participants ?? 50;
+    const remainingSpots = Math.max(maxParticipants - participants.length, 0);
+    const eventIsFull = remainingSpots === 0;
 
     // Bib number based on participant count (user would be next)
     const bibNumber = String(participants.length + 1).padStart(3, '0');
@@ -231,18 +265,32 @@ export const EventDetail: React.FC<EventDetailProps> = ({ route, navigation }) =
                                 <View>
                                     <Text style={styles.joinText}>{t('events.joinTheCrew')}</Text>
                                     <Text style={styles.subJoinText}>{t('events.allPaces')}</Text>
+                                    <Text style={styles.capacityText}>
+                                        {t('events.capacitySummary', {
+                                            count: remainingSpots,
+                                            max: maxParticipants,
+                                            defaultValue: `${remainingSpots} spots left of ${maxParticipants}`,
+                                        })}
+                                    </Text>
                                 </View>
                             </View>
 
                             {/* Action Button */}
                             {!hasCheckedIn && (
                                 <TouchableOpacity
-                                    style={styles.actionButton}
+                                    style={[styles.actionButton, actionLoading && styles.actionButtonDisabled]}
                                     onPress={hasJoined ? (isUpcoming(event.event_datetime) ? handleLeave : handleCheckIn) : handleJoin}
                                     activeOpacity={0.8}
+                                    disabled={actionLoading}
                                 >
                                     <Text style={styles.actionButtonText}>
-                                        {hasJoined ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEventButton').toUpperCase()) : t('events.participate').toUpperCase()}
+                                        {actionLoading
+                                            ? t('common.loading', 'Loading...').toUpperCase()
+                                            : hasJoined
+                                                ? (isWithinCheckInWindow(event.event_datetime) ? t('events.checkIn').toUpperCase() : t('events.leaveEventButton').toUpperCase())
+                                                : eventIsFull
+                                                    ? t('events.joinWaitlist', 'Join Waitlist').toUpperCase()
+                                                    : t('events.participate').toUpperCase()}
                                     </Text>
                                     {/* Show CloseIcon for Leave Event, ArrowRightIcon for Join/Check In */}
                                     {hasJoined && isUpcoming(event.event_datetime) && !isWithinCheckInWindow(event.event_datetime) ? (
@@ -473,6 +521,12 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         fontSize: 12,
     },
+    capacityText: {
+        color: 'rgba(255,255,255,0.7)',
+        textAlign: 'right',
+        fontSize: 11,
+        marginTop: 4,
+    },
     actionButton: {
         backgroundColor: '#FFF',
         borderRadius: 20, // Pill shape
@@ -481,6 +535,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 6,
+    },
+    actionButtonDisabled: {
+        opacity: 0.65,
     },
     actionButtonText: {
         color: '#000',

@@ -20,13 +20,14 @@ import { Button, LoadingSpinner, BackButton } from '../../components/common';
 import { getCurrentGuestPass, useGuestPass } from '../../services/supabase/wallet';
 import { supabase } from '../../services/supabase/client';
 import { GuestPass } from '../../types';
+import { isClubMembershipTier } from '../../constants/tiers';
 
 interface GuestPassScreenProps {
     navigation: any;
 }
 
 export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user, profile } = useAuth();
     const [loading, setLoading] = useState(true);
     const [guestPass, setGuestPass] = useState<GuestPass | null>(null);
@@ -37,7 +38,11 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
     const [guestEmail, setGuestEmail] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const isClubMember = profile?.membershipTier === 'club';
+    const isClubMember = isClubMembershipTier(profile?.membershipTier);
+    const dateLocale =
+        i18n.language === 'pt' ? 'pt-BR'
+            : i18n.language === 'es' ? 'es-ES'
+                : 'en-GB';
 
     const loadData = useCallback(async () => {
         if (!user?.id) return;
@@ -68,7 +73,10 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
 
     const handleUseGuestPass = async () => {
         if (!user?.id || !selectedEvent || !guestName.trim()) {
-            Alert.alert('Error', 'Please fill in all required fields');
+            Alert.alert(
+                t('common.error'),
+                t('guestPass.fillRequired', 'Please fill in all required fields')
+            );
             return;
         }
 
@@ -77,16 +85,25 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
             const pass = await useGuestPass(user.id, guestName, guestEmail, selectedEvent);
             setGuestPass(pass);
             setShowInviteModal(false);
-            Alert.alert('Success', `Guest pass sent to ${guestName}!`);
+            Alert.alert(
+                t('common.success'),
+                t('guestPass.sentSuccess', { name: guestName, defaultValue: `Guest pass sent to ${guestName}!` })
+            );
         } catch (error: any) {
             console.error('Error using guest pass:', error);
-            Alert.alert('Error', error.message || 'Failed to use guest pass');
+            Alert.alert(
+                t('common.error'),
+                error.message || t('guestPass.sendFailed', 'Failed to use guest pass')
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
-    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const currentMonth = new Date().toLocaleDateString(dateLocale, {
+        month: 'long',
+        year: 'numeric',
+    });
 
     if (loading) {
         return (
@@ -102,7 +119,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
                     <BackButton style={styles.backButton} />
-                    <Text style={styles.headerTitle}>Guest Pass</Text>
+                    <Text style={styles.headerTitle}>{t('profile.guestPass')}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -110,13 +127,15 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                     <View style={styles.lockIcon}>
                         <Ionicons name="lock-closed" size={48} color="#888" />
                     </View>
-                    <Text style={styles.upgradeTitle}>Club Members Only</Text>
+                    <Text style={styles.upgradeTitle}>{t('guestPass.clubOnlyTitle', 'Club Members Only')}</Text>
                     <Text style={styles.upgradeText}>
-                        Guest Pass is an exclusive benefit for Corre Club members.
-                        Upgrade to invite one friend per month to any exclusive event!
+                        {t(
+                            'guestPass.clubOnlyDescription',
+                            'Guest Pass is an exclusive benefit for Corre Club members. Upgrade to invite one friend per month to any exclusive event!'
+                        )}
                     </Text>
                     <Button
-                        title="Upgrade to Club"
+                        title={t('guestPass.upgradeToClub', 'Upgrade to Club')}
                         onPress={() => navigation.navigate('SubscriptionScreen')}
                         style={styles.upgradeButton}
                     />
@@ -134,7 +153,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Guest Pass</Text>
+                <Text style={styles.headerTitle}>{t('profile.guestPass')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -151,7 +170,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                             <Ionicons name="ticket" size={32} color="#FFF" />
                         </View>
                         <View>
-                            <Text style={styles.passTitle}>Guest Pass</Text>
+                            <Text style={styles.passTitle}>{t('guestPass.title', 'Guest Pass')}</Text>
                             <Text style={styles.passMonth}>{currentMonth}</Text>
                         </View>
                     </View>
@@ -160,8 +179,8 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                         <View style={styles.passUsedContainer}>
                             <View style={styles.passUsed}>
                                 <Ionicons name="checkmark-circle" size={24} color="#FFF" />
-                                <View style={styles.passUsedInfo}>
-                                    <Text style={styles.passUsedLabel}>Invited</Text>
+                            <View style={styles.passUsedInfo}>
+                                    <Text style={styles.passUsedLabel}>{t('guestPass.invited', 'Invited')}</Text>
                                     <Text style={styles.passUsedName}>{guestPass.guest_name}</Text>
                                     {guestPass.event && (
                                         <Text style={styles.passUsedEvent}>{guestPass.event.title}</Text>
@@ -170,15 +189,15 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                             </View>
                             {guestPass.verification_code && (
                                 <View style={styles.verificationCodeContainer}>
-                                    <Text style={styles.verificationLabel}>CHECK-IN CODE</Text>
+                                    <Text style={styles.verificationLabel}>{t('guestPass.checkInCode', 'CHECK-IN CODE')}</Text>
                                     <Text style={styles.verificationCode}>{guestPass.verification_code}</Text>
                                     <Text style={styles.verificationHint}>
-                                        Show this code at the event entrance
+                                        {t('guestPass.codeHint', 'Show this code at the event entrance')}
                                     </Text>
                                     {guestPass.checked_in_at && (
                                         <View style={styles.checkedInBadge}>
                                             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                                            <Text style={styles.checkedInText}>Checked in</Text>
+                                            <Text style={styles.checkedInText}>{t('events.checkedIn', 'Checked in')}</Text>
                                         </View>
                                     )}
                                 </View>
@@ -186,9 +205,9 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                         </View>
                     ) : (
                         <View style={styles.passAvailable}>
-                            <Text style={styles.passAvailableText}>1 Pass Available</Text>
+                            <Text style={styles.passAvailableText}>{t('guestPass.onePassAvailable', '1 Pass Available')}</Text>
                             <Text style={styles.passAvailableSubtext}>
-                                Invite a friend to join you at an exclusive event!
+                                {t('guestPass.availableSubtext', 'Invite a friend to join you at an exclusive event!')}
                             </Text>
                         </View>
                     )}
@@ -196,37 +215,43 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
 
                 {/* Info Section */}
                 <View style={styles.infoSection}>
-                    <Text style={styles.infoTitle}>How It Works</Text>
+                    <Text style={styles.infoTitle}>{t('guestPass.howItWorks', 'How It Works')}</Text>
                     <View style={styles.infoItem}>
                         <View style={styles.infoNumber}>
                             <Text style={styles.infoNumberText}>1</Text>
                         </View>
-                        <Text style={styles.infoText}>You get 1 Guest Pass per month as a Club member</Text>
+                        <Text style={styles.infoText}>
+                            {t('guestPass.step1', 'You get 1 Guest Pass per month as a Club member')}
+                        </Text>
                     </View>
                     <View style={styles.infoItem}>
                         <View style={styles.infoNumber}>
                             <Text style={styles.infoNumberText}>2</Text>
                         </View>
-                        <Text style={styles.infoText}>Choose an upcoming exclusive event</Text>
+                        <Text style={styles.infoText}>
+                            {t('guestPass.step2', 'Choose an upcoming exclusive event')}
+                        </Text>
                     </View>
                     <View style={styles.infoItem}>
                         <View style={styles.infoNumber}>
                             <Text style={styles.infoNumberText}>3</Text>
                         </View>
-                        <Text style={styles.infoText}>Enter your guest's details to send the invite</Text>
+                        <Text style={styles.infoText}>
+                            {t('guestPass.step3', "Enter your guest's details to send the invite")}
+                        </Text>
                     </View>
                     <View style={styles.infoItem}>
                         <View style={styles.infoNumber}>
                             <Text style={styles.infoNumberText}>4</Text>
                         </View>
-                        <Text style={styles.infoText}>Your guest can attend the event with you!</Text>
+                        <Text style={styles.infoText}>{t('guestPass.step4', 'Your guest can attend the event with you!')}</Text>
                     </View>
                 </View>
 
                 {/* Use Button */}
                 {!guestPass?.used_at && (
                     <Button
-                        title="Invite a Guest"
+                        title={t('guestPass.inviteGuest')}
                         onPress={() => setShowInviteModal(true)}
                         style={styles.inviteButton}
                     />
@@ -242,7 +267,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
             >
                 <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Invite a Guest</Text>
+                        <Text style={styles.modalTitle}>{t('guestPass.inviteGuest')}</Text>
                         <TouchableOpacity onPress={() => setShowInviteModal(false)}>
                             <Ionicons name="close" size={24} color="#FFF" />
                         </TouchableOpacity>
@@ -250,34 +275,39 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
 
                     <ScrollView style={styles.modalContent}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Guest Name *</Text>
+                            <Text style={styles.inputLabel}>{t('guestPass.guestName', 'Guest Name')} *</Text>
                             <TextInput
                                 style={styles.input}
                                 value={guestName}
                                 onChangeText={setGuestName}
-                                placeholder="Enter guest's name"
+                                placeholder={t('guestPass.guestNamePlaceholder', "Enter guest's name")}
                                 placeholderTextColor={theme.colors.text.tertiary}
                             />
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Guest Email *</Text>
+                            <Text style={styles.inputLabel}>{t('guestPass.guestEmail', 'Guest Email')} *</Text>
                             <TextInput
                                 style={styles.input}
                                 value={guestEmail}
                                 onChangeText={setGuestEmail}
-                                placeholder="Enter guest's email"
+                                placeholder={t('guestPass.guestEmailPlaceholder', "Enter guest's email")}
                                 placeholderTextColor={theme.colors.text.tertiary}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
                             <Text style={styles.inputHint}>
-                                The check-in code will be sent to this email
+                                {t('guestPass.emailHint', 'The check-in code will be sent to this email')}
                             </Text>
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Select Event *</Text>
+                            <Text style={styles.inputLabel}>{t('guestPass.selectEvent', 'Select Event')} *</Text>
+                            {events.length === 0 && (
+                                <Text style={styles.inputHint}>
+                                    {t('guestPass.noUpcomingEvents', 'No upcoming events are available right now.')}
+                                </Text>
+                            )}
                             {events.map(event => (
                                 <TouchableOpacity
                                     key={event.id}
@@ -293,7 +323,7 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
                                     <View style={styles.eventInfo}>
                                         <Text style={styles.eventTitle}>{event.title}</Text>
                                         <Text style={styles.eventDate}>
-                                            {new Date(event.event_datetime).toLocaleDateString('en-GB', {
+                                            {new Date(event.event_datetime).toLocaleDateString(dateLocale, {
                                                 weekday: 'short',
                                                 day: '2-digit',
                                                 month: 'short',
@@ -309,7 +339,11 @@ export const GuestPassScreen: React.FC<GuestPassScreenProps> = ({ navigation }) 
 
                     <View style={styles.modalFooter}>
                         <Button
-                            title={submitting ? "Sending..." : "Send Guest Pass"}
+                            title={
+                                submitting
+                                    ? t('guestPass.sending', 'Sending...')
+                                    : t('guestPass.sendGuestPass', 'Send Guest Pass')
+                            }
                             onPress={handleUseGuestPass}
                             disabled={submitting || !guestName.trim() || !guestEmail.trim() || !selectedEvent}
                         />

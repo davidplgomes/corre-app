@@ -46,7 +46,7 @@ interface CartItemWithDetails {
 
 export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { user, profile } = useAuth();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([]);
@@ -143,7 +143,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     const subtotalCents = Math.round(subtotal * 100);
     const membershipMaxPointsDiscount = calculateMaxPointsDiscount(
         subtotalCents,
-        profile?.membershipTier || 'free',
+        'all',
         availablePoints
     );
     const itemMaxPointsDiscount = cartItems.reduce((sum, item) => {
@@ -173,7 +173,6 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
     const pointsDiscount = Math.min(pointsToUse, maxPointsDiscount) / 100;
     const total = subtotal - pointsDiscount;
-    const canUsePoints = profile?.membershipTier !== 'free';
 
     if (loading) {
         return (
@@ -300,7 +299,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                                 ))}
 
                                 {/* Points Section */}
-                                {canUsePoints && availablePoints > 0 && (
+                                {availablePoints > 0 && (
                                     <BlurView intensity={20} tint="dark" style={styles.pointsSection}>
                                         <View style={styles.pointsHeader}>
                                             <Text style={styles.pointsIcon}>💰</Text>
@@ -335,23 +334,6 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                                                 <Text style={styles.maxButtonText}>MAX</Text>
                                             </TouchableOpacity>
                                         </View>
-                                    </BlurView>
-                                )}
-
-                                {!canUsePoints && (
-                                    <BlurView intensity={15} tint="dark" style={styles.upgradeSection}>
-                                        <Text style={styles.upgradeLock}>🔒</Text>
-                                        <Text style={styles.upgradeText}>
-                                            {t('cart.upgradeMessage', 'Upgrade to Pro to use points!')}
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                Haptics.selectionAsync();
-                                                navigation.navigate('SubscriptionScreen');
-                                            }}
-                                        >
-                                            <Text style={styles.upgradeLink}>{t('cart.upgradeNow', 'Upgrade')}</Text>
-                                        </TouchableOpacity>
                                     </BlurView>
                                 )}
                             </ScrollView>

@@ -411,6 +411,29 @@ const toNumber = (value: unknown, fallback = 0): number => {
     return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const CANONICAL_ORDER_STATUSES: Array<Order['status']> = [
+    'pending',
+    'paid',
+    'processing',
+    'ready_for_pickup',
+    'picked_up',
+    'cancelled',
+    'payment_failed',
+    'refunded',
+    'disputed',
+];
+
+const normalizeOrderStatus = (status: unknown): Order['status'] => {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (normalized === 'shipped') return 'ready_for_pickup';
+    if (normalized === 'delivered') return 'picked_up';
+    if (normalized === 'canceled') return 'cancelled';
+
+    return (CANONICAL_ORDER_STATUSES as string[]).includes(normalized)
+        ? (normalized as Order['status'])
+        : 'pending';
+};
+
 const hydrateOrderRows = async (rows: any[]): Promise<Order[]> => {
     if (!rows.length) return [];
 
@@ -492,6 +515,7 @@ const hydrateOrderRows = async (rows: any[]): Promise<Order[]> => {
 
         return {
             ...row,
+            status: normalizeOrderStatus(row?.status),
             items,
         } as Order;
     });
@@ -638,9 +662,12 @@ export async function useGuestPass(
     // Send email to guest if email was provided
     if (guestEmail) {
         try {
-            await supabase.functions.invoke('send-guest-pass-email', {
+            const { data: emailData, error: emailError } = await supabase.functions.invoke('send-guest-pass-email', {
                 body: { guestPassId: result.id }
             });
+            if (emailError || emailData?.error) {
+                console.warn('Guest pass email delivery failed:', emailError || emailData);
+            }
         } catch (emailError) {
             // Don't fail the whole operation if email fails
             console.error('Failed to send guest pass email:', emailError);

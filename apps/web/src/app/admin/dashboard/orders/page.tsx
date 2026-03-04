@@ -16,8 +16,6 @@ type OrderStatus =
     | "processing"
     | "ready_for_pickup"
     | "picked_up"
-    | "shipped"
-    | "delivered"
     | "payment_failed"
     | "refunded"
     | "disputed"
@@ -85,8 +83,6 @@ const STATUS_LABEL: Record<string, string> = {
     processing: "Preparing",
     ready_for_pickup: "Ready for Pickup",
     picked_up: "Picked Up",
-    shipped: "Shipped",
-    delivered: "Delivered",
     payment_failed: "Payment Failed",
     refunded: "Refunded",
     disputed: "Disputed",

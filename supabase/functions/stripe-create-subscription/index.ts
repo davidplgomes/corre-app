@@ -26,7 +26,13 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type MembershipTier = "free" | "pro" | "club";
+type XpLevel = "starter" | "pacer" | "elite";
 const MANAGEABLE_SUB_STATUSES = ["active", "trialing", "past_due", "unpaid", "incomplete"] as const;
+const XP_MONTHLY_DISCOUNT_BY_LEVEL: Record<XpLevel, number> = {
+    starter: 0,
+    pacer: 5,
+    elite: 10,
+};
 
 const normalizeTier = (value: string | null | undefined): MembershipTier | null => {
     if (!value) return null;
@@ -45,9 +51,16 @@ const inferTierFromText = (value: string | null | undefined): MembershipTier | n
     return null;
 };
 
+const normalizeXpLevel = (value: string | null | undefined): XpLevel => {
+    const normalized = (value || "").toLowerCase().trim();
+    if (normalized === "pacer") return "pacer";
+    if (normalized === "elite") return "elite";
+    return "starter";
+};
+
 const getPlanSnapshotFromPriceId = async (
     priceId: string
-): Promise<{ planName: string; tier: MembershipTier }> => {
+): Promise<{ planName: string; tier: MembershipTier; interval: Stripe.Price.Recurring.Interval | null }> => {
     const price = await stripe.prices.retrieve(priceId, { expand: ["product"] });
     const product = typeof price.product === "string"
         ? await stripe.products.retrieve(price.product)
@@ -66,8 +79,81 @@ const getPlanSnapshotFromPriceId = async (
 
     const tier = metadataTier || inferredTier || "pro";
     const planName = product?.name || price.nickname || "Pro";
+    const interval = price.recurring?.interval || null;
 
-    return { planName, tier };
+    return { planName, tier, interval };
+};
+
+const resolveXpMonthlyDiscount = async (
+    supabase: ReturnType<typeof createClient>,
+    userId: string,
+    interval: Stripe.Price.Recurring.Interval | null
+): Promise<{ level: XpLevel; percent: number }> => {
+    const { data: userRow, error } = await supabase
+        .from("users")
+        .select("xp_level")
+        .eq("id", userId)
+        .maybeSingle();
+
+    if (error) {
+        console.warn("[stripe-create-subscription] Failed to read user xp_level:", error);
+    }
+
+    const level = normalizeXpLevel((userRow as { xp_level?: string | null } | null)?.xp_level || null);
+    if (interval !== "month") {
+        return { level, percent: 0 };
+    }
+
+    return {
+        level,
+        percent: XP_MONTHLY_DISCOUNT_BY_LEVEL[level] || 0,
+    };
+};
+
+const ensureXpDiscountCoupon = async (percent: number): Promise<string | null> => {
+    if (!Number.isFinite(percent) || percent <= 0) return null;
+    const normalized = Math.max(1, Math.min(90, Math.floor(percent)));
+    const couponId = `corre_xp_monthly_${normalized}`;
+
+    try {
+        const existing = await stripe.coupons.retrieve(couponId);
+        if (!existing?.valid) {
+            throw new Error(`Coupon ${couponId} exists but is not valid.`);
+        }
+        return existing.id;
+    } catch (error) {
+        const code = (error as { code?: string })?.code;
+        const rawCode = (error as { raw?: { code?: string } })?.raw?.code;
+        const statusCode = (error as { statusCode?: number })?.statusCode;
+        const notFound = code === "resource_missing" || rawCode === "resource_missing" || statusCode === 404;
+
+        if (!notFound) {
+            console.warn("[stripe-create-subscription] Unexpected coupon lookup error:", error);
+            throw error;
+        }
+    }
+
+    const created = await stripe.coupons.create({
+        id: couponId,
+        percent_off: normalized,
+        duration: "forever",
+        name: `Corre XP ${normalized}% (Monthly)`,
+        metadata: {
+            source: "xp_level_discount",
+            cadence: "monthly",
+            percent: String(normalized),
+        },
+    });
+
+    return created.id;
+};
+
+const subscriptionCouponId = (subscription: Stripe.Subscription): string | null => {
+    const discount = subscription.discount;
+    const coupon = discount?.coupon;
+    if (!coupon) return null;
+    if (typeof coupon === "string") return coupon;
+    return coupon.id || null;
 };
 
 const getPaymentIntentClientSecretFromSubscription = (
@@ -241,6 +327,20 @@ Deno.serve(async (req: Request) => {
         }
 
         const planSnapshot = await getPlanSnapshotFromPriceId(priceId);
+        const xpDiscountContext = await resolveXpMonthlyDiscount(supabase, user.id, planSnapshot.interval);
+        let discountCouponId: string | null = null;
+
+        try {
+            discountCouponId = await ensureXpDiscountCoupon(xpDiscountContext.percent);
+        } catch (couponError) {
+            console.warn(
+                "[stripe-create-subscription] Failed to resolve XP discount coupon. Continuing without discount:",
+                couponError
+            );
+            discountCouponId = null;
+        }
+
+        const targetDiscounts = discountCouponId ? [{ coupon: discountCouponId }] : [];
 
         const { data: existingManageableSub, error: existingManageableSubError } = await supabase
             .from("subscriptions")
@@ -277,7 +377,14 @@ Deno.serve(async (req: Request) => {
                 }
 
                 const currentPriceId = currentItem.price?.id;
-                if (currentPriceId === priceId && !existingStripeSubscription.cancel_at_period_end) {
+                const currentCouponId = subscriptionCouponId(existingStripeSubscription);
+                const shouldSyncDiscount = currentCouponId !== discountCouponId;
+
+                if (
+                    currentPriceId === priceId &&
+                    !existingStripeSubscription.cancel_at_period_end &&
+                    !shouldSyncDiscount
+                ) {
                     await upsertSubscriptionRecord(
                         supabase,
                         user.id,
@@ -298,27 +405,41 @@ Deno.serve(async (req: Request) => {
                         JSON.stringify({
                             subscriptionId: existingStripeSubscription.id,
                             clientSecret: getPaymentIntentClientSecretFromSubscription(existingStripeSubscription),
+                            xpLevel: xpDiscountContext.level,
+                            xpDiscountPercent: xpDiscountContext.percent,
+                            xpDiscountApplied: Boolean(discountCouponId),
                         }),
                         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
                     );
                 }
 
-                const updatedSubscription = await stripe.subscriptions.update(
-                    existingStripeSubscription.id,
-                    {
-                        cancel_at_period_end: false,
-                        payment_behavior: "default_incomplete",
-                        payment_settings: { save_default_payment_method: "on_subscription" },
-                        proration_behavior: "create_prorations",
-                        items: [
-                            {
-                                id: currentItem.id,
-                                price: priceId,
-                            },
-                        ],
-                        expand: ["latest_invoice.payment_intent"],
-                    }
-                );
+                const updatedSubscription = currentPriceId === priceId
+                    ? await stripe.subscriptions.update(
+                        existingStripeSubscription.id,
+                        {
+                            cancel_at_period_end: false,
+                            proration_behavior: "none",
+                            discounts: targetDiscounts,
+                            expand: ["latest_invoice.payment_intent"],
+                        }
+                    )
+                    : await stripe.subscriptions.update(
+                        existingStripeSubscription.id,
+                        {
+                            cancel_at_period_end: false,
+                            payment_behavior: "default_incomplete",
+                            payment_settings: { save_default_payment_method: "on_subscription" },
+                            proration_behavior: "create_prorations",
+                            discounts: targetDiscounts,
+                            items: [
+                                {
+                                    id: currentItem.id,
+                                    price: priceId,
+                                },
+                            ],
+                            expand: ["latest_invoice.payment_intent"],
+                        }
+                    );
 
                 await upsertSubscriptionRecord(
                     supabase,
@@ -340,6 +461,9 @@ Deno.serve(async (req: Request) => {
                     JSON.stringify({
                         subscriptionId: updatedSubscription.id,
                         clientSecret: getPaymentIntentClientSecretFromSubscription(updatedSubscription),
+                        xpLevel: xpDiscountContext.level,
+                        xpDiscountPercent: xpDiscountContext.percent,
+                        xpDiscountApplied: Boolean(discountCouponId),
                     }),
                     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
@@ -358,6 +482,7 @@ Deno.serve(async (req: Request) => {
             items: [{ price: priceId }],
             payment_behavior: "default_incomplete",
             payment_settings: { save_default_payment_method: "on_subscription" },
+            discounts: targetDiscounts,
             expand: ["latest_invoice.payment_intent"],
         });
         console.log("[stripe-create-subscription] Subscription created:", subscription.id, "status:", subscription.status);
@@ -385,6 +510,9 @@ Deno.serve(async (req: Request) => {
             JSON.stringify({
                 subscriptionId: subscription.id,
                 clientSecret: getPaymentIntentClientSecretFromSubscription(subscription),
+                xpLevel: xpDiscountContext.level,
+                xpDiscountPercent: xpDiscountContext.percent,
+                xpDiscountApplied: Boolean(discountCouponId),
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

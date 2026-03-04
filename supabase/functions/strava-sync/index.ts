@@ -41,6 +41,7 @@ type StravaActivity = {
 type StravaAwardResult = {
     success?: boolean;
     points_awarded?: number;
+    xp_awarded?: number;
 };
 
 const getServiceClient = (): SupabaseClient =>
@@ -138,9 +139,10 @@ async function syncActivities(
     supabase: SupabaseClient,
     userId: string,
     activities: StravaActivity[]
-): Promise<{ activitiesSynced: number; pointsAwarded: number }> {
+): Promise<{ activitiesSynced: number; pointsAwarded: number; xpAwarded: number }> {
     let activitiesSynced = 0;
     let pointsAwarded = 0;
+    let xpAwarded = 0;
 
     for (const activity of activities) {
         const cachedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -193,10 +195,11 @@ async function syncActivities(
         const parsed = (awardData || {}) as StravaAwardResult;
         if (parsed.success) {
             pointsAwarded += parsed.points_awarded || 0;
+            xpAwarded += parsed.xp_awarded || 0;
         }
     }
 
-    return { activitiesSynced, pointsAwarded };
+    return { activitiesSynced, pointsAwarded, xpAwarded };
 }
 
 Deno.serve(async (req: Request) => {
@@ -282,13 +285,14 @@ Deno.serve(async (req: Request) => {
         );
     }
 
-    const { activitiesSynced, pointsAwarded } = await syncActivities(supabase, user.id, activities);
+    const { activitiesSynced, pointsAwarded, xpAwarded } = await syncActivities(supabase, user.id, activities);
 
     return new Response(
         JSON.stringify({
             success: true,
             activities_synced: activitiesSynced,
             points_awarded: pointsAwarded,
+            xp_awarded: xpAwarded,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -49,28 +49,7 @@ export const updateProfile = async (
 /**
  * Type for user info returned by QR scan (partial data)
  */
-export type MerchantUserInfo = Pick<User, 'id' | 'full_name' | 'email' | 'membership_tier' | 'qr_code_secret'>;
-
-/**
- * Get user by QR code secret (for merchant scanning)
- */
-export const getUserByQRSecret = async (
-    qrSecret: string
-): Promise<MerchantUserInfo | null> => {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('id, full_name, email, membership_tier, qr_code_secret')
-            .eq('qr_code_secret', qrSecret)
-            .single();
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error getting user by QR secret:', error);
-        throw error;
-    }
-};
+export type MerchantUserInfo = Pick<User, 'id' | 'full_name' | 'email' | 'membership_tier'>;
 
 /**
  * Update user language preference
@@ -112,20 +91,32 @@ export const toggleMerchantMode = async (
     }
 };
 
-// Helper to get user's QR secret (should be protected in real app)
-export const getUserQRSecret = async (userId: string): Promise<string> => {
+export type SignedQrPayload = {
+    id: string;
+    ts: number;
+    sig: string;
+};
+
+/**
+ * Get signed loyalty QR payload from secure RPC (never exposes raw secret on client)
+ */
+export const getSignedLoyaltyQrPayload = async (userId: string): Promise<SignedQrPayload | null> => {
     try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('qr_secret')
-            .eq('id', userId)
-            .single();
+        const { data, error } = await supabase.rpc('generate_user_qr_payload', {
+            p_user_id: userId,
+        });
 
         if (error) throw error;
-        return data?.qr_secret || '';
+
+        const payload = data?.payload;
+        if (!payload?.id || !payload?.ts || !payload?.sig) {
+            return null;
+        }
+
+        return payload as SignedQrPayload;
     } catch (error) {
-        console.error('Error getting QR secret:', error);
-        return '';
+        console.warn('Error generating signed QR payload:', error);
+        return null;
     }
 };
 
@@ -155,6 +146,46 @@ export const validateUserQR = async (userId: string, timestamp: number, signatur
     } catch (error: any) {
         console.error('Error validating QR:', error);
         return { valid: false, error: error.message };
+    }
+};
+
+type LoyaltyRedemptionResult = {
+    success: boolean;
+    redemption_id?: string;
+    discount_percent?: number;
+    amount_before_cents?: number;
+    amount_discount_cents?: number;
+    amount_final_cents?: number;
+    error?: string;
+};
+
+/**
+ * Redeem scanned loyalty QR with merchant-entered amount.
+ */
+export const redeemLoyaltyScan = async (
+    userId: string,
+    timestamp: number,
+    signature: string,
+    amountCents: number,
+    metadata: Record<string, unknown> = {}
+): Promise<LoyaltyRedemptionResult> => {
+    try {
+        const { data, error } = await supabase.rpc('redeem_loyalty_scan', {
+            p_user_id: userId,
+            p_timestamp: timestamp,
+            p_signature: signature,
+            p_amount_cents: amountCents,
+            p_metadata: metadata,
+        });
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        return (data || { success: false, error: 'Failed to redeem scan' }) as LoyaltyRedemptionResult;
+    } catch (error: any) {
+        console.error('Error redeeming loyalty scan:', error);
+        return { success: false, error: error?.message || 'Failed to redeem scan' };
     }
 };
 
@@ -280,5 +311,44 @@ export const getPrivacySetting = async (userId: string): Promise<PrivacyVisibili
     } catch (error) {
         console.error('Error getting privacy setting:', error);
         return 'friends';
+    }
+};
+
+/**
+ * Get whether push notifications are enabled for the user.
+ */
+export const getNotificationPreference = async (userId: string): Promise<boolean> => {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('notifications_enabled')
+            .eq('id', userId)
+            .single();
+
+        if (error) throw error;
+        return data?.notifications_enabled ?? true;
+    } catch (error) {
+        console.error('Error getting notification preference:', error);
+        return true;
+    }
+};
+
+/**
+ * Update whether push notifications are enabled for the user.
+ */
+export const updateNotificationPreference = async (
+    userId: string,
+    enabled: boolean
+): Promise<void> => {
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ notifications_enabled: enabled })
+            .eq('id', userId);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error updating notification preference:', error);
+        throw error;
     }
 };

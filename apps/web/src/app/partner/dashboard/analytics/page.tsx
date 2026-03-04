@@ -77,6 +77,7 @@ function buildLast7DaysSeries(redemptionDates: string[], couponDates: string[]):
 
 export default function PartnerAnalyticsPage() {
     const supabase = useMemo(() => createClient(), []);
+    const [chartsMounted, setChartsMounted] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [summary, setSummary] = useState<Summary>({
@@ -88,6 +89,10 @@ export default function PartnerAnalyticsPage() {
     });
     const [trafficData, setTrafficData] = useState<DailySeries[]>([]);
     const [tierData, setTierData] = useState<TierSeries[]>([]);
+
+    useEffect(() => {
+        setChartsMounted(true);
+    }, []);
 
     useEffect(() => {
         const loadAnalytics = async () => {
@@ -276,25 +281,29 @@ export default function PartnerAnalyticsPage() {
                 <GlassCard className="lg:col-span-2 p-6 flex flex-col min-h-[400px]">
                     <h3 className="text-lg font-bold text-white mb-6">Last 7 Days Activity</h3>
                     <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trafficData}>
-                                <defs>
-                                    <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
-                                        <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#FF5722' }}
-                                />
-                                <Area type="monotone" dataKey="redemptions" stroke="#FF5722" strokeWidth={3} fill="url(#viewsGradient)" />
-                                <Area type="monotone" dataKey="newCoupons" stroke="#fff" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {chartsMounted ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={trafficData}>
+                                    <defs>
+                                        <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#FF5722' }}
+                                    />
+                                    <Area type="monotone" dataKey="redemptions" stroke="#FF5722" strokeWidth={3} fill="url(#viewsGradient)" />
+                                    <Area type="monotone" dataKey="newCoupons" stroke="#fff" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full w-full" />
+                        )}
                     </div>
                 </GlassCard>
 
@@ -307,22 +316,26 @@ export default function PartnerAnalyticsPage() {
                                 No redemption data yet
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={tierData} layout="vertical">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="tier" type="category" axisLine={false} tickLine={false} tick={{ fill: '#fff', fontSize: 12 }} width={70} />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    />
-                                    <Bar dataKey="count" fill="#333" radius={[0, 4, 4, 0]} barSize={28}>
-                                        {tierData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#FF5722' : 'rgba(255,255,255,0.1)'} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                            chartsMounted ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={tierData} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                                        <XAxis type="number" hide />
+                                        <YAxis dataKey="tier" type="category" axisLine={false} tickLine={false} tick={{ fill: '#fff', fontSize: 12 }} width={70} />
+                                        <Tooltip
+                                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                            contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        />
+                                        <Bar dataKey="count" fill="#333" radius={[0, 4, 4, 0]} barSize={28}>
+                                            {tierData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={index === 0 ? '#FF5722' : 'rgba(255,255,255,0.1)'} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full w-full" />
+                            )
                         )}
                     </div>
                 </GlassCard>

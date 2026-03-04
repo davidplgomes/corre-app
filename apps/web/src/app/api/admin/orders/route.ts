@@ -29,6 +29,14 @@ type OrderItemRow = {
     unit_price: number;
 };
 
+function normalizeStatus(status: string): string {
+    const normalized = status.trim().toLowerCase();
+    if (normalized === 'canceled') return 'cancelled';
+    if (normalized === 'shipped') return 'ready_for_pickup';
+    if (normalized === 'delivered') return 'picked_up';
+    return normalized;
+}
+
 export async function GET() {
     try {
         const adminCheck = await ensureAdmin();
@@ -130,21 +138,24 @@ export async function GET() {
             itemsByOrderId.set(item.order_id, list);
         }
 
+        const normalizedStatuses = orders.map((order) => normalizeStatus(String(order.status || '')));
+
         const summary = {
             total: orders.length,
-            pending: orders.filter((order) => order.status === 'pending').length,
-            paid: orders.filter((order) => order.status === 'paid').length,
-            processing: orders.filter((order) => order.status === 'processing').length,
-            ready_for_pickup: orders.filter((order) => ['ready_for_pickup', 'shipped'].includes(order.status)).length,
-            picked_up: orders.filter((order) => ['picked_up', 'delivered'].includes(order.status)).length,
-            payment_failed: orders.filter((order) => order.status === 'payment_failed').length,
-            refunded: orders.filter((order) => order.status === 'refunded').length,
-            disputed: orders.filter((order) => order.status === 'disputed').length,
-            cancelled: orders.filter((order) => ['cancelled', 'canceled'].includes(order.status)).length,
+            pending: normalizedStatuses.filter((status) => status === 'pending').length,
+            paid: normalizedStatuses.filter((status) => status === 'paid').length,
+            processing: normalizedStatuses.filter((status) => status === 'processing').length,
+            ready_for_pickup: normalizedStatuses.filter((status) => status === 'ready_for_pickup').length,
+            picked_up: normalizedStatuses.filter((status) => status === 'picked_up').length,
+            payment_failed: normalizedStatuses.filter((status) => status === 'payment_failed').length,
+            refunded: normalizedStatuses.filter((status) => status === 'refunded').length,
+            disputed: normalizedStatuses.filter((status) => status === 'disputed').length,
+            cancelled: normalizedStatuses.filter((status) => status === 'cancelled').length,
         };
 
         const mappedOrders = orders.map((order) => ({
             ...order,
+            status: normalizeStatus(String(order.status || '')),
             user: order.user_id ? (usersById.get(order.user_id) || null) : null,
             items: itemsByOrderId.get(order.id) || [],
         }));

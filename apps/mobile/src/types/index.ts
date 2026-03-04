@@ -78,8 +78,6 @@ export interface Order {
         | 'processing'
         | 'ready_for_pickup'
         | 'picked_up'
-        | 'shipped'
-        | 'delivered'
         | 'cancelled'
         | 'canceled'
         | 'payment_failed'
@@ -142,5 +140,9 @@ export interface Notification {
     body: string;
     read_at: string | null; // Legacy uses read_at, not read boolean
     data?: Record<string, unknown>;
+    push_dispatch_request_id?: number | null;
+    push_dispatched_at?: string | null;
+    push_dispatch_attempted_at?: string | null;
+    push_dispatch_error?: string | null;
     created_at: string;
 }

@@ -50,6 +50,15 @@ export interface CreateSubscriptionRequest {
     priceId: string;
 }
 
+/** Create subscription response from stripe-create-subscription edge function */
+export interface CreateSubscriptionResponse {
+    subscriptionId: string;
+    clientSecret?: string;
+    xpLevel?: 'starter' | 'pacer' | 'elite';
+    xpDiscountPercent?: number;
+    xpDiscountApplied?: boolean;
+}
+
 /** Stripe product with price for display */
 export interface StripeProductDisplay {
     productId: string;

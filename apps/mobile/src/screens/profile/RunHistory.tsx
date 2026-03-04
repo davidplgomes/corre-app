@@ -16,7 +16,6 @@ import { theme } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 import { ClockIcon, ChevronRightIcon, TrendingUpIcon, TrophyIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
-import { getUserRuns, formatPace as formatRunPace, formatDuration as formatRunDuration } from '../../services/supabase/runs';
 import { getUserCheckIns } from '../../services/supabase/checkins';
 import { getStravaActivities, formatDistance, formatDuration as formatStravaDuration } from '../../services/supabase/strava';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,7 +28,7 @@ interface RunItem {
     time: string;
     pace: string;
     points: number;
-    source: 'manual' | 'strava' | 'event';
+    source: 'strava' | 'event';
     name?: string;
     route_data?: any;
     location_lat?: number;
@@ -151,33 +150,10 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
             return;
         }
         try {
-            const [manualData, stravaData, checkInsData] = await Promise.all([
-                getUserRuns(user.id).catch(() => []),
+            const [stravaData, checkInsData] = await Promise.all([
                 getStravaActivities(50).catch(() => []),
                 getUserCheckIns(user.id).catch(() => [])
             ]);
-
-            const manualRuns: RunItem[] = manualData.map((run: any) => {
-                const dateObj = new Date(run.started_at || run.created_at);
-                const hour = dateObj.getHours();
-                let nameKey = 'events.morningRun';
-                if (hour >= 12 && hour < 14) nameKey = 'events.lunchRun';
-                else if (hour >= 14 && hour < 17) nameKey = 'events.afternoonRun';
-                else if (hour >= 17 && hour < 20) nameKey = 'events.eveningRun';
-                else if (hour >= 20 || hour < 4) nameKey = 'events.nightRun';
-
-                return {
-                    id: run.id,
-                    date: run.created_at || run.started_at,
-                    distance: `${run.distance_km}km`,
-                    time: formatRunDuration(run.duration_seconds),
-                    pace: formatRunPace(run.pace_per_km),
-                    points: run.points_earned || 0,
-                    source: 'manual' as const,
-                    name: t(nameKey),
-                    route_data: run.route_data
-                };
-            });
 
             const stravaRuns: RunItem[] = stravaData.map(activity => ({
                 id: `strava-${activity.strava_id}`,
@@ -206,7 +182,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                 location_lng: checkIn.check_in_lng
             }));
 
-            const allRuns = [...manualRuns, ...stravaRuns, ...eventCheckIns].sort(
+            const allRuns = [...stravaRuns, ...eventCheckIns].sort(
                 (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
             );
 
@@ -343,7 +319,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ navigation }) => {
                                 style={styles.connectButton}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                    navigation.navigate('StravaConnect');
+                                    navigation.navigate('Settings');
                                 }}
                             >
                                 <Text style={styles.connectButtonText}>CONNECT STRAVA</Text>

@@ -36,9 +36,13 @@
     "skip": "Pular",
     "skipForNow": "Pular por agora",
     "saveChanges": "Salvar Alterações",
+    "saving": "Salvando...",
     "all": "Todos",
     "active": "Ativo",
-    "removed": "Removido"
+    "removed": "Removido",
+    "remove": "Remover",
+    "manage": "Gerenciar",
+    "retry": "Tentar novamente"
   },
   "auth": {
     "login": "Entrar",
@@ -164,8 +168,14 @@
     "beTheFirst": "Seja o primeiro",
     "joinTheCrew": "Junte-se à galera",
     "allPaces": "Todos os ritmos",
+    "capacitySummary": "{{count}} vagas restantes de {{max}}",
     "participate": "Participar",
+    "joinWaitlist": "Entrar na Lista de Espera",
     "leaveEventButton": "Sair do Evento",
+    "waitlistJoinedTitle": "Adicionado à lista de espera",
+    "waitlistJoinedDescription": "Este evento está lotado. Você agora está na posição #{{position}} da lista de espera.",
+    "viewWaitlist": "Ver Lista de Espera",
+    "eventAlreadyStarted": "Este evento já começou.",
     "runs": "Corridas",
     "streetRun": "Corrida de Rua",
     "morningRun": "Corrida Matinal",
@@ -242,7 +252,11 @@
     "xpLevel": "XP (NÍVEL)",
     "nextLevelLabel": "PRÓXIMO NÍVEL",
     "xpTo": "XP para",
-    "noActivity": "Nenhuma atividade recente"
+    "noActivity": "Nenhuma atividade recente",
+    "purchaseAmount": "VALOR DA COMPRA (€)",
+    "applyDiscount": "APLICAR DESCONTO",
+    "originalAmount": "Original",
+    "finalAmount": "Final"
   },
   "marketplace": {
     "title": "Marketplace",
@@ -374,6 +388,8 @@
     "notifications": "Notificações",
     "guestPass": "Passe de Convidado",
     "welcomeKit": "Kit de Boas-vindas",
+    "availablePoints": "Pontos Disponíveis",
+    "currentXP": "XP Atual",
     "neighborhood": "Bairro",
     "monthPoints": "Pontos do Mês",
     "lifetimePoints": "Pontos Totais",
@@ -395,7 +411,10 @@
     "removeFriend": "Remover Amigo",
     "confirmRemove": "Tem certeza que deseja remover este amigo?",
     "suggested": "Sugestões de Amizade",
-    "nowFriends": "Vocês agora são amigos!"
+    "nowFriends": "Vocês agora são amigos!",
+    "requestAccepted": "Solicitação de amizade aceita.",
+    "requestRejected": "Solicitação de amizade recusada.",
+    "requestActionFailed": "Não foi possível atualizar a solicitação. Tente novamente."
   },
   "achievements": {
     "firstRun": "Primeira Corrida",
@@ -473,6 +492,7 @@
     "notifications": "Notificações",
     "enableNotifications": "Ativar Notificações",
     "notificationsDescription": "Receber alertas de eventos e atividades",
+    "notificationsSaveError": "Nao foi possivel atualizar as configuracoes de notificacao. Tente novamente.",
     "darkMode": "Modo Escuro",
     "privacy": "Privacidade",
     "termsOfUse": "Termos de Uso",
@@ -482,6 +502,19 @@
     "connect": "Conectar",
     "disconnect": "Desconectar",
     "comingSoon": "Em breve"
+  },
+  "notificationsCenter": {
+    "your": "Suas",
+    "title": "Notificacoes",
+    "markAllRead": "Marcar tudo como lido",
+    "unread": "Nao lidas",
+    "total": "Total",
+    "emptyTitle": "Sem notificacoes",
+    "emptySubtitle": "Tudo em dia! Novas notificacoes aparecerao aqui.",
+    "justNow": "Agora",
+    "minuteShort": "{{count}}m",
+    "hourShort": "{{count}}h",
+    "dayShort": "{{count}}d"
   },
   "userProfile": {
     "title": "Perfil",
@@ -576,6 +609,9 @@
     "mostPopular": "MAIS POPULAR",
     "premium": "PREMIUM",
     "perMonth": "/mês",
+    "perYear": "/ano",
+    "xpMonthlyDiscount": "Desconto mensal de XP de {{percent}}% aplicado",
+    "xpDiscountConfirmation": "Seu desconto mensal de XP de {{percent}}% foi aplicado.",
     "subscribe": "Assinar",
     "viewPlans": "📊 Ver Planos",
     "compareFeatures": "📋 Comparar Recursos",
@@ -601,6 +637,21 @@
     "newRun": "NOVA CORRIDA",
     "pointsByDistance": "PONTOS POR DISTÂNCIA"
   },
+  "goals": {
+    "title": "Metas",
+    "addGoal": "Adicionar Meta",
+    "newGoal": "Nova Meta",
+    "editGoal": "Editar Meta",
+    "goalType": "Tipo de Meta",
+    "goalName": "Nome da Meta",
+    "targetValue": "Valor da Meta",
+    "emptyTitle": "Sem metas ainda",
+    "emptySubtitle": "Crie sua primeira meta e acompanhe com as atividades sincronizadas do Strava.",
+    "createFirst": "Criar Primeira Meta",
+    "removeGoal": "Remover meta?",
+    "removeGoalDescription": "Esta meta será removida do seu perfil.",
+    "typeAlreadyExists": "Você já possui esse tipo de meta. Edite a existente."
+  },
   "shop": {
     "orderHistory": "Histórico de Pedidos",
     "noOrdersYet": "Seu histórico de pedidos aparecerá aqui após sua primeira compra.",
@@ -615,10 +666,35 @@
     "title": "Cupons de Parceiros"
   },
   "welcomeKit": {
-    "kitBeingPrepared": "Kit em Preparação"
+    "kitBeingPrepared": "Kit em Preparação",
+    "title": "Kit de Boas-vindas",
+    "clubTitle": "Kit Club",
+    "clubDescription": "Faca upgrade para o Corre Club para receber um kit exclusivo com itens premium de corrida!",
+    "upgradeToClub": "Fazer upgrade para Club",
+    "pendingDescription": "Seu kit de boas-vindas esta sendo preparado! Voce recebera uma notificacao quando for enviado.",
+    "kitStatus": "Status do Kit",
+    "progressDelivered": "{{percent}}% entregue",
+    "trackShipment": "Rastrear envio",
+    "timeline": "Linha do tempo",
+    "orderCreated": "Pedido criado",
+    "pending": "Pendente",
+    "contents": "Conteudo do kit",
+    "invalidTrackingUrl": "Nao foi possivel abrir o link de rastreio agora.",
+    "preview": {
+      "shirt": "Camiseta tecnica",
+      "bag": "Bolsa de corrida",
+      "bottle": "Garrafa de agua"
+    },
+    "status": {
+      "processing": "Em preparo",
+      "shipped": "Enviado",
+      "delivered": "Entregue"
+    }
   },
   "guestPass": {
-    "inviteGuest": "Convidar um Amigo"
+    "inviteGuest": "Convidar um Amigo",
+    "title": "Passe de Convidado",
+    "noUpcomingEvents": "Nao ha eventos disponiveis no momento."
   },
   "runs": {
     "run": "Corrida",
@@ -739,6 +815,11 @@
     "benefit2Desc": "Seja recompensado por cada corrida",
     "benefit3Title": "Suba no ranking",
     "benefit3Desc": "Compita com a comunidade",
-    "syncReady": "Suas atividades do Strava serão sincronizadas automaticamente"
+    "syncReady": "Suas atividades do Strava serão sincronizadas automaticamente",
+    "syncFailed": "Falha ao sincronizar atividades do Strava",
+    "noNewActivities": "Nenhuma atividade nova encontrada no Strava.",
+    "syncSuccess": "{{count}} atividades sincronizadas com sucesso.",
+    "syncSuccessWithPoints": "{{count}} atividades sincronizadas. Você ganhou {{points}} pontos.",
+    "syncSuccessWithPointsAndXp": "{{count}} atividades sincronizadas. Você ganhou {{points}} pontos e {{xp}} XP."
   }
 }

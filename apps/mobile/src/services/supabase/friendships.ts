@@ -12,11 +12,13 @@ export interface Friendship {
         id: string;
         full_name: string;
         membership_tier: string;
+        avatar_url?: string | null;
     };
     addressee?: {
         id: string;
         full_name: string;
         membership_tier: string;
+        avatar_url?: string | null;
     };
 }
 
@@ -27,6 +29,40 @@ export interface UserSearchResult {
     avatar_url?: string;
     friendship_status?: 'pending' | 'accepted' | 'none';
 }
+
+type FriendshipStatus = 'pending' | 'accepted' | 'none';
+
+type FriendshipLookupRow = {
+    id: string;
+    requester_id: string;
+    addressee_id: string;
+    status: 'pending' | 'accepted' | 'rejected';
+};
+
+const buildFriendshipStatusMap = (
+    currentUserId: string,
+    rows: Array<Pick<FriendshipLookupRow, 'requester_id' | 'addressee_id' | 'status'>>
+): Map<string, FriendshipStatus> => {
+    const statusMap = new Map<string, FriendshipStatus>();
+
+    for (const row of rows) {
+        const otherId = row.requester_id === currentUserId ? row.addressee_id : row.requester_id;
+        if (!otherId) continue;
+        if (row.status === 'rejected') continue;
+
+        const current = statusMap.get(otherId);
+        if (row.status === 'accepted') {
+            statusMap.set(otherId, 'accepted');
+            continue;
+        }
+
+        if (!current) {
+            statusMap.set(otherId, 'pending');
+        }
+    }
+
+    return statusMap;
+};
 
 /**
  * Search users by name
@@ -49,17 +85,17 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
         return [];
     }
 
-    // Check friendship status for each result
-    const results: UserSearchResult[] = [];
-    for (const foundUser of data || []) {
-        const status = await getFriendshipStatus(foundUser.id);
-        results.push({
-            ...foundUser,
-            friendship_status: status,
-        });
-    }
+    const { data: allFriendships } = await supabase
+        .from('friendships')
+        .select('requester_id, addressee_id, status')
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
-    return results;
+    const statusMap = buildFriendshipStatusMap(user.id, allFriendships || []);
+
+    return (data || []).map((foundUser) => ({
+        ...foundUser,
+        friendship_status: statusMap.get(foundUser.id) || 'none',
+    }));
 };
 
 /**
@@ -78,14 +114,10 @@ export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
 
     // Build maps for exclusion and status lookup
     const acceptedIds = new Set<string>();
-    const pendingStatusMap = new Map<string, 'pending' | 'accepted' | 'none'>();
-
-    for (const f of allFriendships || []) {
-        const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id;
-        if (f.status === 'accepted') {
+    const statusMap = buildFriendshipStatusMap(user.id, allFriendships || []);
+    for (const [otherId, status] of statusMap.entries()) {
+        if (status === 'accepted') {
             acceptedIds.add(otherId);
-        } else if (f.status === 'pending') {
-            pendingStatusMap.set(otherId, 'pending');
         }
     }
 
@@ -107,25 +139,25 @@ export const getSuggestedFriends = async (): Promise<UserSearchResult[]> => {
     // Map status from our pre-built lookup (no extra queries)
     return (data || []).map(u => ({
         ...u,
-        friendship_status: pendingStatusMap.get(u.id) || 'none',
+        friendship_status: statusMap.get(u.id) || 'none',
     }));
 };
 
 /**
  * Get friendship status with a user
  */
-export const getFriendshipStatus = async (userId: string): Promise<'pending' | 'accepted' | 'none'> => {
+export const getFriendshipStatus = async (userId: string): Promise<FriendshipStatus> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return 'none';
 
     const { data, error } = await supabase
         .from('friendships')
-        .select('status')
-        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`)
-        .single();
+        .select('requester_id, addressee_id, status')
+        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`);
 
-    if (error || !data) return 'none';
-    return data.status === 'accepted' ? 'accepted' : 'pending';
+    if (error || !data || data.length === 0) return 'none';
+    const statusMap = buildFriendshipStatusMap(user.id, data);
+    return statusMap.get(userId) || 'none';
 };
 
 /**
@@ -136,6 +168,7 @@ export const getFriendshipStatus = async (userId: string): Promise<'pending' | '
 export const sendFriendRequest = async (addresseeId: string): Promise<{ success: boolean; autoAccepted: boolean }> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, autoAccepted: false };
+    if (user.id === addresseeId) return { success: false, autoAccepted: false };
 
     // Check if the target user has a public profile
     const { data: targetUser } = await supabase
@@ -146,6 +179,63 @@ export const sendFriendRequest = async (addresseeId: string): Promise<{ success:
 
     const isPublic = targetUser?.privacy_visibility === 'anyone';
 
+    const { data: existingRows, error: existingError } = await supabase
+        .from('friendships')
+        .select('id, requester_id, addressee_id, status')
+        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${addresseeId}),and(requester_id.eq.${addresseeId},addressee_id.eq.${user.id})`);
+
+    if (existingError) {
+        console.error('Error loading existing friendship:', existingError);
+        return { success: false, autoAccepted: false };
+    }
+
+    const existing = (existingRows || []) as FriendshipLookupRow[];
+    if (existing.some((row) => row.status === 'accepted')) {
+        return { success: true, autoAccepted: true };
+    }
+
+    const reversePending = existing.find(
+        (row) =>
+            row.requester_id === addresseeId &&
+            row.addressee_id === user.id &&
+            row.status === 'pending'
+    );
+    if (reversePending) {
+        const { error: acceptError } = await supabase
+            .from('friendships')
+            .update({ status: 'accepted' })
+            .eq('id', reversePending.id);
+
+        if (acceptError) {
+            console.error('Error auto-accepting reverse pending friend request:', acceptError);
+            return { success: false, autoAccepted: false };
+        }
+
+        return { success: true, autoAccepted: true };
+    }
+
+    const outgoing = existing.find(
+        (row) => row.requester_id === user.id && row.addressee_id === addresseeId
+    );
+    if (outgoing) {
+        if (outgoing.status === 'pending') {
+            return { success: true, autoAccepted: false };
+        }
+
+        const nextStatus: 'pending' | 'accepted' = isPublic ? 'accepted' : 'pending';
+        const { error: updateError } = await supabase
+            .from('friendships')
+            .update({ status: nextStatus })
+            .eq('id', outgoing.id);
+
+        if (updateError) {
+            console.error('Error re-opening friend request:', updateError);
+            return { success: false, autoAccepted: false };
+        }
+
+        return { success: true, autoAccepted: nextStatus === 'accepted' };
+    }
+
     const { error } = await supabase
         .from('friendships')
         .insert({
@@ -155,6 +245,11 @@ export const sendFriendRequest = async (addresseeId: string): Promise<{ success:
         });
 
     if (error) {
+        // Another request may have been created concurrently.
+        if ((error as { code?: string }).code === '23505') {
+            const status = await getFriendshipStatus(addresseeId);
+            return { success: true, autoAccepted: status === 'accepted' };
+        }
         console.error('Error sending friend request:', error);
         return { success: false, autoAccepted: false };
     }
@@ -229,7 +324,7 @@ export const getPendingRequests = async (): Promise<Friendship[]> => {
         .from('friendships')
         .select(`
             *,
-            requester:requester_id(id, full_name, membership_tier)
+            requester:requester_id(id, full_name, membership_tier, avatar_url)
         `)
         .eq('addressee_id', user.id)
         .eq('status', 'pending')

@@ -8,12 +8,15 @@ import {
     RefreshControl,
     StatusBar,
     Image,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as Linking from 'expo-linking';
 import { theme } from '../../constants/theme';
+import { isClubMembershipTier } from '../../constants/tiers';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner, Button, BackButton } from '../../components/common';
 import { supabase } from '../../services/supabase/client';
@@ -45,10 +48,11 @@ interface WelcomeKit {
 }
 
 const KitItemCard = ({ item }: { item: WelcomeKitItem }) => {
+    const { t } = useTranslation();
     const statusConfig = {
-        pending: { color: '#F59E0B', label: 'Processing', icon: 'hourglass-outline' },
-        shipped: { color: '#3B82F6', label: 'Shipped', icon: 'airplane-outline' },
-        delivered: { color: '#10B981', label: 'Delivered', icon: 'checkmark-circle-outline' },
+        pending: { color: '#F59E0B', label: t('welcomeKit.status.processing', 'Processing'), icon: 'hourglass-outline' },
+        shipped: { color: '#3B82F6', label: t('welcomeKit.status.shipped', 'Shipped'), icon: 'airplane-outline' },
+        delivered: { color: '#10B981', label: t('welcomeKit.status.delivered', 'Delivered'), icon: 'checkmark-circle-outline' },
     };
 
     const status = statusConfig[item.status];
@@ -81,7 +85,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
     const [refreshing, setRefreshing] = useState(false);
     const [kit, setKit] = useState<WelcomeKit | null>(null);
 
-    const isClubMember = profile?.membershipTier === 'baixa_pace';
+    const isClubMember = isClubMembershipTier(profile?.membershipTier);
 
     const loadWelcomeKit = useCallback(async () => {
         if (!user?.id) return;
@@ -134,9 +138,34 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
 
     const getOverallProgress = () => {
         if (!kit) return 0;
+        if (!Array.isArray(kit.items) || kit.items.length === 0) {
+            return kit.status === 'delivered' ? 100 : 0;
+        }
         const deliveredCount = kit.items.filter(i => i.status === 'delivered').length;
         return Math.round((deliveredCount / kit.items.length) * 100);
     };
+
+    const handleTrackShipment = useCallback(async () => {
+        if (!kit?.tracking_url) return;
+
+        try {
+            const canOpen = await Linking.canOpenURL(kit.tracking_url);
+            if (!canOpen) {
+                Alert.alert(
+                    t('common.error'),
+                    t('welcomeKit.invalidTrackingUrl', 'Unable to open tracking link right now.')
+                );
+                return;
+            }
+            await Linking.openURL(kit.tracking_url);
+        } catch (error) {
+            console.error('Error opening tracking URL:', error);
+            Alert.alert(
+                t('common.error'),
+                t('welcomeKit.invalidTrackingUrl', 'Unable to open tracking link right now.')
+            );
+        }
+    }, [kit?.tracking_url, t]);
 
     if (loading) {
         return (
@@ -153,7 +182,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
                     <BackButton style={styles.backButton} />
-                    <Text style={styles.headerTitle}>Welcome Kit</Text>
+                    <Text style={styles.headerTitle}>{t('welcomeKit.title', 'Welcome Kit')}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -161,26 +190,29 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                     <View style={styles.giftIconLarge}>
                         <Ionicons name="gift" size={64} color={theme.colors.brand.primary} />
                     </View>
-                    <Text style={styles.upgradeTitle}>Club Welcome Kit</Text>
+                    <Text style={styles.upgradeTitle}>{t('welcomeKit.clubTitle', 'Club Welcome Kit')}</Text>
                     <Text style={styles.upgradeText}>
-                        Upgrade to Corre Club to receive an exclusive welcome kit with premium running gear!
+                        {t(
+                            'welcomeKit.clubDescription',
+                            'Upgrade to Corre Club to receive an exclusive welcome kit with premium running gear!'
+                        )}
                     </Text>
                     <View style={styles.kitPreview}>
                         <View style={styles.previewItem}>
                             <Ionicons name="shirt-outline" size={24} color="#888" />
-                            <Text style={styles.previewText}>Technical T-Shirt</Text>
+                            <Text style={styles.previewText}>{t('welcomeKit.preview.shirt', 'Technical T-Shirt')}</Text>
                         </View>
                         <View style={styles.previewItem}>
                             <Ionicons name="bag-outline" size={24} color="#888" />
-                            <Text style={styles.previewText}>Running Bag</Text>
+                            <Text style={styles.previewText}>{t('welcomeKit.preview.bag', 'Running Bag')}</Text>
                         </View>
                         <View style={styles.previewItem}>
                             <Ionicons name="water-outline" size={24} color="#888" />
-                            <Text style={styles.previewText}>Water Bottle</Text>
+                            <Text style={styles.previewText}>{t('welcomeKit.preview.bottle', 'Water Bottle')}</Text>
                         </View>
                     </View>
                     <Button
-                        title="Upgrade to Club"
+                        title={t('welcomeKit.upgradeToClub', 'Upgrade to Club')}
                         onPress={() => navigation.navigate('SubscriptionScreen')}
                         style={styles.upgradeButton}
                     />
@@ -196,7 +228,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                 <StatusBar barStyle="light-content" />
                 <View style={styles.header}>
                     <BackButton style={styles.backButton} />
-                    <Text style={styles.headerTitle}>Welcome Kit</Text>
+                    <Text style={styles.headerTitle}>{t('welcomeKit.title', 'Welcome Kit')}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -204,9 +236,12 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                     <View style={styles.pendingIcon}>
                         <Ionicons name="hourglass-outline" size={48} color="#F59E0B" />
                     </View>
-                    <Text style={styles.pendingTitle}>Kit Being Prepared</Text>
+                    <Text style={styles.pendingTitle}>{t('welcomeKit.kitBeingPrepared', 'Kit Being Prepared')}</Text>
                     <Text style={styles.pendingText}>
-                        Your welcome kit is being prepared! You'll receive a notification when it ships.
+                        {t(
+                            'welcomeKit.pendingDescription',
+                            "Your welcome kit is being prepared! You'll receive a notification when it ships."
+                        )}
                     </Text>
                 </View>
             </SafeAreaView>
@@ -214,9 +249,9 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
     }
 
     const statusConfig = {
-        processing: { color: '#F59E0B', label: 'Processing', icon: 'hourglass-outline' },
-        shipped: { color: '#3B82F6', label: 'Shipped', icon: 'airplane-outline' },
-        delivered: { color: '#10B981', label: 'Delivered', icon: 'checkmark-circle' },
+        processing: { color: '#F59E0B', label: t('welcomeKit.status.processing', 'Processing'), icon: 'hourglass-outline' },
+        shipped: { color: '#3B82F6', label: t('welcomeKit.status.shipped', 'Shipped'), icon: 'airplane-outline' },
+        delivered: { color: '#10B981', label: t('welcomeKit.status.delivered', 'Delivered'), icon: 'checkmark-circle' },
     };
 
     const kitStatus = statusConfig[kit.status];
@@ -231,7 +266,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Welcome Kit</Text>
+                <Text style={styles.headerTitle}>{t('welcomeKit.title', 'Welcome Kit')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -256,7 +291,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                     <View style={styles.statusHeader}>
                         <Ionicons name={kitStatus.icon as any} size={32} color="#FFF" />
                         <View style={styles.statusInfo}>
-                            <Text style={styles.statusLabel}>Kit Status</Text>
+                            <Text style={styles.statusLabel}>{t('welcomeKit.kitStatus', 'Kit Status')}</Text>
                             <Text style={styles.statusValue}>{kitStatus.label}</Text>
                         </View>
                     </View>
@@ -265,25 +300,27 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                         <View style={styles.progressBarBg}>
                             <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
                         </View>
-                        <Text style={styles.progressText}>{progress}% delivered</Text>
+                        <Text style={styles.progressText}>
+                            {t('welcomeKit.progressDelivered', { percent: progress, defaultValue: `${progress}% delivered` })}
+                        </Text>
                     </View>
 
                     {kit.tracking_url && (
-                        <TouchableOpacity style={styles.trackButton}>
+                        <TouchableOpacity style={styles.trackButton} onPress={handleTrackShipment}>
                             <Ionicons name="navigate-outline" size={18} color="#FFF" />
-                            <Text style={styles.trackButtonText}>Track Shipment</Text>
+                            <Text style={styles.trackButtonText}>{t('welcomeKit.trackShipment', 'Track Shipment')}</Text>
                         </TouchableOpacity>
                     )}
                 </LinearGradient>
 
                 {/* Timeline */}
                 <View style={styles.timelineSection}>
-                    <Text style={styles.sectionTitle}>Timeline</Text>
+                    <Text style={styles.sectionTitle}>{t('welcomeKit.timeline', 'Timeline')}</Text>
                     <View style={styles.timeline}>
                         <View style={styles.timelineItem}>
                             <View style={[styles.timelineDot, styles.timelineDotComplete]} />
                             <View style={styles.timelineContent}>
-                                <Text style={styles.timelineLabel}>Order Created</Text>
+                                <Text style={styles.timelineLabel}>{t('welcomeKit.orderCreated', 'Order Created')}</Text>
                                 <Text style={styles.timelineDate}>
                                     {new Date(kit.created_at).toLocaleDateString('en-GB', {
                                         day: '2-digit',
@@ -299,7 +336,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                                 kit.shipped_at && styles.timelineDotComplete
                             ]} />
                             <View style={styles.timelineContent}>
-                                <Text style={styles.timelineLabel}>Shipped</Text>
+                                <Text style={styles.timelineLabel}>{t('welcomeKit.status.shipped', 'Shipped')}</Text>
                                 <Text style={styles.timelineDate}>
                                     {kit.shipped_at
                                         ? new Date(kit.shipped_at).toLocaleDateString('en-GB', {
@@ -307,7 +344,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                                             month: 'short',
                                             year: 'numeric',
                                         })
-                                        : 'Pending'}
+                                        : t('welcomeKit.pending', 'Pending')}
                                 </Text>
                             </View>
                         </View>
@@ -317,7 +354,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                                 kit.delivered_at && styles.timelineDotComplete
                             ]} />
                             <View style={styles.timelineContent}>
-                                <Text style={styles.timelineLabel}>Delivered</Text>
+                                <Text style={styles.timelineLabel}>{t('welcomeKit.status.delivered', 'Delivered')}</Text>
                                 <Text style={styles.timelineDate}>
                                     {kit.delivered_at
                                         ? new Date(kit.delivered_at).toLocaleDateString('en-GB', {
@@ -325,7 +362,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
                                             month: 'short',
                                             year: 'numeric',
                                         })
-                                        : 'Pending'}
+                                        : t('welcomeKit.pending', 'Pending')}
                                 </Text>
                             </View>
                         </View>
@@ -334,7 +371,7 @@ export const WelcomeKitScreen: React.FC<WelcomeKitScreenProps> = ({ navigation }
 
                 {/* Items */}
                 <View style={styles.itemsSection}>
-                    <Text style={styles.sectionTitle}>Kit Contents</Text>
+                    <Text style={styles.sectionTitle}>{t('welcomeKit.contents', 'Kit Contents')}</Text>
                     {kit.items.map((item) => (
                         <KitItemCard key={item.id} item={item} />
                     ))}

@@ -100,6 +100,28 @@ export async function savePushToken(userId: string, token: string): Promise<bool
 }
 
 /**
+ * Remove push token from user profile (opt-out or logout)
+ */
+export async function clearPushToken(userId: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('users')
+            .update({ push_token: null })
+            .eq('id', userId);
+
+        if (error) {
+            console.error('Error clearing push token:', error);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error clearing push token:', error);
+        return false;
+    }
+}
+
+/**
  * Schedule a local notification
  */
 export async function scheduleLocalNotification(
@@ -200,6 +222,10 @@ export async function storeNotification(
     notification: PushNotificationData
 ): Promise<void> {
     try {
+        const data = {
+            ...(notification.data || {}),
+            source: notification.data?.source || 'local_app',
+        };
         const { error } = await supabase
             .from('notifications')
             .insert({
@@ -207,7 +233,7 @@ export async function storeNotification(
                 title: notification.title,
                 body: notification.body,
                 type: notification.type,
-                data: notification.data || null,
+                data,
             });
 
         if (error) {

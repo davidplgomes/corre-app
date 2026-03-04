@@ -115,19 +115,39 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
     };
 
     const handleAcceptRequest = async (friendshipId: string) => {
+        if (processingIds.has(friendshipId)) return;
+        setProcessingIds(prev => new Set(prev).add(friendshipId));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         const success = await acceptFriendRequest(friendshipId);
+        setProcessingIds(prev => {
+            const next = new Set(prev);
+            next.delete(friendshipId);
+            return next;
+        });
         if (success) {
+            Alert.alert(t('common.success'), t('friends.requestAccepted', 'Friend request accepted.'));
             loadData();
+            return;
         }
+        Alert.alert(t('common.error'), t('friends.requestActionFailed', 'Could not update friend request. Please try again.'));
     };
 
     const handleRejectRequest = async (friendshipId: string) => {
+        if (processingIds.has(friendshipId)) return;
+        setProcessingIds(prev => new Set(prev).add(friendshipId));
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const success = await rejectFriendRequest(friendshipId);
+        setProcessingIds(prev => {
+            const next = new Set(prev);
+            next.delete(friendshipId);
+            return next;
+        });
         if (success) {
+            Alert.alert(t('common.success'), t('friends.requestRejected', 'Friend request rejected.'));
             loadData();
+            return;
         }
+        Alert.alert(t('common.error'), t('friends.requestActionFailed', 'Could not update friend request. Please try again.'));
     };
 
     const handleRemoveFriend = async (friendId: string) => {
@@ -243,6 +263,7 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
     const renderRequestItem = ({ item, index }: { item: Friendship; index: number }) => {
         const requester = item.requester as any;
         const tierColor = MEMBERSHIP_TIERS[requester?.membership_tier as TierKey]?.color || theme.colors.border.default;
+        const isProcessing = processingIds.has(item.id);
 
         const handleProfilePress = () => {
             if (requester?.id) {
@@ -273,14 +294,16 @@ export const Friends: React.FC<FriendsProps> = ({ navigation }) => {
                     </TouchableOpacity>
                     <View style={styles.requestActions}>
                         <TouchableOpacity
-                            style={styles.acceptButton}
+                            style={[styles.acceptButton, isProcessing && styles.requestActionDisabled]}
                             onPress={() => handleAcceptRequest(item.id)}
+                            disabled={isProcessing}
                         >
                             <Text style={styles.acceptButtonText}>✓</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={styles.rejectButton}
+                            style={[styles.rejectButton, isProcessing && styles.requestActionDisabled]}
                             onPress={() => handleRejectRequest(item.id)}
+                            disabled={isProcessing}
                         >
                             <Text style={styles.rejectButtonText}>✕</Text>
                         </TouchableOpacity>
@@ -695,6 +718,9 @@ const styles = StyleSheet.create({
         color: '#FF6464',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    requestActionDisabled: {
+        opacity: 0.55,
     },
     emptyContainer: {
         padding: 40,

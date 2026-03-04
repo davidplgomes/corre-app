@@ -11,6 +11,7 @@ import {
     Platform,
     UIManager
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -22,9 +23,11 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { theme, tierColors, levelColors } from '../../constants/theme';
+import { theme, levelColors } from '../../constants/theme';
 import { DigitalCard } from '../../components/loyalty/DigitalCard';
 import { QRCodeIcon, GiftIcon, ClockIcon, CardIcon } from '../../components/common/TabIcons';
+import { getSignedLoyaltyQrPayload } from '../../services/supabase/users';
+import { getAvailablePoints } from '../../services/supabase/wallet';
 
 type LoyaltyCardProps = {
     navigation: any;
@@ -45,7 +48,37 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
     // Use profile data or fallback to mock data
     // New Logic: Level based on XP, not Plan
     const currentXP = profile?.current_xp || 0; // Fallback to 0 if not in DB yet
-    const currentPoints = profile?.current_points || 0;
+    const [currentPoints, setCurrentPoints] = React.useState(
+        profile?.current_points ?? profile?.currentMonthPoints ?? 0
+    );
+
+    React.useEffect(() => {
+        setCurrentPoints(profile?.current_points ?? profile?.currentMonthPoints ?? 0);
+    }, [profile?.current_points, profile?.currentMonthPoints]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            let isMounted = true;
+
+            const loadAvailablePoints = async () => {
+                if (!user?.id) return;
+                try {
+                    const points = await getAvailablePoints(user.id);
+                    if (isMounted) {
+                        setCurrentPoints(points);
+                    }
+                } catch (error) {
+                    console.warn('Failed to refresh loyalty points balance:', error);
+                }
+            };
+
+            void loadAvailablePoints();
+
+            return () => {
+                isMounted = false;
+            };
+        }, [user?.id])
+    );
 
     let currentLevel = 'starter';
     if (currentXP >= 15000) currentLevel = 'elite';
@@ -71,16 +104,12 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
             if (!user?.id) return;
 
             try {
-                const { getUserQRSecret } = require('../../services/supabase/users');
-                const { generateQRPayload } = require('../../utils/totp');
-
-                const secret = await getUserQRSecret(user.id);
-                if (secret) {
-                    const payload = await generateQRPayload(user.id, secret);
-                    setQrValue(payload);
+                const payload = await getSignedLoyaltyQrPayload(user.id);
+                if (payload) {
+                    setQrValue(JSON.stringify(payload));
                 }
             } catch (err) {
-                console.error('QR Gen Error:', err);
+                console.warn('Unable to refresh loyalty QR payload:', err);
             }
         };
 
@@ -148,7 +177,9 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({ navigation }) => {
                     <View style={styles.statsRow}>
                         <View style={styles.statBoxSeparate}>
                             <Text style={styles.statValueLarge}>{stats.points.toLocaleString()}</Text>
-                            <Text style={styles.statLabelSmall}>{t('loyalty.points')} (R$)</Text>
+                            <Text style={styles.statLabelSmall}>
+                                {t('loyalty.pointsSpendable', 'POINTS (SPENDABLE)')}
+                            </Text>
                         </View>
                         <View style={[styles.statBoxSeparate, styles.statBoxAccent, { borderColor: levelConfig.primary }]}>
                             <Text style={[styles.statValueLarge, { color: levelConfig.primary }]}>{stats.xp.toLocaleString()}</Text>

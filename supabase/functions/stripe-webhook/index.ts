@@ -23,6 +23,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 type MembershipTier = "free" | "pro" | "club";
+type NotificationType = "general" | "event" | "points" | "order" | "friend" | "subscription";
 
 const normalizeTier = (value: string | null | undefined): MembershipTier | null => {
     if (!value) return null;
@@ -117,6 +118,33 @@ const refundShopOrderPointsIfNeeded = async (
     }
 
     return true;
+};
+
+const notifyUser = async (
+    supabase: ReturnType<typeof createClient>,
+    params: {
+        userId: string | null | undefined;
+        title: string;
+        body: string;
+        type: NotificationType;
+        data?: Record<string, unknown>;
+    }
+): Promise<void> => {
+    const userId = params.userId || null;
+    if (!userId) return;
+
+    const payload = params.data || {};
+
+    const { error } = await supabase.from("notifications").insert({
+        user_id: userId,
+        title: params.title,
+        body: params.body,
+        type: params.type,
+        data: payload,
+    });
+    if (error) {
+        console.error("Failed to insert notification in stripe-webhook:", error);
+    }
 };
 
 Deno.serve(async (req: Request) => {
@@ -312,11 +340,12 @@ Deno.serve(async (req: Request) => {
 
                     const { data: order } = await supabase
                         .from("orders")
-                        .select("id, user_id, total_amount")
+                        .select("id, user_id, total_amount, status")
                         .eq("stripe_payment_intent_id", paymentIntent.id)
                         .single();
 
                     if (order) {
+                        const previousStatus = String(order.status || "");
                         await supabase
                             .from("orders")
                             .update({
@@ -324,6 +353,16 @@ Deno.serve(async (req: Request) => {
                                 paid_at: new Date().toISOString(),
                             })
                             .eq("id", order.id);
+
+                        if (previousStatus !== "paid") {
+                            await notifyUser(supabase, {
+                                userId: order.user_id,
+                                title: "Order confirmed",
+                                body: "Your payment was confirmed. We'll prepare your order for pickup.",
+                                type: "order",
+                                data: { orderId: order.id, status: "paid" },
+                            });
+                        }
 
                         console.log(`Shop order ${order.id} marked as paid via webhook`);
                     } else {
@@ -353,7 +392,7 @@ Deno.serve(async (req: Request) => {
                 } else {
                     const { data: order } = await supabase
                         .from("orders")
-                        .select("id, status")
+                        .select("id, user_id, status")
                         .eq("stripe_payment_intent_id", paymentIntent.id)
                         .single();
 
@@ -362,6 +401,14 @@ Deno.serve(async (req: Request) => {
                             .from("orders")
                             .update({ status: "processing" })
                             .eq("id", order.id);
+
+                        await notifyUser(supabase, {
+                            userId: order.user_id,
+                            title: "Order in preparation",
+                            body: "Your order is being prepared and will be ready for pickup soon.",
+                            type: "order",
+                            data: { orderId: order.id, status: "processing" },
+                        });
                         console.log(`Shop order ${order.id} marked as processing`);
                     }
                 }
@@ -407,11 +454,12 @@ Deno.serve(async (req: Request) => {
 
                     const { data: order } = await supabase
                         .from("orders")
-                        .select("id, user_id, points_used, points_consumed_at, points_refunded_at")
+                        .select("id, user_id, status, points_used, points_consumed_at, points_refunded_at")
                         .eq("stripe_payment_intent_id", paymentIntent.id)
                         .single();
 
                     if (order) {
+                        const previousStatus = String(order.status || "");
                         await supabase
                             .from("orders")
                             .update({
@@ -426,6 +474,16 @@ Deno.serve(async (req: Request) => {
                             console.log(`Shop order ${order.id} failed/canceled, points refunded`);
                         } else {
                             console.log(`Shop order ${order.id} marked as failed/canceled (no points refund needed)`);
+                        }
+
+                        if (previousStatus !== "payment_failed") {
+                            await notifyUser(supabase, {
+                                userId: order.user_id,
+                                title: "Payment failed",
+                                body: "We couldn't process your order payment. Please try another payment method.",
+                                type: "order",
+                                data: { orderId: order.id, status: "payment_failed" },
+                            });
                         }
                     } else {
                         console.warn(`No shop order found for failed/canceled payment_intent: ${paymentIntent.id}`);
@@ -442,11 +500,12 @@ Deno.serve(async (req: Request) => {
                 // Try shop orders first
                 const { data: shopOrder } = await supabase
                     .from("orders")
-                    .select("id, user_id, points_used, points_consumed_at, points_refunded_at")
+                    .select("id, user_id, status, points_used, points_consumed_at, points_refunded_at")
                     .eq("stripe_payment_intent_id", piId)
                     .single();
 
                 if (shopOrder) {
+                    const previousStatus = String(shopOrder.status || "");
                     await supabase
                         .from("orders")
                         .update({ status: "refunded" })
@@ -457,6 +516,16 @@ Deno.serve(async (req: Request) => {
                         console.log(`Shop order ${shopOrder.id} marked as refunded and points refunded`);
                     } else {
                         console.log(`Shop order ${shopOrder.id} marked as refunded`);
+                    }
+
+                    if (previousStatus !== "refunded") {
+                        await notifyUser(supabase, {
+                            userId: shopOrder.user_id,
+                            title: "Order refunded",
+                            body: "Your order has been refunded.",
+                            type: "order",
+                            data: { orderId: shopOrder.id, status: "refunded" },
+                        });
                     }
                     break;
                 }
@@ -486,15 +555,26 @@ Deno.serve(async (req: Request) => {
                 // Flag the order for admin review
                 const { data: shopOrder } = await supabase
                     .from("orders")
-                    .select("id")
+                    .select("id, user_id, status")
                     .eq("stripe_payment_intent_id", piId)
                     .single();
 
                 if (shopOrder) {
+                    const previousStatus = String(shopOrder.status || "");
                     await supabase
                         .from("orders")
                         .update({ status: "disputed" })
                         .eq("id", shopOrder.id);
+
+                    if (previousStatus !== "disputed") {
+                        await notifyUser(supabase, {
+                            userId: shopOrder.user_id,
+                            title: "Order under review",
+                            body: "Your payment was flagged for review. Our team will contact you if needed.",
+                            type: "order",
+                            data: { orderId: shopOrder.id, status: "disputed" },
+                        });
+                    }
                     console.log(`Shop order ${shopOrder.id} flagged as disputed`);
                     break;
                 }

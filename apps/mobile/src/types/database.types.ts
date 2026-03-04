@@ -88,6 +88,7 @@ export interface Event {
   event_type: EventType;
   points_value: number;
   event_datetime: string;
+  max_participants?: number | null;
   location_lat: number;
   location_lng: number;
   location_name: string | null;

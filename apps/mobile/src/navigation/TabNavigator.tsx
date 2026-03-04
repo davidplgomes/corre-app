@@ -27,7 +27,6 @@ import { Friends } from '../screens/profile/Friends';
 import { UserProfile } from '../screens/profile/UserProfile';
 import { GuestPassScreen } from '../screens/profile/GuestPassScreen';
 import { WelcomeKitScreen } from '../screens/profile/WelcomeKitScreen';
-import { RunTracker } from '../screens/runs/RunTracker';
 import { MarketplaceScreen } from '../screens/marketplace/MarketplaceScreen';
 import { ProductDetail } from '../screens/marketplace/ProductDetail';
 import { CreateListing } from '../screens/marketplace/CreateListing';
@@ -98,7 +97,6 @@ export type ProfileStackParamList = {
     ChangePassword: undefined;
     ChangeEmail: undefined;
     RunHistory: undefined;
-    RunTracker: undefined;
     Achievements: undefined;
     RunMap: { run: any } | undefined;
     Friends: undefined;
@@ -201,7 +199,6 @@ const ProfileStackNavigator: React.FC = () => (
         <ProfileStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <ProfileStack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
         <ProfileStack.Screen name="RunHistory" component={RunHistory} />
-        <ProfileStack.Screen name="RunTracker" component={RunTracker} />
         <ProfileStack.Screen name="Achievements" component={Achievements} />
         <ProfileStack.Screen name="RunMap" component={RunMap} />
         <ProfileStack.Screen name="Friends" component={Friends} />

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
             );
         }
 
-        if (['picked_up', 'delivered'].includes(currentStatus) && nextStatus !== 'disputed') {
+        if (currentStatus === 'picked_up' && nextStatus !== 'disputed') {
             return NextResponse.json(
                 { error: 'Picked up orders can only transition to disputed manually.' },
                 { status: 400 }

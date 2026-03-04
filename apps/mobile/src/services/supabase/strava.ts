@@ -148,18 +148,7 @@ export const connectStrava = async (): Promise<{ success: boolean; error?: strin
  * Use disconnectStravaComplete() for full deauthorization
  */
 export const disconnectStrava = async (): Promise<boolean> => {
-    try {
-        const { error } = await supabase
-            .from('strava_connections')
-            .delete()
-            .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error disconnecting Strava:', error);
-        return false;
-    }
+    return disconnectStravaComplete();
 };
 
 /**
@@ -168,54 +157,16 @@ export const disconnectStrava = async (): Promise<boolean> => {
  */
 export const disconnectStravaComplete = async (): Promise<boolean> => {
     try {
-        // Get current connection to get access token
-        const { data: connection, error: connError } = await supabase
-            .from('strava_connections')
-            .select('access_token')
-            .maybeSingle();
+        const { data, error } = await supabase.functions.invoke('strava-disconnect', {
+            body: {},
+        });
 
-        if (connError) throw connError;
-
-        // If we have a token, deauthorize on Strava side
-        if (connection?.access_token) {
-            try {
-                const response = await fetch('https://www.strava.com/oauth/deauthorize', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${connection.access_token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                if (response.ok) {
-                    console.log('Deauthorized on Strava side successfully');
-                } else {
-                    console.warn(`Strava deauth failed with status ${response.status} (continuing with local delete)`);
-                }
-            } catch (stravaError) {
-                // Continue anyway - we'll delete our local data
-                console.warn('Strava deauth API call failed (continuing with local delete):', stravaError);
-            }
+        if (error) {
+            console.error('Error invoking secure Strava disconnect:', error);
+            return false;
         }
 
-        // Delete local connection and activities
-        const userId = (await supabase.auth.getUser()).data.user?.id;
-        if (!userId) throw new Error('User not authenticated');
-
-        // Delete activities first (due to potential FK constraints)
-        await supabase
-            .from('strava_activities')
-            .delete()
-            .eq('user_id', userId);
-
-        // Delete connection
-        const { error: deleteError } = await supabase
-            .from('strava_connections')
-            .delete()
-            .eq('user_id', userId);
-
-        if (deleteError) throw deleteError;
-
-        return true;
+        return Boolean(data?.success);
     } catch (error) {
         console.error('Error disconnecting Strava completely:', error);
         return false;
@@ -367,6 +318,7 @@ export const triggerStravaSync = async (): Promise<{
     success: boolean;
     activitiesSynced?: number;
     pointsAwarded?: number;
+    xpAwarded?: number;
     error?: string
 }> => {
     try {
@@ -384,6 +336,7 @@ export const triggerStravaSync = async (): Promise<{
             success: true,
             activitiesSynced: data?.activities_synced || 0,
             pointsAwarded: data?.points_awarded || 0,
+            xpAwarded: data?.xp_awarded || 0,
         };
     } catch (error: any) {
         // If the function doesn't exist yet, return a helpful message

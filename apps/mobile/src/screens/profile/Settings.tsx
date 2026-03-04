@@ -17,7 +17,13 @@ import { theme } from '../../constants/theme';
 import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { BackButton, Button } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
-import { updatePrivacySettings, getPrivacySetting, PrivacyVisibility } from '../../services/supabase/users';
+import {
+    getNotificationPreference,
+    getPrivacySetting,
+    PrivacyVisibility,
+    updateNotificationPreference,
+    updatePrivacySettings,
+} from '../../services/supabase/users';
 import {
     connectStrava,
     disconnectStravaComplete,
@@ -25,6 +31,12 @@ import {
     StravaConnection,
     triggerStravaSync,
 } from '../../services/supabase/strava';
+import {
+    cancelAllNotifications,
+    clearPushToken,
+    registerForPushNotificationsAsync,
+    savePushToken,
+} from '../../services/notifications';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -70,7 +82,8 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
         try {
             await Promise.all([
                 checkStravaConnection(),
-                getPrivacySetting(profile.id).then(setPrivacyVisibility)
+                getPrivacySetting(profile.id).then(setPrivacyVisibility),
+                getNotificationPreference(profile.id).then(setNotificationsEnabled),
             ]);
         } catch (error) {
             console.error('Error refreshing settings:', error);
@@ -89,28 +102,43 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
             const result = await triggerStravaSync();
 
             if (!result.success) {
-                Alert.alert(t('common.error'), result.error || 'Failed to sync Strava activities');
+                Alert.alert(t('common.error'), result.error || t('strava.syncFailed', 'Failed to sync Strava activities'));
                 return;
             }
 
             const activitiesSynced = result.activitiesSynced || 0;
             const pointsAwarded = result.pointsAwarded || 0;
+            const xpAwarded = result.xpAwarded || 0;
             setLastSyncedAt(new Date().toISOString());
 
             if (activitiesSynced === 0) {
-                Alert.alert(t('common.success'), 'No new activities found on Strava.');
+                Alert.alert(t('common.success'), t('strava.noNewActivities', 'No new activities found on Strava.'));
                 return;
             }
 
             Alert.alert(
                 t('common.success'),
-                pointsAwarded > 0
-                    ? `${activitiesSynced} activities synced. You earned ${pointsAwarded} points.`
-                    : `${activitiesSynced} activities synced successfully.`
+                xpAwarded > 0
+                    ? t('strava.syncSuccessWithPointsAndXp', {
+                        count: activitiesSynced,
+                        points: pointsAwarded,
+                        xp: xpAwarded,
+                        defaultValue: `${activitiesSynced} activities synced. You earned ${pointsAwarded} points and ${xpAwarded} XP.`,
+                    })
+                    : pointsAwarded > 0
+                    ? t('strava.syncSuccessWithPoints', {
+                        count: activitiesSynced,
+                        points: pointsAwarded,
+                        defaultValue: `${activitiesSynced} activities synced. You earned ${pointsAwarded} points.`,
+                    })
+                    : t('strava.syncSuccess', {
+                        count: activitiesSynced,
+                        defaultValue: `${activitiesSynced} activities synced successfully.`,
+                    })
             );
         } catch (error) {
             console.error('Manual Strava sync error:', error);
-            Alert.alert(t('common.error'), 'Failed to sync Strava activities');
+            Alert.alert(t('common.error'), t('strava.syncFailed', 'Failed to sync Strava activities'));
         } finally {
             setStravaSyncing(false);
         }
@@ -162,6 +190,13 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
     const loadSettings = async () => {
         try {
+            if (profile?.id) {
+                const remoteEnabled = await getNotificationPreference(profile.id);
+                setNotificationsEnabled(remoteEnabled);
+                await AsyncStorage.setItem('@corre:notificationsEnabled', String(remoteEnabled));
+                return;
+            }
+
             const storedNotifications = await AsyncStorage.getItem('@corre:notificationsEnabled');
 
 
@@ -193,11 +228,33 @@ export const Settings: React.FC<SettingsProps> = ({ navigation }) => {
 
     const handleToggleNotifications = async (value: boolean) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const previousValue = notificationsEnabled;
         setNotificationsEnabled(value);
         try {
+            if (profile?.id) {
+                await updateNotificationPreference(profile.id, value);
+            }
             await AsyncStorage.setItem('@corre:notificationsEnabled', String(value));
+            if (profile?.id) {
+                if (value) {
+                    const token = await registerForPushNotificationsAsync();
+                    if (token) {
+                        await savePushToken(profile.id, token);
+                    }
+                } else {
+                    await Promise.all([
+                        clearPushToken(profile.id),
+                        cancelAllNotifications(),
+                    ]);
+                }
+            }
         } catch (error) {
             console.error('Failed to save notifications setting:', error);
+            setNotificationsEnabled(previousValue);
+            Alert.alert(
+                t('common.error'),
+                t('settings.notificationsSaveError', 'Could not update notification settings. Please try again.')
+            );
         }
     };
 

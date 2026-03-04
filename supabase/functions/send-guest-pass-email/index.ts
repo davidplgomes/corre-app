@@ -21,6 +21,13 @@ serve(async (req) => {
   }
 
   try {
+    if (!RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'Email service is not configured (missing RESEND_API_KEY)' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { guestPassId }: GuestPassEmailRequest = await req.json();
@@ -38,7 +45,7 @@ serve(async (req) => {
       .select(`
         *,
         host:user_id (full_name, email),
-        event:event_id (title, event_datetime, location)
+        event:event_id (title, event_datetime, location_name, location)
       `)
       .eq('id', guestPassId)
       .single();
@@ -70,6 +77,8 @@ serve(async (req) => {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+    const eventLocation = guestPass.event?.location_name || guestPass.event?.location || null;
 
     // Send email via Resend
     const emailResponse = await fetch('https://api.resend.com/emails', {
@@ -112,9 +121,9 @@ serve(async (req) => {
                   <p style="color: rgba(255,255,255,0.9); margin: 0 0 8px 0;">
                     <strong>Time:</strong> ${formattedTime}
                   </p>
-                  ${guestPass.event.location ? `
+                  ${eventLocation ? `
                   <p style="color: rgba(255,255,255,0.9); margin: 0;">
-                    <strong>Location:</strong> ${guestPass.event.location}
+                    <strong>Location:</strong> ${eventLocation}
                   </p>
                   ` : ''}
                 </div>

@@ -17,7 +17,6 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { getUserRuns } from '../../services/supabase/runs';
 import { getStravaActivities } from '../../services/supabase/strava';
 import { TrophyIcon } from '../../components/common/TabIcons';
 
@@ -56,24 +55,13 @@ export const PersonalRecords: React.FC<PersonalRecordsProps> = ({ navigation }) 
         if (!user?.id) return;
 
         try {
-            const [manualRuns, stravaActivities] = await Promise.all([
-                getUserRuns(user.id).catch(() => []),
-                getStravaActivities(200).catch(() => []),
-            ]);
+            const stravaActivities = await getStravaActivities(200).catch(() => []);
 
-            // Combine all activities
-            const allActivities = [
-                ...manualRuns.map((run: any) => ({
-                    date: run.created_at || run.started_at,
-                    distance: run.distance_km || 0,
-                    time: run.duration_seconds || 0,
-                })),
-                ...stravaActivities.map((activity: any) => ({
-                    date: activity.start_date,
-                    distance: (activity.distance_meters || 0) / 1000,
-                    time: activity.moving_time_seconds || 0,
-                })),
-            ];
+            const allActivities = stravaActivities.map((activity: any) => ({
+                date: activity.start_date,
+                distance: (activity.distance_meters || 0) / 1000,
+                time: activity.moving_time_seconds || 0,
+            }));
 
             // Calculate PRs for each distance
             const prs: PRRecord[] = PR_DISTANCES.map(({ name, km }) => {

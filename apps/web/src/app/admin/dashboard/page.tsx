@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid } from 'recharts';
@@ -9,6 +9,10 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import DashboardLocations from '@/components/admin/dashboard-locations';
+import enMessages from '../../../../messages/en.json';
+import ptMessages from '../../../../messages/pt.json';
+import esMessages from '../../../../messages/es.json';
+import { DashboardLocale, detectDashboardLocale, translate } from '@/lib/dashboardTranslations';
 
 type DashboardEvent = {
     id: string;
@@ -53,7 +57,8 @@ function buildActivityChart(runs: Array<{ started_at?: string | null; created_at
 }
 
 function buildRevenueChart(
-    txns: Array<{ created_at?: string | null; amount?: number | null }>
+    txns: Array<{ created_at?: string | null; amount?: number | null }>,
+    locale: string
 ): RevenuePoint[] {
     const now = new Date();
     const output: RevenuePoint[] = [];
@@ -73,7 +78,7 @@ function buildRevenueChart(
         });
 
         output.push({
-            day: dayStart.toLocaleDateString('en-IE', { weekday: 'short' }),
+            day: dayStart.toLocaleDateString(locale, { weekday: 'short' }),
             revenue: daily.reduce((sum, txn) => sum + (Number(txn.amount) || 0), 0) / 100,
             orders: daily.length,
         });
@@ -89,7 +94,32 @@ function calculateChangePercent(current: number, previous: number): number {
     return ((current - previous) / previous) * 100;
 }
 
+const ADMIN_DICTIONARIES: Record<DashboardLocale, Record<string, unknown>> = {
+    en: (enMessages as Record<string, Record<string, unknown>>).AdminDashboard ?? {},
+    pt: (ptMessages as Record<string, Record<string, unknown>>).AdminDashboard ?? {},
+    es: (esMessages as Record<string, Record<string, unknown>>).AdminDashboard ?? {},
+};
+
 export default function AdminDashboardPage() {
+    const [chartsMounted, setChartsMounted] = useState(false);
+    const [locale, setLocale] = useState<DashboardLocale>('en');
+    const dictionary = useMemo(
+        () => ADMIN_DICTIONARIES[locale] || ADMIN_DICTIONARIES.en,
+        [locale]
+    );
+    const t = useCallback(
+        (path: string, values: Record<string, string | number> = {}) =>
+            translate(dictionary, path, values),
+        [dictionary]
+    );
+
+    useEffect(() => {
+        setLocale(detectDashboardLocale());
+    }, []);
+
+    useEffect(() => {
+        setChartsMounted(true);
+    }, []);
     const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
     const [isGenerating, setIsGenerating] = useState(false);
     const [data, setData] = useState({
@@ -207,16 +237,16 @@ export default function AdminDashboardPage() {
                     ),
                     events,
                     activityChart: buildActivityChart(runs),
-                    revenueChart: buildRevenueChart(txns),
+                    revenueChart: buildRevenueChart(txns, locale),
                 }));
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
-                toast.error("Failed to load dashboard data");
+                toast.error(t('toast.loadError'));
             }
         };
 
         fetchDashboardData();
-    }, [timeRange]); // Re-run when filter changes
+    }, [locale, t, timeRange]); // Re-run when filter changes
 
     const handleGenerateReport = async () => {
         if (isGenerating) return;
@@ -224,17 +254,17 @@ export default function AdminDashboardPage() {
 
         try {
             // Generate Real CSV
-            const headers = ['Metric', 'Value', 'Generated At'];
+            const headers = [t('csv.metric'), t('csv.value'), t('csv.generatedAt')];
             const rows = [
-                ['Total Users', data.totalUsers, new Date().toISOString()],
-                ['New Users (Period)', data.newUsers, new Date().toISOString()],
-                ['Active Runners', data.activeRunners, new Date().toISOString()],
-                ['Total Revenue', `€${data.revenue}`, new Date().toISOString()],
+                [t('csv.totalUsers'), data.totalUsers, new Date().toISOString()],
+                [t('csv.newUsersPeriod'), data.newUsers, new Date().toISOString()],
+                [t('csv.activeRunners'), data.activeRunners, new Date().toISOString()],
+                [t('csv.totalRevenue'), `€${data.revenue}`, new Date().toISOString()],
             ];
 
             data.events.forEach((event) => {
                 rows.push([
-                    'Upcoming Event',
+                    t('csv.upcomingEvent'),
                     `${event.title} (${event.event_type})`,
                     new Date(event.event_datetime).toISOString(),
                 ]);
@@ -252,9 +282,9 @@ export default function AdminDashboardPage() {
             link.click();
             document.body.removeChild(link);
 
-            toast.success("Report downloaded successfully");
+            toast.success(t('toast.reportDownloaded'));
         } catch (e) {
-            toast.error("Failed to generate report");
+            toast.error(t('toast.reportFailed'));
         } finally {
             setIsGenerating(false);
         }
@@ -268,10 +298,12 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl md:text-4xl font-bold text-white tracking-tight uppercase mb-2">
-                        Overview
+                        {t('title')}
                     </h1>
                     <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-white/40">{new Date().toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' })} • Dublin, IE</span>
+                        <span className="text-sm font-medium text-white/40">
+                            {new Date().toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })} • {t('location')}
+                        </span>
                     </div>
                 </div>
 
@@ -280,12 +312,12 @@ export default function AdminDashboardPage() {
                         onClick={() => {
                             const newRange = timeRange === '7d' ? '30d' : '7d';
                             setTimeRange(newRange);
-                            toast.info(`Switched to Last ${newRange === '7d' ? '7' : '30'} Days view`);
+                            toast.info(t('toast.switchRange', { days: newRange === '7d' ? '7' : '30' }));
                         }}
                         className="h-10 flex-1 lg:flex-none px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors flex items-center justify-center gap-2 active:scale-95 duration-100 whitespace-nowrap"
                     >
                         <Calendar className="w-4 h-4 text-white/60" />
-                        <span>Last {timeRange === '7d' ? '7' : '30'} Days</span>
+                        <span>{t('range.lastDays', { days: timeRange === '7d' ? '7' : '30' })}</span>
                     </button>
                     <button
                         onClick={handleGenerateReport}
@@ -295,7 +327,7 @@ export default function AdminDashboardPage() {
                             isGenerating ? "bg-orange-500/50 cursor-not-allowed" : "bg-[#FF5722] hover:bg-[#F4511E]"
                         )}
                     >
-                        {isGenerating ? 'Generating...' : 'Generate Report'}
+                        {isGenerating ? t('actions.generating') : t('actions.generateReport')}
                     </button>
                 </div>
             </div>
@@ -307,18 +339,18 @@ export default function AdminDashboardPage() {
                         <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Total Revenue</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.totalRevenue')}</p>
                                 <DollarSign className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">
-                                {data.revenue.toLocaleString('en-IE', { style: 'currency', currency: 'EUR' })}
+                                {data.revenue.toLocaleString(locale, { style: 'currency', currency: 'EUR' })}
                             </h3>
                         </div>
                         <div>
                             <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 ${data.revenueChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
                                 {data.revenueChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 <span>{data.revenueChangePct >= 0 ? '+' : ''}{data.revenueChangePct}%</span>
-                                <span className="text-white/20 font-medium">vs last period</span>
+                                <span className="text-white/20 font-medium">{t('labels.vsLastPeriod')}</span>
                             </div>
                             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                                 <div className="h-full w-[70%] bg-[#FF5722] rounded-full" />
@@ -331,7 +363,7 @@ export default function AdminDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Active Runners</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.activeRunners')}</p>
                                 <Activity className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.activeRunners.toLocaleString()}</h3>
@@ -340,7 +372,7 @@ export default function AdminDashboardPage() {
                         <div className={`flex items-center gap-1.5 text-xs font-bold mb-2 ${data.activeRunnersChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
                             {data.activeRunnersChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                             <span>{data.activeRunnersChangePct >= 0 ? '+' : ''}{data.activeRunnersChangePct}%</span>
-                            <span className="text-white/20 font-medium">vs last period</span>
+                            <span className="text-white/20 font-medium">{t('labels.vsLastPeriod')}</span>
                         </div>
                         <div className="h-10 flex items-end gap-1">
                             {data.activityChart.map((point) => (
@@ -358,7 +390,7 @@ export default function AdminDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">New Signups</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.newSignups')}</p>
                                 <Users className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.newUsers}</h3>
@@ -367,7 +399,7 @@ export default function AdminDashboardPage() {
                             <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 ${data.signupChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
                                 {data.signupChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 <span>{data.signupChangePct >= 0 ? '+' : ''}{data.signupChangePct}%</span>
-                                <span className="text-white/20 font-medium">{timeRange === '7d' ? 'last 7 days' : 'last 30 days'}</span>
+                                <span className="text-white/20 font-medium">{t('range.lastDaysLower', { days: timeRange === '7d' ? '7' : '30' })}</span>
                             </div>
                             {/* Mini Avatars */}
                             <div className="flex -space-x-2 mt-2">
@@ -385,7 +417,7 @@ export default function AdminDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">System Health</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.systemHealth')}</p>
                                 <Server className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.systemHealth.toFixed(1)}%</h3>
@@ -398,7 +430,7 @@ export default function AdminDashboardPage() {
                                 <div className="w-2 bg-white/20 rounded-full" />
                             </div>
                         </div>
-                        <p className="text-xs text-white/30 mt-1">{data.avgLatency} avg latency</p>
+                        <p className="text-xs text-white/30 mt-1">{t('metrics.avgLatency', { value: data.avgLatency })}</p>
                     </GlassCard>
                 </div>
             </div>
@@ -410,40 +442,44 @@ export default function AdminDashboardPage() {
                 <GlassCard className="w-full lg:col-span-8 p-6 flex flex-col h-[300px] lg:h-full">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h3 className="text-lg font-bold text-white uppercase tracking-tight">Live Activity</h3>
-                            <p className="text-xs text-white/40 font-medium mt-1">Real-time user engagement across tracked events.</p>
+                            <h3 className="text-lg font-bold text-white uppercase tracking-tight">{t('sections.liveActivity.title')}</h3>
+                            <p className="text-xs text-white/40 font-medium mt-1">{t('sections.liveActivity.description')}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-1 rounded bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-bold uppercase tracking-wider">Runners</span>
-                            <span className="px-2 py-1 rounded bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-wider">Spectators</span>
+                            <span className="px-2 py-1 rounded bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-bold uppercase tracking-wider">{t('sections.liveActivity.runners')}</span>
+                            <span className="px-2 py-1 rounded bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-wider">{t('sections.liveActivity.spectators')}</span>
                         </div>
                     </div>
 
                     <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.activityChart}>
-                                <defs>
-                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
-                                        <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#FF5722' }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="val"
-                                    stroke="#FF5722"
-                                    strokeWidth={3}
-                                    fill="url(#chartGradient)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {chartsMounted ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={data.activityChart}>
+                                    <defs>
+                                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#FF5722' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="val"
+                                        stroke="#FF5722"
+                                        strokeWidth={3}
+                                        fill="url(#chartGradient)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full w-full" />
+                        )}
                     </div>
                 </GlassCard>
 
@@ -460,12 +496,12 @@ export default function AdminDashboardPage() {
                     <GlassCard className="col-span-1 p-6 cursor-pointer hover:border-[#FF5722]/30 transition-all flex flex-col h-[300px] lg:h-auto">
                         <div className="flex justify-between items-start mb-6">
                             <div>
-                                <h3 className="text-sm font-bold text-white uppercase">Weekly Revenue</h3>
-                                <p className="text-xs text-white/40 mt-1">Succeeded transactions</p>
+                                <h3 className="text-sm font-bold text-white uppercase">{t('sections.weeklyRevenue.title')}</h3>
+                                <p className="text-xs text-white/40 mt-1">{t('sections.weeklyRevenue.subtitle')}</p>
                             </div>
                             <div className="text-right">
                                 <span className="block text-lg font-bold text-white">
-                                    {data.revenue.toLocaleString('en-IE', { style: 'currency', currency: 'EUR' })}
+                                    {data.revenue.toLocaleString(locale, { style: 'currency', currency: 'EUR' })}
                                 </span>
                                 <span className={`text-xs font-bold flex items-center justify-end gap-1 ${data.revenueChangePct >= 0 ? 'text-[#FF5722]' : 'text-red-400'}`}>
                                     {data.revenueChangePct >= 0 ? <TrendingUp className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -474,20 +510,24 @@ export default function AdminDashboardPage() {
                             </div>
                         </div>
                         <div className="flex-1 w-full min-h-[140px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data.revenueChart} barSize={8}>
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Bar dataKey="revenue" fill="#fff" radius={[2, 2, 0, 0]}>
-                                        {data.revenueChart.map((entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={index === 5 || index === 6 ? '#FF5722' : 'rgba(255,255,255,0.2)'} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                            {chartsMounted ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={data.revenueChart} barSize={8}>
+                                        <Tooltip
+                                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                            contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Bar dataKey="revenue" fill="#fff" radius={[2, 2, 0, 0]}>
+                                            {data.revenueChart.map((entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={index === 5 || index === 6 ? '#FF5722' : 'rgba(255,255,255,0.2)'} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full w-full" />
+                            )}
                         </div>
                     </GlassCard>
                 </Link>
@@ -496,9 +536,9 @@ export default function AdminDashboardPage() {
                 <div className="lg:col-span-2 contents">
                     <GlassCard className="lg:col-span-2 p-0 flex flex-col">
                         <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                            <h3 className="text-sm font-bold text-white uppercase">Upcoming Events</h3>
+                            <h3 className="text-sm font-bold text-white uppercase">{t('sections.upcomingEvents.title')}</h3>
                             <Link href="/admin/dashboard/events">
-                                <button className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View Schedule</button>
+                                <button className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">{t('actions.viewSchedule')}</button>
                             </Link>
                         </div>
                         <div className="flex-1 p-2">
@@ -513,9 +553,9 @@ export default function AdminDashboardPage() {
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <p className="text-xs text-white/40 flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
-                                                    {new Date(event.event_datetime).toLocaleDateString('en-IE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(event.event_datetime).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </p>
-                                                <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location_name || 'TBA'}</p>
+                                                <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location_name || t('labels.tba')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -524,12 +564,12 @@ export default function AdminDashboardPage() {
                                             }`}>
                                             {event.event_type}
                                         </span>
-                                        <span className="text-xs text-white/30 font-medium">+{event.points_value} pts</span>
+                                        <span className="text-xs text-white/30 font-medium">+{event.points_value} {t('labels.pointsShort')}</span>
                                     </div>
                                 </Link>
                             )) : (
                                 <div className="p-8 text-center text-white/40 text-xs text-center border-t border-white/5">
-                                    No scheduled events found in database.
+                                    {t('empty.noScheduledEvents')}
                                 </div>
                             )}
                         </div>

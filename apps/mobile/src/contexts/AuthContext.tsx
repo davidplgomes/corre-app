@@ -3,6 +3,7 @@ import { supabase, Session, User } from '@services/supabase/client';
 import { UserProfile } from '../types/user.types';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
+import { clearPushToken } from '../services/notifications';
 
 const TRUSTED_WEB_AUTH_HOST = 'corre-app-web.vercel.app';
 const TRUSTED_SUPABASE_HOST_SUFFIX = '.supabase.co';
@@ -151,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, full_name, neighborhood, bio, city, instagram_handle, avatar_url, membership_tier, current_month_points, total_lifetime_points, current_xp, language_preference, is_merchant, onboarding_completed, created_at, updated_at')
         .eq('id', userId)
         .single();
 
@@ -172,8 +173,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           membershipTier: data.membership_tier,
           currentMonthPoints: data.current_month_points,
           totalLifetimePoints: data.total_lifetime_points,
+          current_xp: data.current_xp ?? 0,
+          current_points: data.current_month_points ?? 0,
           languagePreference: data.language_preference,
-          qrCodeSecret: data.qr_code_secret,
+          qrCodeSecret: '',
           isMerchant: data.is_merchant,
           onboardingCompleted: data.onboarding_completed ?? false,
           createdAt: new Date(data.created_at),
@@ -235,6 +238,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      if (user?.id) {
+        try {
+          await clearPushToken(user.id);
+        } catch (pushError) {
+          console.warn('[Auth] Could not clear push token on sign out:', pushError);
+        }
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setProfile(null);

@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userRow, error: userError } = await supabase
       .from("users")
-      .select("id, email, membership_tier")
+      .select("id, email")
       .eq("id", user.id)
       .single();
 
@@ -190,8 +190,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const membershipTier = String(userRow.membership_tier || "free").toLowerCase().trim();
-    const membershipCap = membershipTier === "free" ? 0 : Math.floor(subtotalCents * 0.2);
+    // Plans and points are decoupled: points discount cap applies independently of plan tier.
+    const membershipCap = Math.floor(subtotalCents * 0.2);
 
     const { data: availablePointsRaw, error: pointsError } = await supabase.rpc("get_available_points", {
       p_user_id: user.id,

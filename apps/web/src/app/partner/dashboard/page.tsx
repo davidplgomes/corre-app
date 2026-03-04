@@ -1,24 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase';
 import { GlassCard } from '@/components/ui/glass-card';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, CartesianGrid } from 'recharts';
 import { ArrowUpRight, MapPin, Calendar, Tag, Activity, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getPartnerPlaces } from '@/lib/services/places';
 import { getPartnerCoupons, getPartnerCouponStats } from '@/lib/services/coupons';
 import { getEventsByCreator } from '@/lib/services/events';
 import type { PartnerPlace, PartnerCoupon, Event } from '@/types';
+import enMessages from '../../../../messages/en.json';
+import ptMessages from '../../../../messages/pt.json';
+import esMessages from '../../../../messages/es.json';
+import { DashboardLocale, detectDashboardLocale, translate } from '@/lib/dashboardTranslations';
 
 type ActivityPoint = {
     time: string;
     val: number;
 };
 
-function buildActivityChart(range: '7d' | '30d', redemptionDates: string[]): ActivityPoint[] {
+function buildActivityChart(range: '7d' | '30d', redemptionDates: string[], locale: string): ActivityPoint[] {
     const days = range === '7d' ? 7 : 30;
     const now = new Date();
     const points: ActivityPoint[] = [];
@@ -38,8 +41,8 @@ function buildActivityChart(range: '7d' | '30d', redemptionDates: string[]): Act
 
         points.push({
             time: range === '7d'
-                ? dayStart.toLocaleDateString('en-US', { weekday: 'short' })
-                : dayStart.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+                ? dayStart.toLocaleDateString(locale, { weekday: 'short' })
+                : dayStart.toLocaleDateString(locale, { month: 'numeric', day: 'numeric' }),
             val,
         });
     }
@@ -47,7 +50,32 @@ function buildActivityChart(range: '7d' | '30d', redemptionDates: string[]): Act
     return points;
 }
 
+const PARTNER_DICTIONARIES: Record<DashboardLocale, Record<string, unknown>> = {
+    en: (enMessages as Record<string, Record<string, unknown>>).PartnerDashboard ?? {},
+    pt: (ptMessages as Record<string, Record<string, unknown>>).PartnerDashboard ?? {},
+    es: (esMessages as Record<string, Record<string, unknown>>).PartnerDashboard ?? {},
+};
+
 export default function PartnerDashboardPage() {
+    const [chartsMounted, setChartsMounted] = useState(false);
+    const [locale, setLocale] = useState<DashboardLocale>('en');
+    const dictionary = useMemo(
+        () => PARTNER_DICTIONARIES[locale] || PARTNER_DICTIONARIES.en,
+        [locale]
+    );
+    const t = useCallback(
+        (path: string, values: Record<string, string | number> = {}) =>
+            translate(dictionary, path, values),
+        [dictionary]
+    );
+
+    useEffect(() => {
+        setLocale(detectDashboardLocale());
+    }, []);
+
+    useEffect(() => {
+        setChartsMounted(true);
+    }, []);
     const [timeRange, setTimeRange] = useState<'7d' | '30d'>('7d');
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({
@@ -99,18 +127,18 @@ export default function PartnerDashboardPage() {
                     places: placesData,
                     coupons: couponsData,
                     events: eventsData,
-                    activityChart: buildActivityChart(timeRange, redemptionDates)
+                    activityChart: buildActivityChart(timeRange, redemptionDates, locale)
                 });
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
-                toast.error("Failed to load dashboard data");
+                toast.error(t('toast.loadError'));
             } finally {
                 setLoading(false);
             }
         };
 
         fetchDashboardData();
-    }, [timeRange]);
+    }, [locale, t, timeRange]);
 
     if (loading) {
         return (
@@ -126,10 +154,12 @@ export default function PartnerDashboardPage() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight uppercase mb-2">
-                        Overview
+                        {t('title')}
                     </h1>
                     <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-white/40">{new Date().toLocaleDateString('en-IE', { weekday: 'short', month: 'short', day: 'numeric' })} • Partner Portal</span>
+                        <span className="text-sm font-medium text-white/40">
+                            {new Date().toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })} • {t('portal')}
+                        </span>
                     </div>
                 </div>
 
@@ -138,18 +168,18 @@ export default function PartnerDashboardPage() {
                         onClick={() => {
                             const newRange = timeRange === '7d' ? '30d' : '7d';
                             setTimeRange(newRange);
-                            toast.info(`Switched to Last ${newRange === '7d' ? '7' : '30'} Days view`);
+                            toast.info(t('toast.switchRange', { days: newRange === '7d' ? '7' : '30' }));
                         }}
                         className="h-10 flex-1 lg:flex-none px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-colors flex items-center justify-center gap-2 active:scale-95 duration-100"
                     >
                         <Calendar className="w-4 h-4 text-white/60" />
-                        <span>Last {timeRange === '7d' ? '7' : '30'} Days</span>
+                        <span>{t('range.lastDays', { days: timeRange === '7d' ? '7' : '30' })}</span>
                     </button>
                     <Link href="/partner/dashboard/coupons/new" className="flex-1 lg:flex-none">
                         <button
                             className="h-10 w-full px-4 bg-[#FF5722] hover:bg-[#F4511E] rounded-lg text-sm font-bold text-white transition-all shadow-lg shadow-orange-500/20 active:scale-95 transform duration-100"
                         >
-                            Create Coupon
+                            {t('actions.createCoupon')}
                         </button>
                     </Link>
                 </div>
@@ -162,7 +192,7 @@ export default function PartnerDashboardPage() {
                         <div className="absolute right-0 top-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity opacity-50 group-hover:opacity-100" />
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Total Redemptions</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.totalRedemptions')}</p>
                                 <Tag className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">
@@ -172,8 +202,8 @@ export default function PartnerDashboardPage() {
                         <div>
                             <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
                                 <ArrowUpRight className="w-3 h-3" />
-                                <span>Views</span>
-                                <span className="text-white/20 font-medium">Analytics</span>
+                                <span>{t('labels.views')}</span>
+                                <span className="text-white/20 font-medium">{t('labels.analytics')}</span>
                             </div>
                             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                                 <div className="h-full w-[70%] bg-[#FF5722] rounded-full" />
@@ -186,7 +216,7 @@ export default function PartnerDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Active Coupons</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.activeCoupons')}</p>
                                 <Activity className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.activeCoupons}</h3>
@@ -203,7 +233,7 @@ export default function PartnerDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Upcoming Events</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.upcomingEvents')}</p>
                                 <Calendar className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.upcomingEvents}</h3>
@@ -211,7 +241,7 @@ export default function PartnerDashboardPage() {
                         <div>
                             <div className="flex items-center gap-1.5 text-[#FF5722] text-xs font-bold mb-1">
                                 <ArrowUpRight className="w-3 h-3" />
-                                <span>Upcoming</span>
+                                <span>{t('labels.upcoming')}</span>
                             </div>
 
                         </div>
@@ -222,7 +252,7 @@ export default function PartnerDashboardPage() {
                     <GlassCard className="p-6 flex flex-col justify-between h-[160px] w-full cursor-pointer hover:border-white/20 transition-all">
                         <div>
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">Total Places</p>
+                                <p className="text-xs font-bold uppercase tracking-wider text-white/40">{t('metrics.totalPlaces')}</p>
                                 <MapPin className="w-4 h-4 text-white/20" />
                             </div>
                             <h3 className="text-3xl font-bold text-white tracking-tight">{data.totalPlaces}</h3>
@@ -234,7 +264,7 @@ export default function PartnerDashboardPage() {
                                 <div className="w-2 bg-white/20 rounded-full" />
                             </div>
                         </div>
-                        <p className="text-xs text-white/30 mt-1">Manage locations</p>
+                        <p className="text-xs text-white/30 mt-1">{t('labels.manageLocations')}</p>
                     </GlassCard>
                 </Link>
             </div>
@@ -246,39 +276,43 @@ export default function PartnerDashboardPage() {
                 <GlassCard className="w-full lg:col-span-8 p-6 flex flex-col h-[300px] lg:h-full">
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h3 className="text-lg font-bold text-white uppercase tracking-tight">Engagement</h3>
-                            <p className="text-xs text-white/40 font-medium mt-1">Interactions with your coupons and events.</p>
+                            <h3 className="text-lg font-bold text-white uppercase tracking-tight">{t('sections.engagement.title')}</h3>
+                            <p className="text-xs text-white/40 font-medium mt-1">{t('sections.engagement.description')}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-1 rounded bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-bold uppercase tracking-wider">Redemptions</span>
+                            <span className="px-2 py-1 rounded bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-bold uppercase tracking-wider">{t('sections.engagement.redemptions')}</span>
                         </div>
                     </div>
 
                     <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.activityChart}>
-                                <defs>
-                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
-                                        <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#FF5722' }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="val"
-                                    stroke="#FF5722"
-                                    strokeWidth={3}
-                                    fill="url(#chartGradient)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {chartsMounted ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={data.activityChart}>
+                                    <defs>
+                                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#FF5722" stopOpacity={0.4} />
+                                            <stop offset="100%" stopColor="#FF5722" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#666', fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#FF5722' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="val"
+                                        stroke="#FF5722"
+                                        strokeWidth={3}
+                                        fill="url(#chartGradient)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full w-full" />
+                        )}
                     </div>
                 </GlassCard>
 
@@ -286,8 +320,8 @@ export default function PartnerDashboardPage() {
                 <div className="w-full lg:col-span-4 h-full min-h-[400px] flex flex-col gap-6">
                     <GlassCard className="flex-1 p-6 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold text-white uppercase">Your Places</h3>
-                            <Link href="/partner/dashboard/places" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View All</Link>
+                            <h3 className="text-sm font-bold text-white uppercase">{t('sections.yourPlaces.title')}</h3>
+                            <Link href="/partner/dashboard/places" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">{t('actions.viewAll')}</Link>
                         </div>
                         <div className="space-y-3 overflow-y-auto pr-2">
                             {data.places.slice(0, 3).map((place) => (
@@ -304,14 +338,14 @@ export default function PartnerDashboardPage() {
                                     <div className={`w-2 h-2 rounded-full ${place.is_active ? 'bg-[#22c55e]' : 'bg-white/20'}`} />
                                 </div>
                             ))}
-                            {data.places.length === 0 && <p className="text-xs text-white/40 text-center py-4">No places added yet.</p>}
+                            {data.places.length === 0 && <p className="text-xs text-white/40 text-center py-4">{t('empty.noPlaces')}</p>}
                         </div>
                     </GlassCard>
 
                     <GlassCard className="flex-1 p-6 flex flex-col">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold text-white uppercase">Active Coupons</h3>
-                            <Link href="/partner/dashboard/coupons" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View All</Link>
+                            <h3 className="text-sm font-bold text-white uppercase">{t('sections.activeCoupons.title')}</h3>
+                            <Link href="/partner/dashboard/coupons" className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">{t('actions.viewAll')}</Link>
                         </div>
                         <div className="space-y-3 overflow-y-auto pr-2">
                             {data.coupons.slice(0, 3).map((coupon) => (
@@ -322,13 +356,13 @@ export default function PartnerDashboardPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-white truncate w-24">{coupon.code}</p>
-                                            <p className="text-[10px] text-white/40">{coupon.discount_type === 'freebie' ? 'Freebie' : coupon.discount_type === 'fixed' ? `€${coupon.discount_value} Off` : `${coupon.discount_value}% Off`}</p>
+                                            <p className="text-[10px] text-white/40">{coupon.discount_type === 'freebie' ? t('labels.freebie') : coupon.discount_type === 'fixed' ? t('labels.fixedOff', { value: coupon.discount_value ?? 0 }) : t('labels.percentOff', { value: coupon.discount_value ?? 0 })}</p>
                                         </div>
                                     </div>
-                                    <span className="text-xs text-white/60 font-mono">{coupon.redeemed_count} uses</span>
+                                    <span className="text-xs text-white/60 font-mono">{t('labels.uses', { count: coupon.redeemed_count })}</span>
                                 </div>
                             ))}
-                            {data.coupons.length === 0 && <p className="text-xs text-white/40 text-center py-4">No active coupons.</p>}
+                            {data.coupons.length === 0 && <p className="text-xs text-white/40 text-center py-4">{t('empty.noCoupons')}</p>}
                         </div>
                     </GlassCard>
                 </div>
@@ -338,9 +372,9 @@ export default function PartnerDashboardPage() {
             <div className="grid grid-cols-1 gap-6">
                 <GlassCard className="p-0 flex flex-col">
                     <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-white uppercase">Upcoming Events</h3>
+                        <h3 className="text-sm font-bold text-white uppercase">{t('sections.upcomingEvents.title')}</h3>
                         <Link href="/partner/dashboard/events">
-                            <button className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">View Schedule</button>
+                            <button className="text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors">{t('actions.viewSchedule')}</button>
                         </Link>
                     </div>
                     <div className="flex-1 p-2">
@@ -355,9 +389,9 @@ export default function PartnerDashboardPage() {
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <p className="text-xs text-white/40 flex items-center gap-1">
                                                 <Calendar className="w-3 h-3" />
-                                                {new Date(event.event_datetime).toLocaleDateString('en-IE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                {new Date(event.event_datetime).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </p>
-                                            <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location_name || 'TBA'}</p>
+                                            <p className="text-xs text-white/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {event.location_name || t('labels.tba')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -370,7 +404,7 @@ export default function PartnerDashboardPage() {
                             </Link>
                         )) : (
                             <div className="p-8 text-center text-white/40 text-xs text-center border-t border-white/5">
-                                No scheduled events found.
+                                {t('empty.noEvents')}
                             </div>
                         )}
                     </div>

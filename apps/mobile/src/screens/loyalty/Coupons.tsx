@@ -22,6 +22,7 @@ import { ChevronRightIcon } from '../../components/common/TabIcons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getPartnerCoupons, redeemPartnerCouponWithPoints, PartnerCoupon } from '../../services/supabase/coupons';
+import { getAvailablePoints } from '../../services/supabase/wallet';
 
 const { width } = Dimensions.get('window');
 
@@ -38,12 +39,13 @@ const formatExpiryDate = (dateString: string): string => {
 const categoryColors = couponCategoryColors;
 
 export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
-    const { profile, refreshProfile } = useAuth();
+    const { user, profile, refreshProfile } = useAuth();
     const { t } = useTranslation();
-    const userPoints = profile?.currentMonthPoints || 0;
 
     const [coupons, setCoupons] = useState<PartnerCoupon[]>([]);
     const [loading, setLoading] = useState(true);
+    const [availablePoints, setAvailablePoints] = useState(0);
+    const userPoints = availablePoints;
     const [selectedCoupon, setSelectedCoupon] = useState<PartnerCoupon & { isAvailable?: boolean; expiresAt?: string } | null>(null);
     const [filter, setFilter] = useState<string>('all');
     const [isRedeeming, setIsRedeeming] = useState(false);
@@ -53,12 +55,16 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
         useCallback(() => {
             const fetchCoupons = async () => {
                 setLoading(true);
-                const data = await getPartnerCoupons();
-                setCoupons(data);
+                const [couponData, pointsBalance] = await Promise.all([
+                    getPartnerCoupons(),
+                    user?.id ? getAvailablePoints(user.id) : Promise.resolve(0),
+                ]);
+                setCoupons(couponData);
+                setAvailablePoints(pointsBalance);
                 setLoading(false);
             };
             fetchCoupons();
-        }, [])
+        }, [user?.id])
     );
 
     const filteredCoupons = (filter === 'all'
@@ -113,8 +119,12 @@ export const Coupons: React.FC<CouponsProps> = ({ navigation }) => {
                                 await refreshProfile();
 
                                 // Fetch updated coupons to reflect redeemed_count
-                                const updatedCoupons = await getPartnerCoupons();
+                                const [updatedCoupons, updatedPointsBalance] = await Promise.all([
+                                    getPartnerCoupons(),
+                                    getAvailablePoints(profile.id),
+                                ]);
                                 setCoupons(updatedCoupons);
+                                setAvailablePoints(updatedPointsBalance);
 
                                 Alert.alert(
                                     "Sucesso! 🎉",

@@ -35,6 +35,19 @@ type SubscriptionScreenProps = {
     route: any;
 };
 
+type XpLevel = 'starter' | 'pacer' | 'elite';
+const XP_MONTHLY_DISCOUNT_BY_LEVEL: Record<XpLevel, number> = {
+    starter: 0,
+    pacer: 5,
+    elite: 10,
+};
+
+const resolveXpLevel = (currentXp: number): XpLevel => {
+    if (currentXp >= 15000) return 'elite';
+    if (currentXp >= 10000) return 'pacer';
+    return 'starter';
+};
+
 export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, route }) => {
     const { t, i18n } = useTranslation();
     const { user, profile, refreshProfile } = useAuth();
@@ -44,9 +57,12 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
     const [loading, setLoading] = useState(false);
     const [plansLoading, setPlansLoading] = useState(true);
     const [plans, setPlans] = useState<StripeProductDisplay[]>([]);
+    const [plansError, setPlansError] = useState<string | null>(null);
     const [currentSubscription, setCurrentSubscription] = useState<SubscriptionInfo | null>(null);
     const [showComparison, setShowComparison] = useState(false);
     const [cancelLoading, setCancelLoading] = useState(false);
+    const xpLevel = resolveXpLevel(Number(profile?.current_xp || 0));
+    const xpMonthlyDiscountPercent = XP_MONTHLY_DISCOUNT_BY_LEVEL[xpLevel] || 0;
 
     // Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -84,6 +100,7 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
 
         try {
             setPlansLoading(true);
+            setPlansError(null);
 
             // Fetch current subscription and plans in parallel
             const [subResponse, plansResponse] = await Promise.all([
@@ -95,7 +112,13 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                 setCurrentSubscription(subResponse.data);
             }
 
-            if (plansResponse.data) {
+            if (plansResponse.error) {
+                setPlans([]);
+                setPlansError(
+                    plansResponse.error.message ||
+                    t('subscription.noPlansAvailable', 'Subscription plans are unavailable right now.')
+                );
+            } else if (plansResponse.data) {
                 setPlans(plansResponse.data);
             }
 
@@ -231,9 +254,19 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
             }
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            const discountConfirmation =
+                data?.xpDiscountApplied &&
+                    Number(data.xpDiscountPercent || 0) > 0 &&
+                    plan.interval === 'month'
+                    ? `\n\n${t('subscription.xpDiscountConfirmation', {
+                        percent: Number(data.xpDiscountPercent || 0),
+                        defaultValue: `Your ${Number(data.xpDiscountPercent || 0)}% XP monthly discount was applied.`,
+                    })}`
+                    : '';
+
             Alert.alert(
                 t('subscription.success', 'Welcome to the Club! 🎉'),
-                t('subscription.successMessage', { plan: plan.name, defaultValue: `You are now subscribed to ${plan.name}!\n\nYour subscription is now active.` }),
+                `${t('subscription.successMessage', { plan: plan.name, defaultValue: `You are now subscribed to ${plan.name}!\n\nYour subscription is now active.` })}${discountConfirmation}`,
                 [{ text: t('common.ok', 'OK') }]
             );
         } catch (error) {
@@ -575,10 +608,20 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
         const planNameLower = plan.name.toLowerCase();
         const isClub = planNameLower.includes('club') || planNameLower.includes('premium');
         const isPro = planNameLower.includes('pro');
+        const isMonthly = plan.interval === 'month';
+        const intervalLabel = isMonthly ? t('subscription.perMonth') : t('subscription.perYear', '/year');
+        const hasXpDiscount = isMonthly && xpMonthlyDiscountPercent > 0;
+        const discountedAmount = hasXpDiscount
+            ? Math.round(plan.amount * (1 - (xpMonthlyDiscountPercent / 100)))
+            : plan.amount;
 
         const borderColor = isClub ? '#FFD700' : (isPro ? theme.colors.brand.primary : 'rgba(255,255,255,0.1)');
 
         const priceFormatted = new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
+            style: 'currency',
+            currency: plan.currency.toUpperCase()
+        }).format(discountedAmount / 100);
+        const basePriceFormatted = new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
             style: 'currency',
             currency: plan.currency.toUpperCase()
         }).format(plan.amount / 100);
@@ -627,7 +670,21 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         <Text style={[styles.planName, { color: isClub ? '#FFD700' : (isPro ? theme.colors.brand.primary : '#FFF') }]}>
                             {plan.name.toUpperCase()}
                         </Text>
-                        <Text style={styles.planPrice}>{priceFormatted}<Text style={styles.perMonth}>{t('subscription.perMonth')}</Text></Text>
+                        {hasXpDiscount ? (
+                            <Text style={styles.planOriginalPrice}>
+                                {basePriceFormatted}
+                                <Text style={styles.perMonth}>{intervalLabel}</Text>
+                            </Text>
+                        ) : null}
+                        <Text style={styles.planPrice}>{priceFormatted}<Text style={styles.perMonth}>{intervalLabel}</Text></Text>
+                        {hasXpDiscount ? (
+                            <Text style={styles.planDiscountNote}>
+                                {t('subscription.xpMonthlyDiscount', {
+                                    percent: xpMonthlyDiscountPercent,
+                                    defaultValue: `${xpMonthlyDiscountPercent}% XP monthly discount applied`,
+                                })}
+                            </Text>
+                        ) : null}
                         <Text style={styles.planDesc}>{plan.description}</Text>
                     </View>
 
@@ -691,7 +748,16 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         plans.map((plan, index) => renderCard(plan, index))
                     ) : (
                         <View style={{ width: width - 40, alignItems: 'center', justifyContent: 'center', height: 200 }}>
-                            <Text style={{ color: theme.colors.text.secondary }}>{t('subscription.noPlansAvailable')}</Text>
+                            <Text style={{ color: theme.colors.text.secondary, textAlign: 'center', marginBottom: 12 }}>
+                                {plansError || t('subscription.noPlansAvailable')}
+                            </Text>
+                            {plansError && (
+                                <TouchableOpacity onPress={fetchData}>
+                                    <Text style={{ color: theme.colors.brand.primary, fontWeight: '700' }}>
+                                        {t('common.retry', 'Retry')}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     )}
                 </ScrollView>
@@ -982,10 +1048,22 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: theme.colors.text.primary,
     },
+    planOriginalPrice: {
+        fontSize: 16,
+        color: theme.colors.text.tertiary,
+        textDecorationLine: 'line-through',
+        marginBottom: 2,
+    },
     perMonth: {
         fontSize: 14,
         color: theme.colors.text.tertiary,
         fontWeight: 'normal',
+    },
+    planDiscountNote: {
+        color: theme.colors.success,
+        fontSize: 12,
+        fontWeight: '700',
+        marginTop: 2,
     },
     planDesc: {
         color: theme.colors.text.secondary,

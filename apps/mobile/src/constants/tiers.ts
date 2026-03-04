@@ -1,5 +1,6 @@
 export type MembershipTier = 'free' | 'pro' | 'club' | 'basico' | 'baixa_pace' | 'parceiros';
 export type TierKey = MembershipTier; // Alias for backward compatibility
+export type CanonicalMembershipTier = 'free' | 'pro' | 'club';
 
 export interface TierConfig {
   name: string;
@@ -96,4 +97,22 @@ export const getTierConfig = (tier: MembershipTier): TierConfig => {
 
 export const getDiscountPercentage = (tier: MembershipTier): number => {
   return MEMBERSHIP_TIERS[tier].discount * 100;
+};
+
+export const toCanonicalTier = (tier?: string | null): CanonicalMembershipTier => {
+  switch ((tier || '').toLowerCase()) {
+    case 'club':
+    case 'baixa_pace':
+    case 'parceiros':
+      return 'club';
+    case 'pro':
+    case 'basico':
+      return 'pro';
+    default:
+      return 'free';
+  }
+};
+
+export const isClubMembershipTier = (tier?: string | null): boolean => {
+  return toCanonicalTier(tier) === 'club';
 };

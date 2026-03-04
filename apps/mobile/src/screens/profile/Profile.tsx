@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
 import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon, ShoppingBagIcon } from '../../components/common/TabIcons';
+import { getGoalProgress, getUserGoals, goalTypeDefinitions, GoalProgress } from '../../services/supabase/goals';
 
 type ProfileProps = {
     navigation: any;
@@ -38,30 +39,47 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const { profile, user, signOut, refreshProfile } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
     const [avatarError, setAvatarError] = useState(false);
+    const [goalSummary, setGoalSummary] = useState<GoalProgress[]>([]);
     const isFirstMount = useRef(true);
+
+    const loadGoalSummary = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const goals = await getUserGoals(user.id);
+            const progress = await getGoalProgress(user.id, goals);
+            setGoalSummary(progress.slice(0, 2));
+        } catch (error) {
+            console.error('Error loading goal summary:', error);
+        }
+    }, [user?.id]);
 
     // Auto-refresh profile when screen comes into focus (e.g. after EditProfile)
     useFocusEffect(
         useCallback(() => {
             if (isFirstMount.current) {
                 isFirstMount.current = false;
+                loadGoalSummary();
                 return;
             }
             refreshProfile();
-        }, [refreshProfile])
+            loadGoalSummary();
+        }, [refreshProfile, loadGoalSummary])
     );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         try {
-            await refreshProfile();
+            await Promise.all([
+                refreshProfile(),
+                loadGoalSummary(),
+            ]);
         } catch (error) {
             console.error('Error refreshing profile:', error);
         } finally {
             setRefreshing(false);
         }
-    }, [refreshProfile]);
+    }, [refreshProfile, loadGoalSummary]);
 
     const tier = (profile?.membershipTier || 'free') as keyof typeof tierColors;
     const tierConfig = tierColors[tier];
@@ -77,7 +95,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
     // Stats from real user profile data
     const stats = {
-        currentPoints: profile?.currentMonthPoints || 0,
+        currentPoints: profile?.current_points ?? profile?.currentMonthPoints ?? 0,
+        currentXP: profile?.current_xp ?? 0,
         lifetimePoints: profile?.totalLifetimePoints || 0,
     };
 
@@ -120,6 +139,16 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             onPress: () => {
                 Haptics.selectionAsync();
                 navigation.navigate('Achievements');
+            },
+            badge: null,
+        },
+        {
+            id: 'goals',
+            label: t('goals.title', 'Goals'),
+            icon: <MedalIcon size={20} color="#FFF" />,
+            onPress: () => {
+                Haptics.selectionAsync();
+                navigation.navigate('Goals');
             },
             badge: null,
         },
@@ -247,8 +276,8 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                         {/* Points Highlight */}
                         <View style={styles.pointsSection}>
                             <Text style={styles.pointsNumber}>{stats.currentPoints}</Text>
-                            <Text style={styles.pointsLabel}>{t('profile.currentPoints').toUpperCase()}</Text>
-                            <Text style={styles.lifetimePoints}>{stats.lifetimePoints} total</Text>
+                            <Text style={styles.pointsLabel}>{t('profile.availablePoints', 'AVAILABLE POINTS').toUpperCase()}</Text>
+                            <Text style={styles.lifetimePoints}>{stats.currentXP} XP</Text>
                         </View>
 
                         {/* Stats Grid */}
@@ -275,9 +304,9 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                                 <View style={styles.statContent}>
                                     <View style={styles.statHeader}>
                                         <Text style={styles.statIcon}>⚡</Text>
-                                        <Text style={styles.statLabel}>{t('profile.monthPoints', 'PTS MÊS').toUpperCase()}</Text>
+                                        <Text style={styles.statLabel}>{t('profile.currentXP', 'XP').toUpperCase()}</Text>
                                     </View>
-                                    <Text style={styles.statValue}>{stats.currentPoints}</Text>
+                                    <Text style={styles.statValue}>{stats.currentXP}</Text>
                                 </View>
                             </BlurView>
                             <BlurView intensity={30} tint="dark" style={styles.statCard}>
@@ -290,6 +319,53 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
                                 </View>
                             </BlurView>
                         </View>
+
+                        {goalSummary.length > 0 && (
+                            <View style={styles.goalsPreviewSection}>
+                                <View style={styles.goalsPreviewHeader}>
+                                    <Text style={styles.goalsPreviewTitle}>{t('goals.title', 'GOALS').toUpperCase()}</Text>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            navigation.navigate('Goals');
+                                        }}
+                                    >
+                                        <Text style={styles.goalsPreviewManage}>{t('common.manage', 'MANAGE')}</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {goalSummary.map((goal) => {
+                                    const def = goalTypeDefinitions[goal.goal_type];
+                                    const target = Number(goal.target_value);
+                                    const current = goal.goal_type.includes('distance')
+                                        ? goal.current_value.toFixed(1)
+                                        : Math.round(goal.current_value).toString();
+                                    const total = goal.goal_type.includes('distance')
+                                        ? target.toFixed(1)
+                                        : Math.round(target).toString();
+                                    return (
+                                        <BlurView key={goal.id} intensity={15} tint="dark" style={styles.goalPreviewCard}>
+                                            <View style={styles.goalPreviewRow}>
+                                                <Text style={styles.goalPreviewLabel}>
+                                                    {def.emoji} {goal.title}
+                                                </Text>
+                                                <Text style={styles.goalPreviewValue}>
+                                                    {current} / {total} {goal.unit}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.goalPreviewTrack}>
+                                                <View
+                                                    style={[
+                                                        styles.goalPreviewFill,
+                                                        { width: `${goal.progress_percent}%` },
+                                                    ]}
+                                                />
+                                            </View>
+                                        </BlurView>
+                                    );
+                                })}
+                            </View>
+                        )}
 
                         {/* Menu Items */}
                         <View style={styles.menuSection}>
@@ -501,6 +577,66 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         gap: 8,
         marginBottom: 30,
+    },
+    goalsPreviewSection: {
+        paddingHorizontal: 20,
+        marginBottom: 28,
+        gap: 8,
+    },
+    goalsPreviewHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    goalsPreviewTitle: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 1.6,
+    },
+    goalsPreviewManage: {
+        color: theme.colors.brand.primary,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1,
+    },
+    goalPreviewCard: {
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        overflow: 'hidden',
+        padding: 12,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+    },
+    goalPreviewRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+        gap: 10,
+    },
+    goalPreviewLabel: {
+        color: '#FFF',
+        fontSize: 13,
+        fontWeight: '700',
+        flex: 1,
+    },
+    goalPreviewValue: {
+        color: 'rgba(255,255,255,0.65)',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    goalPreviewTrack: {
+        height: 5,
+        borderRadius: 999,
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    goalPreviewFill: {
+        height: '100%',
+        borderRadius: 999,
+        backgroundColor: theme.colors.brand.primary,
     },
     statCard: {
         width: '48%',

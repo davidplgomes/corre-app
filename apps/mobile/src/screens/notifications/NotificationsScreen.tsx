@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
+import { supabase } from '../../services/supabase/client';
 import {
     getNotifications,
     markNotificationRead,
@@ -44,6 +45,7 @@ const NotificationItem = ({
     notification: Notification;
     onPress: () => void;
 }) => {
+    const { t, i18n } = useTranslation();
     const isUnread = !notification.read_at;
     const config = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.general;
 
@@ -55,11 +57,11 @@ const NotificationItem = ({
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m`;
-        if (diffHours < 24) return `${diffHours}h`;
-        if (diffDays < 7) return `${diffDays}d`;
-        return notifDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        if (diffMins < 1) return t('notificationsCenter.justNow', 'Just now');
+        if (diffMins < 60) return t('notificationsCenter.minuteShort', { count: diffMins, defaultValue: `${diffMins}m` });
+        if (diffHours < 24) return t('notificationsCenter.hourShort', { count: diffHours, defaultValue: `${diffHours}h` });
+        if (diffDays < 7) return t('notificationsCenter.dayShort', { count: diffDays, defaultValue: `${diffDays}d` });
+        return notifDate.toLocaleDateString(i18n.language || 'en-GB', { day: '2-digit', month: 'short' });
     };
 
     return (
@@ -114,6 +116,55 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
         loadNotifications();
     }, [loadNotifications]);
 
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const channel = supabase
+            .channel(`notifications:${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${user.id}`,
+                },
+                (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        const inserted = payload.new as Notification;
+                        setNotifications((prev) => {
+                            const deduped = [inserted, ...prev.filter((item) => item.id !== inserted.id)];
+                            return deduped
+                                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                .slice(0, 50);
+                        });
+                        return;
+                    }
+
+                    if (payload.eventType === 'UPDATE') {
+                        const updated = payload.new as Notification;
+                        setNotifications((prev) =>
+                            prev
+                                .map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+                                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        );
+                        return;
+                    }
+
+                    if (payload.eventType === 'DELETE') {
+                        const deleted = payload.old as { id?: string };
+                        if (!deleted?.id) return;
+                        setNotifications((prev) => prev.filter((item) => item.id !== deleted.id));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id]);
+
     const onRefresh = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setRefreshing(true);
@@ -129,30 +180,47 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
             );
         }
 
+        const eventId =
+            typeof notification.data?.eventId === 'string'
+                ? notification.data.eventId
+                : undefined;
+        const orderId =
+            typeof notification.data?.orderId === 'string'
+                ? notification.data.orderId
+                : undefined;
+        const fromUserId =
+            typeof notification.data?.fromUserId === 'string'
+                ? notification.data.fromUserId
+                : undefined;
+
         switch (notification.type) {
             case 'event':
-                if (notification.data?.eventId) {
+                if (eventId) {
                     navigation.navigate('Events', {
                         screen: 'EventDetail',
-                        params: { eventId: notification.data.eventId }
+                        params: { eventId }
                     });
                 }
                 break;
             case 'order':
-                if (notification.data?.orderId) {
-                    navigation.navigate('OrderHistory');
-                }
-                break;
-            case 'friend':
-                if (notification.data?.fromUserId) {
-                    navigation.navigate('Profile', {
-                        screen: 'UserProfile',
-                        params: { userId: notification.data.fromUserId }
+                if (orderId) {
+                    navigation.navigate('Marketplace', {
+                        screen: 'OrderDetail',
+                        params: { orderId },
+                    });
+                } else {
+                    navigation.navigate('Marketplace', {
+                        screen: 'OrderHistory',
                     });
                 }
                 break;
+            case 'friend':
+                if (fromUserId) {
+                    navigation.navigate('UserProfile', { userId: fromUserId });
+                }
+                break;
             case 'subscription':
-                navigation.navigate('Profile', { screen: 'SubscriptionScreen' });
+                navigation.navigate('SubscriptionScreen');
                 break;
             case 'points':
                 navigation.navigate('Wallet');
@@ -204,13 +272,13 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
                                 navigation.goBack();
                             }} />
                             <View style={styles.headerTitles}>
-                                <Text style={styles.headerLabel}>YOUR</Text>
-                                <Text style={styles.headerTitle}>NOTIFICATIONS</Text>
+                                <Text style={styles.headerLabel}>{t('notificationsCenter.your', 'YOUR').toUpperCase()}</Text>
+                                <Text style={styles.headerTitle}>{t('notificationsCenter.title', 'NOTIFICATIONS').toUpperCase()}</Text>
                             </View>
                         </View>
                         {unreadCount > 0 && (
                             <TouchableOpacity onPress={handleMarkAllRead} style={styles.markReadButton}>
-                                <Text style={styles.markReadText}>Mark all read</Text>
+                                <Text style={styles.markReadText}>{t('notificationsCenter.markAllRead', 'Mark all read')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -220,11 +288,11 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
                         <View style={styles.statsContainer}>
                             <BlurView intensity={20} tint="dark" style={styles.statPill}>
                                 <Text style={styles.statValue}>{unreadCount}</Text>
-                                <Text style={styles.statLabel}>Unread</Text>
+                                <Text style={styles.statLabel}>{t('notificationsCenter.unread', 'Unread')}</Text>
                             </BlurView>
                             <BlurView intensity={20} tint="dark" style={styles.statPill}>
                                 <Text style={[styles.statValue, { color: 'rgba(255,255,255,0.5)' }]}>{notifications.length}</Text>
-                                <Text style={styles.statLabel}>Total</Text>
+                                <Text style={styles.statLabel}>{t('notificationsCenter.total', 'Total')}</Text>
                             </BlurView>
                         </View>
                     )}
@@ -234,9 +302,9 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ naviga
                             <View style={styles.emptyIconContainer}>
                                 <Text style={styles.emptyIcon}>🔔</Text>
                             </View>
-                            <Text style={styles.emptyTitle}>No notifications</Text>
+                            <Text style={styles.emptyTitle}>{t('notificationsCenter.emptyTitle', 'No notifications')}</Text>
                             <Text style={styles.emptySubtitle}>
-                                You're all caught up! New notifications will appear here.
+                                {t('notificationsCenter.emptySubtitle', "You're all caught up! New notifications will appear here.")}
                             </Text>
                         </View>
                     ) : (

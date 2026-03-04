@@ -18,7 +18,6 @@ import * as Haptics from 'expo-haptics';
 import { theme } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
-import { getUserRuns } from '../../services/supabase/runs';
 import { getStravaActivities } from '../../services/supabase/strava';
 import { TrendingUpIcon, ClockIcon, FireIcon } from '../../components/common/TabIcons';
 
@@ -64,28 +63,16 @@ export const RunningStats: React.FC<RunningStatsProps> = ({ navigation }) => {
         if (!user?.id) return;
 
         try {
-            const [manualRuns, stravaActivities] = await Promise.all([
-                getUserRuns(user.id).catch(() => []),
-                getStravaActivities(100).catch(() => []),
-            ]);
+            const stravaActivities = await getStravaActivities(100).catch(() => []);
 
-            // Combine all activities
-            const allActivities = [
-                ...manualRuns.map((run: any) => ({
-                    date: new Date(run.created_at || run.started_at),
-                    distance: run.distance_km || 0,
-                    time: run.duration_seconds || 0,
-                    pace: run.pace_per_km || 0,
-                })),
-                ...stravaActivities.map((activity: any) => ({
-                    date: new Date(activity.start_date),
-                    distance: (activity.distance_meters || 0) / 1000,
-                    time: activity.moving_time_seconds || 0,
-                    pace: activity.distance_meters > 0
-                        ? (activity.moving_time_seconds / (activity.distance_meters / 1000))
-                        : 0,
-                })),
-            ];
+            const allActivities = stravaActivities.map((activity: any) => ({
+                date: new Date(activity.start_date),
+                distance: (activity.distance_meters || 0) / 1000,
+                time: activity.moving_time_seconds || 0,
+                pace: activity.distance_meters > 0
+                    ? (activity.moving_time_seconds / (activity.distance_meters / 1000))
+                    : 0,
+            }));
 
             // Filter by time range
             const now = new Date();

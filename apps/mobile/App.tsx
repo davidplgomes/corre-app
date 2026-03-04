@@ -10,6 +10,15 @@ import { CONFIG } from './src/constants/config';
 import { ChatwootWidgetContainer } from './src/components/support/ChatwootWidgetContainer';
 import { migrateAuthTokensToSecureStore } from './src/services/supabase/tokenMigration';
 import * as Linking from 'expo-linking';
+import { useAuth } from './src/contexts/AuthContext';
+import {
+  addNotificationReceivedListener,
+  addNotificationResponseListener,
+  clearPushToken,
+  registerForPushNotificationsAsync,
+  savePushToken,
+} from './src/services/notifications';
+import { getNotificationPreference } from './src/services/supabase/users';
 
 // Simple Error Boundary to catch crashes
 interface ErrorBoundaryState {
@@ -83,6 +92,47 @@ const StripeDeepLinkHandler: React.FC = () => {
   return null;
 };
 
+const NotificationBootstrap: React.FC = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let mounted = true;
+    const setup = async () => {
+      const notificationsEnabled = await getNotificationPreference(user.id).catch(() => true);
+      if (!notificationsEnabled) {
+        await clearPushToken(user.id);
+        return;
+      }
+
+      const token = await registerForPushNotificationsAsync();
+      if (token && mounted) {
+        await savePushToken(user.id, token);
+      }
+    };
+
+    setup();
+
+    const receivedSub = addNotificationReceivedListener(() => {
+      // Notification persistence is handled server-side.
+      // Keeping this listener allows future foreground UX hooks.
+    });
+
+    const responseSub = addNotificationResponseListener(() => {
+      // Keep listener active so navigation hooks can be added later without changing bootstrap lifecycle.
+    });
+
+    return () => {
+      mounted = false;
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  }, [user?.id]);
+
+  return null;
+};
+
 export default function App() {
   const [isI18nReady, setI18nReady] = useState(false);
 
@@ -121,6 +171,7 @@ export default function App() {
           <View style={{ flex: 1 }}>
             <AuthProvider>
               <StatusBar style="auto" />
+              <NotificationBootstrap />
               <RootNavigator />
               <ChatwootWidgetContainer />
             </AuthProvider>

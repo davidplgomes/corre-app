@@ -33,8 +33,6 @@ const statusConfig: Record<string, { color: string; bg: string; label: string; i
     processing: { color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', label: 'Preparing', icon: 'cube-outline' },
     ready_for_pickup: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Ready for Pickup', icon: 'storefront-outline' },
     picked_up: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Picked Up', icon: 'checkmark-done-outline' },
-    shipped: { color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', label: 'Shipped', icon: 'airplane-outline' },
-    delivered: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', label: 'Delivered', icon: 'checkmark-done-outline' },
     cancelled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled', icon: 'close-circle-outline' },
     canceled: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Cancelled', icon: 'close-circle-outline' },
     payment_failed: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', label: 'Payment Failed', icon: 'alert-circle-outline' },
@@ -42,8 +40,16 @@ const statusConfig: Record<string, { color: string; bg: string; label: string; i
     disputed: { color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', label: 'Disputed', icon: 'warning-outline' },
 };
 
+const normalizeOrderStatus = (status: string): string => {
+    const normalized = status.toLowerCase();
+    if (normalized === 'shipped') return 'ready_for_pickup';
+    if (normalized === 'delivered') return 'picked_up';
+    if (normalized === 'canceled') return 'cancelled';
+    return normalized;
+};
+
 const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[normalizeOrderStatus(status)] || statusConfig.pending;
 
     return (
         <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
@@ -54,11 +60,11 @@ const OrderStatusBadge = ({ status }: { status: Order['status'] }) => {
 };
 
 const OrderTimeline = ({ order }: { order: Order }) => {
-    const status = String(order.status || '');
-    const paymentConfirmed = ['paid', 'processing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered', 'refunded', 'disputed'].includes(status);
-    const inPreparation = ['processing', 'ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(status);
-    const readyForPickup = ['ready_for_pickup', 'picked_up', 'shipped', 'delivered'].includes(status);
-    const pickedUp = ['picked_up', 'delivered'].includes(status);
+    const status = normalizeOrderStatus(String(order.status || ''));
+    const paymentConfirmed = ['paid', 'processing', 'ready_for_pickup', 'picked_up', 'refunded', 'disputed'].includes(status);
+    const inPreparation = ['processing', 'ready_for_pickup', 'picked_up'].includes(status);
+    const readyForPickup = ['ready_for_pickup', 'picked_up'].includes(status);
+    const pickedUp = status === 'picked_up';
 
     const steps = [
         { key: 'created', label: 'Order Placed', date: order.created_at, complete: true },
