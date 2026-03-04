@@ -20,6 +20,7 @@ import { supabase } from '../../services/supabase/client';
 import { VerifiedIcon, CheckCircleIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
+import { isPaidMembershipTier } from '../../constants/tiers';
 
 type SellerOnboardingProps = {
     navigation: any;
@@ -35,14 +36,36 @@ const FEATURES = [
 
 export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }) => {
     const { t } = useTranslation();
-    const { session } = useAuth();
+    const { session, profile } = useAuth();
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<OnboardingStatus>('loading');
 
+    const promptUpgradeAndExit = useCallback(() => {
+        Alert.alert(
+            t('marketplace.communitySellRequiresPaidTitle', 'Paid Plan Required'),
+            t(
+                'marketplace.communitySellRequiresPaidDescription',
+                'Selling in the community marketplace is available only for Pro and Club members.'
+            ),
+            [
+                { text: t('common.cancel', 'Cancel'), style: 'cancel', onPress: () => navigation.goBack() },
+                {
+                    text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                    onPress: () => navigation.navigate('Profile', { screen: 'SubscriptionScreen' }),
+                },
+            ]
+        );
+    }, [navigation, t]);
+
     useFocusEffect(
         useCallback(() => {
+            if (!isPaidMembershipTier(profile?.membershipTier)) {
+                setStatus('not_created');
+                promptUpgradeAndExit();
+                return;
+            }
             checkOnboardingStatus();
-        }, [])
+        }, [profile?.membershipTier, promptUpgradeAndExit])
     );
 
     const checkOnboardingStatus = async () => {
@@ -78,6 +101,11 @@ export const SellerOnboarding: React.FC<SellerOnboardingProps> = ({ navigation }
     };
 
     const handleOnboarding = async () => {
+        if (!isPaidMembershipTier(profile?.membershipTier)) {
+            promptUpgradeAndExit();
+            return;
+        }
+
         if (!session?.access_token) {
             Alert.alert(t('common.error'), t('common.pleaseLogin', 'Please log in to continue'));
             return;

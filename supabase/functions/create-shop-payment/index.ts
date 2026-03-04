@@ -190,6 +190,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const minimumChargeCents = 50;
+    if (subtotalCents < minimumChargeCents) {
+      return new Response(
+        JSON.stringify({
+          error: "Minimum card charge is €0.50 after discount.",
+          pointsApproved: 0,
+        }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     // Plans and points are decoupled: points discount cap applies independently of plan tier.
     const membershipCap = Math.floor(subtotalCents * 0.2);
 
@@ -205,11 +216,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const availablePoints = Math.max(0, Math.floor(Number(availablePointsRaw) || 0));
-    const maxAllowedPoints = Math.min(availablePoints, membershipCap, itemMaxPointsDiscount);
+    const minimumChargeCap = Math.max(0, subtotalCents - minimumChargeCents);
+    const maxAllowedPoints = Math.min(
+      availablePoints,
+      membershipCap,
+      itemMaxPointsDiscount,
+      minimumChargeCap
+    );
     const approvedPoints = Math.min(requestedPoints, maxAllowedPoints);
     const cashAmountCents = subtotalCents - approvedPoints;
 
-    if (cashAmountCents < 50) {
+    if (cashAmountCents < minimumChargeCents) {
       return new Response(
         JSON.stringify({
           error: "Minimum card charge is €0.50 after discount.",

@@ -9,6 +9,7 @@ import {
     ImageBackground,
     Image,
     RefreshControl,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -17,8 +18,10 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme, tierColors } from '../../constants/theme';
+import { isPaidMembershipTier } from '../../constants/tiers';
 import { ChevronRightIcon, ClockIcon, MedalIcon, SettingsIcon, BellIcon, PersonIcon, PencilIcon, EyeIcon, CardIcon, ShoppingBagIcon } from '../../components/common/TabIcons';
 import { getGoalProgress, getUserGoals, goalTypeDefinitions, GoalProgress } from '../../services/supabase/goals';
+import { getAvailablePoints } from '../../services/supabase/wallet';
 
 type ProfileProps = {
     navigation: any;
@@ -40,6 +43,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [avatarError, setAvatarError] = useState(false);
     const [goalSummary, setGoalSummary] = useState<GoalProgress[]>([]);
+    const [availablePoints, setAvailablePoints] = useState<number | null>(null);
     const isFirstMount = useRef(true);
 
     const loadGoalSummary = useCallback(async () => {
@@ -53,17 +57,34 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
         }
     }, [user?.id]);
 
+    const loadAvailablePoints = useCallback(async () => {
+        if (!user?.id) {
+            setAvailablePoints(null);
+            return;
+        }
+
+        try {
+            const points = await getAvailablePoints(user.id);
+            setAvailablePoints(points);
+        } catch (error) {
+            console.error('Error loading available points:', error);
+            setAvailablePoints(null);
+        }
+    }, [user?.id]);
+
     // Auto-refresh profile when screen comes into focus (e.g. after EditProfile)
     useFocusEffect(
         useCallback(() => {
             if (isFirstMount.current) {
                 isFirstMount.current = false;
-                loadGoalSummary();
+                void loadGoalSummary();
+                void loadAvailablePoints();
                 return;
             }
-            refreshProfile();
-            loadGoalSummary();
-        }, [refreshProfile, loadGoalSummary])
+            void refreshProfile();
+            void loadGoalSummary();
+            void loadAvailablePoints();
+        }, [refreshProfile, loadGoalSummary, loadAvailablePoints])
     );
 
     const onRefresh = useCallback(async () => {
@@ -73,13 +94,14 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             await Promise.all([
                 refreshProfile(),
                 loadGoalSummary(),
+                loadAvailablePoints(),
             ]);
         } catch (error) {
             console.error('Error refreshing profile:', error);
         } finally {
             setRefreshing(false);
         }
-    }, [refreshProfile, loadGoalSummary]);
+    }, [refreshProfile, loadGoalSummary, loadAvailablePoints]);
 
     const tier = (profile?.membershipTier || 'free') as keyof typeof tierColors;
     const tierConfig = tierColors[tier];
@@ -95,7 +117,7 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
 
     // Stats from real user profile data
     const stats = {
-        currentPoints: profile?.current_points ?? profile?.currentMonthPoints ?? 0,
+        currentPoints: availablePoints ?? profile?.current_points ?? profile?.currentMonthPoints ?? 0,
         currentXP: profile?.current_xp ?? 0,
         lifetimePoints: profile?.totalLifetimePoints || 0,
     };
@@ -110,6 +132,23 @@ export const Profile: React.FC<ProfileProps> = ({ navigation }) => {
             icon: <ShoppingBagIcon size={20} color="#FFF" />,
             onPress: () => {
                 Haptics.selectionAsync();
+                if (!isPaidMembershipTier(profile?.membershipTier)) {
+                    Alert.alert(
+                        t('marketplace.communitySellRequiresPaidTitle', 'Paid Plan Required'),
+                        t(
+                            'marketplace.communitySellRequiresPaidDescription',
+                            'Selling in the community marketplace is available only for Pro and Club members.'
+                        ),
+                        [
+                            { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+                            {
+                                text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                                onPress: () => navigation.navigate('SubscriptionScreen'),
+                            },
+                        ]
+                    );
+                    return;
+                }
                 navigation.navigate('MyListings');
             },
             badge: null,

@@ -27,6 +27,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import { StripeProductDisplay, SubscriptionInfo } from '../../types/subscription.types';
 import { supabase } from '../../services/supabase/client';
 import * as Haptics from 'expo-haptics';
+import { resolveSubscriptionScreenViewState } from './subscriptionViewState';
 
 const { width } = Dimensions.get('window');
 
@@ -69,12 +70,10 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
     const slideAnim = React.useRef(new Animated.Value(50)).current;
     const skeletonAnim = React.useRef(new Animated.Value(0.3)).current;
 
-    // Check if user has active subscription
-    const isSubscribed = currentSubscription &&
-        ['active', 'trialing'].includes(currentSubscription.status) &&
-        !currentSubscription.cancelAtPeriodEnd;
-
-    const isCancelled = currentSubscription?.cancelAtPeriodEnd === true;
+    const {
+        showCurrentPlanView,
+        hasPaidCancelingAccess: isCancelled,
+    } = resolveSubscriptionScreenViewState(profile?.membershipTier, currentSubscription);
 
     // Skeleton pulse animation
     useEffect(() => {
@@ -110,6 +109,8 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
 
             if (subResponse.data) {
                 setCurrentSubscription(subResponse.data);
+            } else {
+                setCurrentSubscription(null);
             }
 
             if (plansResponse.error) {
@@ -788,17 +789,17 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                     />
                     <View>
                         <Text style={styles.headerLabel}>
-                            {isSubscribed ? t('subscription.manage', 'MANAGE') : t('subscription.plans')}
+                            {showCurrentPlanView ? t('subscription.manage', 'MANAGE') : t('subscription.plans')}
                         </Text>
                         <Text style={styles.headerTitle}>
-                            {isSubscribed ? t('subscription.yourPlan', 'Your Plan') : t('subscription.title')}
+                            {showCurrentPlanView ? t('subscription.yourPlan', 'Your Plan') : t('subscription.title')}
                         </Text>
                     </View>
                 </View>
 
                 <ScrollView
                     style={{ flex: 1 }}
-                    contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isSubscribed ? 20 : 0 }}
+                    contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: showCurrentPlanView ? 20 : 0 }}
                     showsVerticalScrollIndicator={false}
                 >
                     {loading && (
@@ -812,7 +813,7 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigati
                         <View style={{ padding: 20 }}>
                             {renderSkeletonCard(0)}
                         </View>
-                    ) : isSubscribed || isCancelled ? (
+                    ) : showCurrentPlanView ? (
                         renderActiveSubscription()
                     ) : (
                         renderPlanSelection()

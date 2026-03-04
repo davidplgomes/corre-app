@@ -10,7 +10,7 @@ import {
     Alert,
     ImageBackground
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +21,7 @@ import { CloseIcon } from '../../components/common/TabIcons';
 import { supabase } from '../../services/supabase/client';
 import { addToCart } from '../../services/supabase/wallet';
 import { useAuth } from '../../contexts/AuthContext';
+import { isPaidMembershipTier } from '../../constants/tiers';
 
 type ProductDetailProps = {
     route: any;
@@ -29,9 +30,10 @@ type ProductDetailProps = {
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation }) => {
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { product, type } = route.params || {};
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
+    const insets = useSafeAreaInsets();
 
     if (!product) {
         return null;
@@ -48,9 +50,33 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
             : Number(product.price || 0);
     const allowPointsDiscount = product.allow_points_discount !== false;
     const maxPointsDiscountPercent = Number(product.max_points_discount_percent ?? 20);
+    const isCommunityLocked = !isShopItem && !isPaidMembershipTier(profile?.membershipTier);
+    const tabBarHeight = 80 + insets.bottom;
+    const footerBottomOffset = tabBarHeight;
+    const footerInnerBottomPadding = Math.max(insets.bottom, 12);
+    const footerEstimatedHeight = 84 + footerInnerBottomPadding;
+    const scrollBottomPadding = footerEstimatedHeight + footerBottomOffset + 24;
 
     const handlePrimaryAction = async () => {
         const listingId = product.id;
+
+        if (isCommunityLocked) {
+            Alert.alert(
+                t('marketplace.communityBuyRequiresPaidTitle', 'Paid Plan Required'),
+                t(
+                    'marketplace.communityBuyRequiresPaidDescription',
+                    'Buying from the community marketplace is available only for Pro and Club members.'
+                ),
+                [
+                    { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+                    {
+                        text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                        onPress: () => navigation.navigate('Profile', { screen: 'SubscriptionScreen' }),
+                    },
+                ]
+            );
+            return;
+        }
 
         if (!isShopItem) {
             try {
@@ -146,7 +172,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
             >
                 <View style={styles.overlay} />
 
-                <ScrollView style={styles.scrollView} bounces={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
+                    bounces={false}
+                >
                     {/* Image Section */}
                     <View style={styles.imageContainer}>
                         <Image source={{ uri: product.image_url || product.image }} style={styles.image} />
@@ -169,9 +199,11 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                     {/* Content Glass */}
                     <BlurView intensity={20} tint="dark" style={styles.contentGlass}>
                         <View style={styles.header}>
-                            <View>
+                            <View style={styles.headerContent}>
                                 <Text style={styles.brand}>{product.brand || (isShopItem ? 'CORRE SHOP' : 'COMMUNITY')}</Text>
-                                <Text style={styles.title}>{product.title}</Text>
+                                <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
+                                    {product.title}
+                                </Text>
                             </View>
                             <View style={styles.pointsBadge}>
                                 <Text style={styles.pointsValue}>
@@ -214,22 +246,27 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ route, navigation 
                             )}
                         </View>
 
-                        {/* Space for bottom button */}
-                        <View style={{ height: 120 }} />
                     </BlurView>
                 </ScrollView>
 
                 {/* Bottom Action - Fixed at bottom with proper margin */}
-                <View style={styles.footerContainer}>
-                    <BlurView intensity={30} tint="dark" style={styles.footerGlass}>
+                <View style={[styles.footerContainer, { bottom: footerBottomOffset }]}>
+                    <BlurView intensity={30} tint="dark" style={[styles.footerGlass, { paddingBottom: footerInnerBottomPadding }]}>
                         <TouchableOpacity
                             style={styles.redeemButton}
                             onPress={handlePrimaryAction}
                         >
-                            <Text style={styles.redeemText}>
+                            <Text
+                                style={styles.redeemText}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.85}
+                            >
                                 {isShopItem
                                     ? t('cart.addToCart', 'ADD TO CART')
-                                    : t('marketplace.buyNow', 'BUY NOW')}
+                                    : (isCommunityLocked
+                                        ? t('marketplace.upgradeToProClub', 'UPGRADE TO PRO/CLUB')
+                                        : t('marketplace.buyNow', 'BUY NOW'))}
                             </Text>
                         </TouchableOpacity>
                     </BlurView>
@@ -257,6 +294,9 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     imageContainer: {
         height: 400,
@@ -294,7 +334,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 24,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.15)',
-        backgroundColor: 'rgba(0,0,0,0.6)', // Semi-transparent black
+        backgroundColor: 'rgba(0,0,0,0.72)',
         minHeight: 500, // Ensure it fills down
     },
     header: {
@@ -302,6 +342,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: theme.spacing[6],
+    },
+    headerContent: {
+        flex: 1,
+        minWidth: 0,
+        marginRight: 12,
     },
     brand: {
         fontSize: theme.typography.size.caption,
@@ -311,29 +356,32 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
+        lineHeight: 34,
         fontWeight: '900',
         fontStyle: 'italic',
         color: '#FFF',
-        maxWidth: 220,
+        flexShrink: 1,
     },
     pointsBadge: {
         alignItems: 'center',
+        minWidth: 124,
         backgroundColor: 'rgba(255,255,255,0.1)',
-        paddingHorizontal: theme.spacing[4],
-        paddingVertical: theme.spacing[2],
-        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
         borderWidth: 1,
         borderColor: theme.colors.brand.primary,
     },
     pointsValue: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: '900',
         fontStyle: 'italic',
         color: theme.colors.brand.primary,
+        fontVariant: ['tabular-nums'],
     },
     pointsLabel: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '700',
         color: 'rgba(255,255,255,0.7)',
         textTransform: 'uppercase',
@@ -377,13 +425,11 @@ const styles = StyleSheet.create({
     },
     footerContainer: {
         position: 'absolute',
-        bottom: 80, // Moved up to avoid navbar overlap
         left: 0,
         right: 0,
     },
     footerGlass: {
         padding: 20,
-        paddingBottom: 30, // Extra padding for safe area
         borderTopWidth: 1,
         borderTopColor: 'rgba(255,255,255,0.1)',
     },
@@ -396,10 +442,10 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.brand.primary,
     },
     redeemText: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
         color: '#FFF', // White text
-        letterSpacing: 1,
+        letterSpacing: 0.8,
         textTransform: 'uppercase',
     },
 });

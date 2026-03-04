@@ -25,6 +25,7 @@ export interface PartnerCoupon {
     image_url: string | null;
     terms: string | null;
     referral_link: string | null;
+    valid_from?: string | null;
 }
 
 /**
@@ -33,50 +34,46 @@ export interface PartnerCoupon {
  */
 export const redeemPartnerCoupon = async (
     userId: string,
-    pointsCost: number,
+    _pointsCost: number,
     couponCode: string
 ): Promise<RedeemCouponResult> => {
     try {
-        // Get current user points
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('current_month_points, total_lifetime_points')
-            .eq('id', userId)
-            .single();
+        // Use server-authoritative coupon redemption flow only.
+        const nowIso = new Date().toISOString();
+        const { data: coupon, error: couponError } = await supabase
+            .from('partner_coupons')
+            .select('id, expires_at, valid_from')
+            .eq('code', couponCode)
+            .eq('is_active', true)
+            .maybeSingle();
 
-        if (userError || !userData) {
-            return { success: false, error: 'User not found' };
+        if (couponError) {
+            console.error('Error loading coupon by code:', couponError);
+            return { success: false, error: couponError.message };
         }
 
-        const currentPoints = userData.current_month_points || 0;
-
-        if (currentPoints < pointsCost) {
-            return {
-                success: false,
-                error: `Insufficient points. You have ${currentPoints} but need ${pointsCost}.`
-            };
+        if (!coupon?.id) {
+            return { success: false, error: 'Coupon not found or expired' };
         }
 
-        // Deduct points
-        const newBalance = currentPoints - pointsCost;
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({
-                current_month_points: newBalance
-            })
-            .eq('id', userId);
-
-        if (updateError) {
-            console.error('Error deducting points:', updateError);
-            return { success: false, error: 'Failed to deduct points' };
+        if (coupon.expires_at && coupon.expires_at <= nowIso) {
+            return { success: false, error: 'Coupon not found or expired' };
         }
 
-        // Log the redemption (optional - could create a redemptions table later)
-        console.log(`Coupon ${couponCode} redeemed by user ${userId} for ${pointsCost} points`);
+        if (coupon.valid_from && coupon.valid_from > nowIso) {
+            return { success: false, error: 'Coupon not found or expired' };
+        }
+
+        const redemption = await redeemPartnerCouponWithPoints(userId, coupon.id);
+        if (!redemption.success) {
+            return { success: false, error: redemption.error };
+        }
 
         return {
             success: true,
-            newPointsBalance: newBalance
+            newPointsBalance: redemption.newPointsBalance,
+            code: redemption.code,
+            redemption_id: redemption.redemption_id,
         };
     } catch (error) {
         console.error('Error redeeming coupon:', error);
@@ -132,11 +129,11 @@ export const useDiscountCoupon = async (couponCode: string, userId: string) => {
  */
 export const getPartnerCoupons = async (): Promise<PartnerCoupon[]> => {
     try {
+        const nowMs = Date.now();
         const { data, error } = await supabase
             .from('partner_coupons')
             .select('*')
             .eq('is_active', true)
-            .gt('expires_at', new Date().toISOString())
             .order('points_required', { ascending: true });
 
         if (error) {
@@ -144,7 +141,11 @@ export const getPartnerCoupons = async (): Promise<PartnerCoupon[]> => {
             return [];
         }
 
-        return (data || []) as PartnerCoupon[];
+        return ((data || []) as PartnerCoupon[]).filter((coupon) => {
+            const notExpired = !coupon.expires_at || Date.parse(coupon.expires_at) > nowMs;
+            const started = !coupon.valid_from || Date.parse(coupon.valid_from) <= nowMs;
+            return notExpired && started;
+        });
     } catch (error) {
         console.error('Error in getPartnerCoupons:', error);
         return [];
@@ -179,7 +180,8 @@ export const redeemPartnerCouponWithPoints = async (
         return {
             success: true,
             code: data.code,
-            redemption_id: data.redemption_id
+            redemption_id: data.redemption_id,
+            newPointsBalance: data.new_points_balance,
         };
     } catch (error) {
         console.error('Error in redeemPartnerCouponWithPoints:', error);

@@ -176,10 +176,43 @@ interface StravaActivity {
     };
 }
 
+type StravaAwardResult = {
+    success?: boolean;
+    error?: string;
+    points_awarded?: number;
+    xp_awarded?: number;
+};
+
 // ─── Helper: Create Supabase Client ──────────────────────────────────────────
 
 function getSupabaseClient(): SupabaseClient {
     return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function logWebhookFailure(
+    supabase: SupabaseClient,
+    params: {
+        athleteId: number;
+        stage: string;
+        message: string;
+        activityId?: number;
+        userId?: string;
+        payload?: Record<string, unknown>;
+    }
+): Promise<void> {
+    const { error } = await supabase.from('strava_sync_failures').insert({
+        user_id: params.userId ?? null,
+        strava_athlete_id: params.athleteId,
+        strava_activity_id: params.activityId ?? null,
+        source: 'webhook',
+        stage: params.stage,
+        error_message: params.message,
+        payload: params.payload || {},
+    });
+
+    if (error) {
+        console.error('Failed to log webhook failure:', error);
+    }
 }
 
 // ─── Helper: Refresh Strava Token ────────────────────────────────────────────
@@ -387,6 +420,11 @@ async function handleDeauthorization(
 
     if (error) {
         console.error('Deauthorization error:', error);
+        await logWebhookFailure(supabase, {
+            athleteId,
+            stage: 'deauthorization',
+            message: error.message,
+        });
     } else {
         console.log(`Successfully deleted all data for athlete ${athleteId}`);
     }
@@ -399,6 +437,7 @@ async function handleDeauthorization(
 
 async function handleActivityDelete(
     supabase: SupabaseClient,
+    athleteId: number,
     activityId: number
 ): Promise<Response> {
     console.log(`Processing activity deletion: ${activityId}`);
@@ -409,6 +448,12 @@ async function handleActivityDelete(
 
     if (error) {
         console.error('Activity deletion error:', error);
+        await logWebhookFailure(supabase, {
+            athleteId,
+            stage: 'delete_activity',
+            message: error.message,
+            activityId,
+        });
     } else {
         console.log(`Deleted activity ${activityId}`);
     }
@@ -438,6 +483,12 @@ async function processActivityInBackground(
 
         if (connError || !connection) {
             console.warn(`No connection found for athlete ${athleteId}`);
+            await logWebhookFailure(supabase, {
+                athleteId,
+                stage: 'load_connection',
+                message: connError?.message || 'No connection found for athlete',
+                activityId,
+            });
             return;
         }
 
@@ -446,6 +497,14 @@ async function processActivityInBackground(
 
         if (!syncResult.success) {
             console.error(`Sync failed: ${syncResult.error}`);
+            await logWebhookFailure(supabase, {
+                athleteId,
+                userId: connection.user_id,
+                stage: 'sync_activity',
+                message: syncResult.error || 'Sync failed',
+                activityId,
+                payload: { is_update: isUpdate },
+            });
             return;
         }
 
@@ -460,14 +519,39 @@ async function processActivityInBackground(
 
             if (pointsError) {
                 console.error('Points award error:', pointsError);
+                await logWebhookFailure(supabase, {
+                    athleteId,
+                    userId: connection.user_id,
+                    stage: 'award_points',
+                    message: pointsError.message,
+                    activityId,
+                });
             } else {
                 console.log('Points result:', JSON.stringify(pointsResult));
+                const parsed = (pointsResult || {}) as StravaAwardResult;
+                if (!parsed.success && parsed.error !== 'Points already awarded') {
+                    await logWebhookFailure(supabase, {
+                        athleteId,
+                        userId: connection.user_id,
+                        stage: 'award_points',
+                        message: parsed.error || 'Unknown award error',
+                        activityId,
+                        payload: { award_result: parsed },
+                    });
+                }
             }
         }
 
         console.log(`[Background] Activity ${activityId} processing complete`);
     } catch (error) {
         console.error(`[Background] Error processing activity ${activityId}:`, error);
+        await logWebhookFailure(supabase, {
+            athleteId,
+            stage: 'background_processing',
+            message: error instanceof Error ? error.message : 'Unhandled background error',
+            activityId,
+            payload: { is_update: isUpdate },
+        });
     }
 }
 
@@ -501,7 +585,7 @@ serve(async (req: Request) => {
                 switch (aspect_type) {
                     case 'delete':
                         // Delete is quick - run inline
-                        return await handleActivityDelete(supabase, object_id);
+                        return await handleActivityDelete(supabase, owner_id, object_id);
 
                     case 'create':
                     case 'update': {

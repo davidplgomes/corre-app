@@ -19,6 +19,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
+import { isPaidMembershipTier } from '../../constants/tiers';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button, Input, LoadingSpinner } from '../../components/common';
 import { getMarketplaceItems, getShopItems, createMarketplaceItem, getSellerListings } from '../../services/supabase/marketplace';
@@ -75,6 +76,23 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
     const [newItemPrice, setNewItemPrice] = useState('');
     const [creating, setCreating] = useState(false);
     const [hasListings, setHasListings] = useState(false);
+
+    const promptPaidMembershipRequired = useCallback(() => {
+        Alert.alert(
+            t('marketplace.communitySellRequiresPaidTitle', 'Paid Plan Required'),
+            t(
+                'marketplace.communitySellRequiresPaidDescription',
+                'Selling in the community marketplace is available only for Pro and Club members.'
+            ),
+            [
+                { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+                {
+                    text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                    onPress: () => navigation.navigate('Profile', { screen: 'SubscriptionScreen' })
+                }
+            ]
+        );
+    }, [navigation, t]);
 
     // Check if user has listings for My Items button
     useEffect(() => {
@@ -251,6 +269,10 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                                     style={styles.myListingsButton}
                                     onPress={() => {
                                         Haptics.selectionAsync();
+                                        if (!isPaidMembershipTier(profile?.membershipTier)) {
+                                            promptPaidMembershipRequired();
+                                            return;
+                                        }
                                         navigation.navigate('MyListings');
                                     }}
                                 >
@@ -261,12 +283,8 @@ export const MarketplaceScreen: React.FC<MarketplaceScreenProps> = ({ navigation
                                 style={styles.createButtonFloat}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                    const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
-                                    if (!isPro) {
-                                        Alert.alert(
-                                            t('marketplace.proRequired', 'Recurso Exclusivo'),
-                                            t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
-                                        );
+                                    if (!isPaidMembershipTier(profile?.membershipTier)) {
+                                        promptPaidMembershipRequired();
                                         return;
                                     }
                                     navigation.navigate('CreateListing');

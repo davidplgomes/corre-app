@@ -46,11 +46,20 @@ function isValidUrl(value) {
   }
 }
 
-const mergedEnv = {
-  ...parseEnvFile(path.join(repoRoot, ".env")),
-  ...parseEnvFile(path.join(mobileDir, ".env")),
-  ...process.env,
-};
+const envFiles = [
+  path.join(repoRoot, ".env"),
+  path.join(repoRoot, ".env.local"),
+  path.join(repoRoot, ".env.functions.local"),
+  path.join(mobileDir, ".env"),
+  path.join(mobileDir, ".env.local"),
+  path.join(mobileDir, ".env.functions.local"),
+];
+
+const mergedEnv = envFiles.reduce((acc, filePath) => {
+  return { ...acc, ...parseEnvFile(filePath) };
+}, {});
+
+Object.assign(mergedEnv, process.env);
 
 const checks = [];
 
@@ -71,6 +80,11 @@ function addEnvCheck(section, label, aliases, validator = null, required = true)
     `source=${source}; keys=${aliases.join(" | ")}`,
     required
   );
+}
+
+function envFlagIsTrue(keys) {
+  const value = firstDefined(mergedEnv, keys).toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
 }
 
 addEnvCheck("Env: Mobile Runtime", "Supabase URL", ["EXPO_PUBLIC_SUPABASE_URL", "SUPABASE_URL"], isValidUrl);
@@ -97,7 +111,23 @@ addEnvCheck("Env: Supabase Functions", "Stripe Connect Webhook Secret", ["STRIPE
 addEnvCheck("Env: Supabase Functions", "Strava Client ID", ["STRAVA_CLIENT_ID"]);
 addEnvCheck("Env: Supabase Functions", "Strava Client Secret", ["STRAVA_CLIENT_SECRET"]);
 addEnvCheck("Env: Supabase Functions", "Strava Verify Token", ["STRAVA_VERIFY_TOKEN"]);
-addEnvCheck("Env: Supabase Functions", "Resend API Key", ["RESEND_API_KEY"], null, false);
+const resendValue = firstDefined(mergedEnv, ["RESEND_API_KEY"]);
+const resendManagedInSupabase = envFlagIsTrue([
+  "RESEND_API_KEY_MANAGED_IN_SUPABASE",
+  "FUNCTIONS_SECRETS_MANAGED_IN_SUPABASE",
+]);
+const resendSource = resendValue
+  ? "RESEND_API_KEY"
+  : resendManagedInSupabase
+    ? "managed_in_supabase_flag"
+    : "missing";
+addCheck(
+  "Env: Supabase Functions",
+  "Resend API Key",
+  resendValue.length > 0 || resendManagedInSupabase,
+  `source=${resendSource}; keys=RESEND_API_KEY | RESEND_API_KEY_MANAGED_IN_SUPABASE | FUNCTIONS_SECRETS_MANAGED_IN_SUPABASE`,
+  false
+);
 
 const require = createRequire(import.meta.url);
 const appConfigPath = path.join(mobileDir, "app.config.js");

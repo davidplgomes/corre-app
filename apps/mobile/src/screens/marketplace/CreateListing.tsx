@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     View,
     Text,
@@ -19,11 +19,13 @@ import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
 import { supabase } from '../../services/supabase/client';
 import { PlusIcon } from '../../components/common/TabIcons';
 import { BackButton } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
+import { isPaidMembershipTier } from '../../constants/tiers';
 
 type CreateListingProps = {
     navigation: any;
@@ -55,6 +57,31 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
     const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    const promptUpgradeAndExit = useCallback(() => {
+        Alert.alert(
+            t('marketplace.communitySellRequiresPaidTitle', 'Paid Plan Required'),
+            t(
+                'marketplace.communitySellRequiresPaidDescription',
+                'Selling in the community marketplace is available only for Pro and Club members.'
+            ),
+            [
+                { text: t('common.cancel', 'Cancel'), style: 'cancel', onPress: () => navigation.goBack() },
+                {
+                    text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                    onPress: () => navigation.navigate('Profile', { screen: 'SubscriptionScreen' }),
+                },
+            ]
+        );
+    }, [navigation, t]);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!isPaidMembershipTier(profile?.membershipTier)) {
+                promptUpgradeAndExit();
+            }
+        }, [profile?.membershipTier, promptUpgradeAndExit])
+    );
+
     const pickImage = async () => {
         Haptics.selectionAsync();
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -72,12 +99,8 @@ export const CreateListing: React.FC<CreateListingProps> = ({ navigation }) => {
 
     const handleCreate = async () => {
         if (!user) return;
-        const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
-        if (!isPro) {
-            Alert.alert(
-                t('marketplace.proRequired', 'Recurso Exclusivo'),
-                t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
-            );
+        if (!isPaidMembershipTier(profile?.membershipTier)) {
+            promptUpgradeAndExit();
             return;
         }
 

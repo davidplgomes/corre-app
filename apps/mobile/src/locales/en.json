@@ -338,7 +338,12 @@
     "errorDeleting": "Failed to delete listing",
     "noListingsFilter": "No listings with this status",
     "createFirst": "Create your first listing to start selling",
-    "createListing": "Create Listing"
+    "createListing": "Create Listing",
+    "communityBuyRequiresPaidTitle": "Paid Plan Required",
+    "communityBuyRequiresPaidDescription": "Buying from the community marketplace is available only for Pro and Club members.",
+    "communitySellRequiresPaidTitle": "Paid Plan Required",
+    "communitySellRequiresPaidDescription": "Selling in the community marketplace is available only for Pro and Club members.",
+    "upgradeToProClub": "Upgrade to Pro/Club"
   },
   "profile": {
     "title": "Profile",

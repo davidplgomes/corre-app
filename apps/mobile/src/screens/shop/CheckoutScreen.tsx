@@ -41,6 +41,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState<'payment' | 'confirmation'>('payment');
     const [cardComplete, setCardComplete] = useState(false);
+    const [checkoutSummary, setCheckoutSummary] = useState(() => ({
+        subtotalCents: Math.round(Number(subtotal || 0) * 100),
+        pointsApproved: Math.max(0, Math.floor(Number(pointsToUse) || 0)),
+        cashAmountCents: Math.round(Number(total || 0) * 100),
+    }));
 
     /**
      * Poll order status waiting for webhook to confirm payment.
@@ -86,6 +91,11 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
 
             const { data: sessionData } = checkoutSession;
             orderId = sessionData.orderId;
+            setCheckoutSummary({
+                subtotalCents: Number(sessionData.subtotalCents) || 0,
+                pointsApproved: Number(sessionData.pointsApproved) || 0,
+                cashAmountCents: Number(sessionData.cashAmountCents) || 0,
+            });
 
             if (sessionData.pointsApproved !== pointsToUse) {
                 Alert.alert(
@@ -271,12 +281,12 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                         <Text style={styles.sectionTitle}>{t('checkout.orderSummary', 'Order Summary')}</Text>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>{t('checkout.items', 'Items')} ({cartItems.length})</Text>
-                            <Text style={styles.summaryValue}>€{subtotal.toFixed(2)}</Text>
+                            <Text style={styles.summaryValue}>€{(checkoutSummary.subtotalCents / 100).toFixed(2)}</Text>
                         </View>
-                        {pointsToUse > 0 && (
+                        {checkoutSummary.pointsApproved > 0 && (
                             <View style={styles.summaryRow}>
                                 <Text style={styles.discountLabel}>{t('cart.pointsDiscount', 'Points Discount')}</Text>
-                                <Text style={styles.discountValue}>-€{(pointsToUse / 100).toFixed(2)}</Text>
+                                <Text style={styles.discountValue}>-€{(checkoutSummary.pointsApproved / 100).toFixed(2)}</Text>
                             </View>
                         )}
                         <View style={styles.summaryRow}>
@@ -285,14 +295,14 @@ export const CheckoutScreen: React.FC<CheckoutScreenProps> = ({ navigation, rout
                         </View>
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
-                            <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
+                            <Text style={styles.totalValue}>€{(checkoutSummary.cashAmountCents / 100).toFixed(2)}</Text>
                         </View>
                     </View>
                 </ScrollView>
 
                 <View style={styles.bottomSection}>
                     <Button
-                        title={`${t('checkout.pay', 'Pay')} €${total.toFixed(2)}`}
+                        title={`${t('checkout.pay', 'Pay')} €${(checkoutSummary.cashAmountCents / 100).toFixed(2)}`}
                         onPress={handlePlaceOrder}
                     />
                 </View>

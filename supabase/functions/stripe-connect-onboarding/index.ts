@@ -21,6 +21,13 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PAID_TIERS = new Set(["pro", "club", "basico", "baixa_pace", "parceiros"]);
+
+const isPaidMembershipTier = (tier?: string | null): boolean => {
+    if (!tier) return false;
+    return PAID_TIERS.has(String(tier).toLowerCase());
+};
+
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
     apiVersion: "2023-10-16",
 });
@@ -142,6 +149,26 @@ Deno.serve(async (req: Request) => {
 
         // ─── Create or Refresh Onboarding ────────────────────────────
         if (action === "create" || action === "refresh") {
+            const { data: membershipData, error: membershipError } = await supabase
+                .from("users")
+                .select("membership_tier")
+                .eq("id", user.id)
+                .single();
+
+            if (membershipError) {
+                return new Response(JSON.stringify({ error: "Could not verify membership tier" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            if (!isPaidMembershipTier(membershipData?.membership_tier)) {
+                return new Response(JSON.stringify({ error: "Pro or Club membership is required to become a seller" }), {
+                    status: 403,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
             // Check if seller account already exists
             const { data: existingAccount } = await supabase
                 .from("seller_accounts")

@@ -116,3 +116,8 @@ export const toCanonicalTier = (tier?: string | null): CanonicalMembershipTier =
 export const isClubMembershipTier = (tier?: string | null): boolean => {
   return toCanonicalTier(tier) === 'club';
 };
+
+export const isPaidMembershipTier = (tier?: string | null): boolean => {
+  const canonicalTier = toCanonicalTier(tier);
+  return canonicalTier === 'pro' || canonicalTier === 'club';
+};

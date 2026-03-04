@@ -54,8 +54,7 @@ function resolvePriceCents(item: Partial<ShopItem>): number {
     }
 
     if (typeof item.points_price === 'number' && Number.isFinite(item.points_price)) {
-        const legacy = Math.max(0, Math.round(item.points_price));
-        return legacy < 1000 ? legacy * 100 : legacy;
+        return Math.max(0, Math.round(item.points_price));
     }
 
     return 0;

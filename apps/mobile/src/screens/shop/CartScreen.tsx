@@ -52,6 +52,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([]);
     const [availablePoints, setAvailablePoints] = useState(0);
     const [pointsToUse, setPointsToUse] = useState(0);
+    const minimumChargeCents = 50;
 
     const loadCart = useCallback(async () => {
         if (!user?.id) return;
@@ -139,14 +140,16 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         );
     };
 
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.item?.price || 0) * item.quantity, 0);
+    const shopCartItems = cartItems.filter(item => item.item_type === 'shop');
+    const hasNonShopItems = cartItems.some(item => item.item_type !== 'shop');
+    const subtotal = shopCartItems.reduce((sum, item) => sum + (item.item?.price || 0) * item.quantity, 0);
     const subtotalCents = Math.round(subtotal * 100);
     const membershipMaxPointsDiscount = calculateMaxPointsDiscount(
         subtotalCents,
         'all',
         availablePoints
     );
-    const itemMaxPointsDiscount = cartItems.reduce((sum, item) => {
+    const itemMaxPointsDiscount = shopCartItems.reduce((sum, item) => {
         const itemPriceCents = Math.round((item.item?.price || 0) * 100);
         const lineSubtotalCents = itemPriceCents * item.quantity;
         if (lineSubtotalCents <= 0) return sum;
@@ -158,11 +161,13 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         const maxPercent = Math.max(0, Math.min(100, item.item?.max_points_discount_percent ?? 20));
         return sum + Math.floor(lineSubtotalCents * (maxPercent / 100));
     }, 0);
+    const minimumChargeCap = Math.max(0, subtotalCents - minimumChargeCents);
 
     const maxPointsDiscount = Math.min(
         membershipMaxPointsDiscount,
         itemMaxPointsDiscount,
-        availablePoints
+        availablePoints,
+        minimumChargeCap
     );
 
     useEffect(() => {
@@ -171,8 +176,10 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         }
     }, [maxPointsDiscount, pointsToUse]);
 
-    const pointsDiscount = Math.min(pointsToUse, maxPointsDiscount) / 100;
-    const total = subtotal - pointsDiscount;
+    const pointsDiscountCents = Math.min(pointsToUse, maxPointsDiscount);
+    const pointsDiscount = pointsDiscountCents / 100;
+    const totalCents = subtotalCents - pointsDiscountCents;
+    const total = totalCents / 100;
 
     if (loading) {
         return (
@@ -267,9 +274,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                                                 <Text style={styles.itemTitle} numberOfLines={2}>
                                                     {item.item?.title || 'Unknown Item'}
                                                 </Text>
-                                                <Text style={styles.itemPrice}>
-                                                    €{(item.item?.price || 0).toFixed(2)}
-                                                </Text>
+                                                <Text style={styles.itemPrice}>€{(item.item?.price || 0).toFixed(2)}</Text>
+                                                {item.item_type !== 'shop' && (
+                                                    <Text style={styles.itemTypeTag}>
+                                                        {t('marketplace.community', 'Community').toUpperCase()}
+                                                    </Text>
+                                                )}
                                             </View>
                                             <View style={styles.itemActions}>
                                                 <View style={styles.quantityControls}>
@@ -299,7 +309,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                                 ))}
 
                                 {/* Points Section */}
-                                {availablePoints > 0 && (
+                                {availablePoints > 0 && shopCartItems.length > 0 && (
                                     <BlurView intensity={20} tint="dark" style={styles.pointsSection}>
                                         <View style={styles.pointsHeader}>
                                             <Text style={styles.pointsIcon}>💰</Text>
@@ -354,14 +364,52 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                                     <Text style={styles.totalLabel}>{t('cart.total', 'Total')}</Text>
                                     <Text style={styles.totalValue}>€{total.toFixed(2)}</Text>
                                 </View>
+                                {hasNonShopItems && (
+                                    <Text style={styles.checkoutWarning}>
+                                        {t(
+                                            'cart.shopOnlyCheckoutMessage',
+                                            'Remove community items from your cart to continue with shop checkout.'
+                                        )}
+                                    </Text>
+                                )}
                                 <TouchableOpacity
                                     style={styles.checkoutButton}
                                     onPress={() => {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        if (hasNonShopItems) {
+                                            Alert.alert(
+                                                t('cart.shopOnlyCheckoutTitle', 'Shop Checkout Only'),
+                                                t(
+                                                    'cart.shopOnlyCheckoutMessage',
+                                                    'Remove community items from your cart to continue with shop checkout.'
+                                                )
+                                            );
+                                            return;
+                                        }
+
+                                        if (shopCartItems.length === 0) {
+                                            Alert.alert(
+                                                t('common.error'),
+                                                t('cart.emptyTitle', 'Your cart is empty')
+                                            );
+                                            return;
+                                        }
+
+                                        if (totalCents < minimumChargeCents) {
+                                            Alert.alert(
+                                                t('common.error'),
+                                                t(
+                                                    'cart.minimumChargeMessage',
+                                                    'Minimum card charge is €0.50 after discount. Reduce points usage to continue.'
+                                                )
+                                            );
+                                            return;
+                                        }
+
                                         navigation.navigate('Checkout', {
-                                            cartItems,
+                                            cartItems: shopCartItems,
                                             subtotal,
-                                            pointsToUse,
+                                            pointsToUse: pointsDiscountCents,
                                             total
                                         });
                                     }}
@@ -507,6 +555,13 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontStyle: 'italic',
         color: theme.colors.brand.primary,
+    },
+    itemTypeTag: {
+        marginTop: 6,
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '700',
+        letterSpacing: 0.8,
     },
     itemActions: {
         alignItems: 'flex-end',
@@ -736,6 +791,12 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontStyle: 'italic',
         color: theme.colors.brand.primary,
+    },
+    checkoutWarning: {
+        marginTop: 10,
+        color: '#FFB4A3',
+        fontSize: 12,
+        lineHeight: 18,
     },
     checkoutButton: {
         backgroundColor: theme.colors.brand.primary,

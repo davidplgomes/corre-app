@@ -338,7 +338,12 @@
     "errorDeleting": "Error al eliminar anuncio",
     "noListingsFilter": "No hay anuncios con este estado",
     "createFirst": "Crea tu primer anuncio para comenzar a vender",
-    "createListing": "Crear Anuncio"
+    "createListing": "Crear Anuncio",
+    "communityBuyRequiresPaidTitle": "Plan pago obligatorio",
+    "communityBuyRequiresPaidDescription": "Comprar en el marketplace de la comunidad esta disponible solo para miembros Pro y Club.",
+    "communitySellRequiresPaidTitle": "Plan pago obligatorio",
+    "communitySellRequiresPaidDescription": "Vender en el marketplace de la comunidad esta disponible solo para miembros Pro y Club.",
+    "upgradeToProClub": "Mejorar a Pro/Club"
   },
   "profile": {
     "title": "Perfil",

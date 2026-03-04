@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { BackButton } from '../../components/common';
 import { getSellerListings, updateListingStatus, deleteListing } from '../../services/supabase/marketplace';
 import { PencilIcon, TrashIcon, CheckIcon } from '../../components/common/TabIcons';
+import { isPaidMembershipTier } from '../../constants/tiers';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 12) / 2; // padding + gap
@@ -55,6 +56,23 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [selectedListing, setSelectedListing] = useState<string | null>(null);
 
+    const promptUpgradeAndExit = useCallback(() => {
+        Alert.alert(
+            t('marketplace.communitySellRequiresPaidTitle', 'Paid Plan Required'),
+            t(
+                'marketplace.communitySellRequiresPaidDescription',
+                'Selling in the community marketplace is available only for Pro and Club members.'
+            ),
+            [
+                { text: t('common.cancel', 'Cancel'), style: 'cancel', onPress: () => navigation.goBack() },
+                {
+                    text: t('marketplace.upgradeToProClub', 'Upgrade to Pro/Club'),
+                    onPress: () => navigation.navigate('Profile', { screen: 'SubscriptionScreen' }),
+                },
+            ]
+        );
+    }, [navigation, t]);
+
     const filters: { key: StatusFilter; label: string; count: number }[] = [
         { key: 'all', label: t('marketplace.filterAll', 'All'), count: listings.length },
         { key: 'active', label: t('marketplace.filterActive', 'Active'), count: listings.filter(l => l.status === 'active').length },
@@ -63,6 +81,12 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
 
     const loadListings = useCallback(async () => {
         if (!user?.id) return;
+        if (!isPaidMembershipTier(profile?.membershipTier)) {
+            setListings([]);
+            setLoading(false);
+            setRefreshing(false);
+            return;
+        }
         try {
             const data = await getSellerListings(user.id);
             setListings(data || []);
@@ -73,12 +97,17 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user?.id, t]);
+    }, [profile?.membershipTier, user?.id, t]);
 
     useFocusEffect(
         useCallback(() => {
+            if (!isPaidMembershipTier(profile?.membershipTier)) {
+                setLoading(false);
+                promptUpgradeAndExit();
+                return;
+            }
             loadListings();
-        }, [loadListings])
+        }, [loadListings, profile?.membershipTier, promptUpgradeAndExit])
     );
 
     const onRefresh = () => {
@@ -397,12 +426,8 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                                         style={styles.emptyButton}
                                         onPress={() => {
                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                            const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
-                                            if (!isPro) {
-                                                Alert.alert(
-                                                    t('marketplace.proRequired', 'Recurso Exclusivo'),
-                                                    t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
-                                                );
+                                            if (!isPaidMembershipTier(profile?.membershipTier)) {
+                                                promptUpgradeAndExit();
                                                 return;
                                             }
                                             navigation.navigate('CreateListing');
@@ -421,12 +446,8 @@ export const MyListings: React.FC<MyListingsProps> = ({ navigation }) => {
                             style={styles.fab}
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                const isPro = profile?.membershipTier && profile.membershipTier !== 'free';
-                                if (!isPro) {
-                                    Alert.alert(
-                                        t('marketplace.proRequired', 'Recurso Exclusivo'),
-                                        t('marketplace.proRequiredDesc', 'Vender no marketplace é um benefício exclusivo para assinantes PRO. Faça o upgrade para anunciar seus itens.')
-                                    );
+                                if (!isPaidMembershipTier(profile?.membershipTier)) {
+                                    promptUpgradeAndExit();
                                     return;
                                 }
                                 navigation.navigate('CreateListing');

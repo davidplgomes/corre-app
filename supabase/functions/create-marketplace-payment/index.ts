@@ -7,6 +7,22 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno";
 
 console.log("Marketplace Payment Function Up!");
 
+const PAID_TIERS = new Set(["pro", "club", "basico", "baixa_pace", "parceiros"]);
+
+const isPaidMembershipTier = (tier?: string | null): boolean => {
+    if (!tier) return false;
+    return PAID_TIERS.has(String(tier).toLowerCase());
+};
+
+class HttpError extends Error {
+    status: number;
+
+    constructor(status: number, message: string) {
+        super(message);
+        this.status = status;
+    }
+}
+
 Deno.serve(async (req: Request) => {
     // CORS
     if (req.method === 'OPTIONS') {
@@ -22,14 +38,32 @@ Deno.serve(async (req: Request) => {
         const { listing_id } = await req.json();
 
         // Auth Check
-        const authHeader = req.headers.get('Authorization')!;
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
         const supabase = createClient(
             Deno.env.get('SUPABASE_URL')!,
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         );
 
         const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-        if (authError || !user) throw new Error('Unauthorized');
+        if (authError || !user) throw new HttpError(401, "Unauthorized");
+
+        const { data: buyer, error: buyerError } = await supabase
+            .from('users')
+            .select('membership_tier')
+            .eq('id', user.id)
+            .single();
+
+        if (buyerError || !buyer) {
+            throw new HttpError(400, "Could not load buyer profile");
+        }
+
+        if (!isPaidMembershipTier(buyer.membership_tier)) {
+            throw new HttpError(403, "Community marketplace purchases require a Pro or Club membership");
+        }
 
         // Get Listing
         const { data: listing, error: listingError } = await supabase
@@ -45,22 +79,22 @@ Deno.serve(async (req: Request) => {
             .eq('id', listing_id)
             .single();
 
-        if (listingError || !listing) throw new Error('Listing not found');
-        if (listing.status !== 'active') throw new Error('Listing is no longer active');
+        if (listingError || !listing) throw new HttpError(404, 'Listing not found');
+        if (listing.status !== 'active') throw new HttpError(400, 'Listing is no longer active');
 
         // Check if seller can receive payments
         if (!listing.seller_account.charges_enabled) {
-            throw new Error('Seller is not ready to receive payments yet');
+            throw new HttpError(400, 'Seller is not ready to receive payments yet');
         }
 
         // prevent buying own item
         if (listing.seller.id === user.id) {
-            throw new Error('You cannot buy your own item');
+            throw new HttpError(400, 'You cannot buy your own item');
         }
 
-        // Server-side block for free-tier sellers
-        if (listing.seller.membership_tier === 'free') {
-            throw new Error('Seller must be a PRO member to sell on the marketplace');
+        // Server-side block for non-paid sellers
+        if (!isPaidMembershipTier(listing.seller.membership_tier)) {
+            throw new HttpError(403, 'Seller must have an active Pro or Club membership to sell on the marketplace');
         }
 
         // Init Stripe
@@ -115,8 +149,9 @@ Deno.serve(async (req: Request) => {
 
     } catch (error: any) {
         console.error('Error in create-payment:', error);
+        const status = error instanceof HttpError ? error.status : 400;
         return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
+            status,
             headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
     }

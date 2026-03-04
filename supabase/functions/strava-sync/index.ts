@@ -40,15 +40,45 @@ type StravaActivity = {
 
 type StravaAwardResult = {
     success?: boolean;
+    error?: string;
     points_awarded?: number;
     xp_awarded?: number;
 };
+
+type FailureSource = "manual_sync" | "retry";
 
 const getServiceClient = (): SupabaseClient =>
     createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.max(min, Math.min(max, value));
+
+async function logSyncFailure(
+    supabase: SupabaseClient,
+    params: {
+        userId: string;
+        athleteId: number;
+        source: FailureSource;
+        stage: string;
+        message: string;
+        activityId?: number;
+        payload?: Record<string, unknown>;
+    }
+): Promise<void> {
+    const { error } = await supabase.from("strava_sync_failures").insert({
+        user_id: params.userId,
+        strava_athlete_id: params.athleteId,
+        strava_activity_id: params.activityId ?? null,
+        source: params.source,
+        stage: params.stage,
+        error_message: params.message,
+        payload: params.payload || {},
+    });
+
+    if (error) {
+        console.error("Failed to log strava sync failure:", error);
+    }
+}
 
 async function refreshStravaToken(
     supabase: SupabaseClient,
@@ -106,16 +136,17 @@ async function getValidAccessToken(
     return refreshStravaToken(supabase, connection);
 }
 
-async function fetchRecentActivities(
+async function fetchRecentActivitiesPage(
     accessToken: string,
     perPage: number,
-    daysBack: number
+    daysBack: number,
+    page: number
 ): Promise<StravaActivity[] | null> {
     try {
         const afterEpoch = Math.floor(Date.now() / 1000) - daysBack * 24 * 60 * 60;
         const url =
             `https://www.strava.com/api/v3/athlete/activities?` +
-            `per_page=${perPage}&page=1&after=${afterEpoch}`;
+            `per_page=${perPage}&page=${page}&after=${afterEpoch}`;
 
         const response = await fetch(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -123,22 +154,56 @@ async function fetchRecentActivities(
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Failed to fetch Strava activities:", response.status, errorText);
+            console.error(`Failed to fetch Strava activities page ${page}:`, response.status, errorText);
             return null;
         }
 
         const activities = (await response.json()) as StravaActivity[];
         return Array.isArray(activities) ? activities : [];
     } catch (error) {
-        console.error("Unexpected error fetching Strava activities:", error);
+        console.error("Unexpected error fetching Strava activities page:", error);
         return null;
     }
 }
 
+async function fetchRecentActivities(
+    accessToken: string,
+    perPage: number,
+    daysBack: number,
+    maxPages: number
+): Promise<StravaActivity[] | null> {
+    const collected: StravaActivity[] = [];
+
+    for (let page = 1; page <= maxPages; page += 1) {
+        const pageData = await fetchRecentActivitiesPage(accessToken, perPage, daysBack, page);
+        if (!pageData) {
+            return null;
+        }
+
+        if (!pageData.length) {
+            break;
+        }
+
+        collected.push(...pageData);
+
+        if (pageData.length < perPage) {
+            break;
+        }
+    }
+
+    const deduped = new Map<number, StravaActivity>();
+    for (const activity of collected) {
+        deduped.set(activity.id, activity);
+    }
+
+    return Array.from(deduped.values());
+}
+
 async function syncActivities(
     supabase: SupabaseClient,
-    userId: string,
-    activities: StravaActivity[]
+    connection: StravaConnection,
+    activities: StravaActivity[],
+    source: FailureSource
 ): Promise<{ activitiesSynced: number; pointsAwarded: number; xpAwarded: number }> {
     let activitiesSynced = 0;
     let pointsAwarded = 0;
@@ -150,7 +215,7 @@ async function syncActivities(
             .from("strava_activities")
             .upsert(
                 {
-                    user_id: userId,
+                    user_id: connection.user_id,
                     strava_id: activity.id,
                     activity_type: activity.type,
                     name: activity.name,
@@ -173,6 +238,15 @@ async function syncActivities(
 
         if (upsertError) {
             console.error(`Failed to upsert Strava activity ${activity.id}:`, upsertError);
+            await logSyncFailure(supabase, {
+                userId: connection.user_id,
+                athleteId: connection.strava_athlete_id,
+                source,
+                stage: "upsert_activity",
+                message: upsertError.message,
+                activityId: activity.id,
+                payload: { activity_type: activity.type, start_date: activity.start_date },
+            });
             continue;
         }
 
@@ -189,6 +263,14 @@ async function syncActivities(
 
         if (awardError) {
             console.error(`Failed to award points for Strava activity ${activity.id}:`, awardError);
+            await logSyncFailure(supabase, {
+                userId: connection.user_id,
+                athleteId: connection.strava_athlete_id,
+                source,
+                stage: "award_points",
+                message: awardError.message,
+                activityId: activity.id,
+            });
             continue;
         }
 
@@ -196,10 +278,104 @@ async function syncActivities(
         if (parsed.success) {
             pointsAwarded += parsed.points_awarded || 0;
             xpAwarded += parsed.xp_awarded || 0;
+            continue;
+        }
+
+        if (parsed.error !== "Points already awarded") {
+            await logSyncFailure(supabase, {
+                userId: connection.user_id,
+                athleteId: connection.strava_athlete_id,
+                source,
+                stage: "award_points",
+                message: parsed.error || "Unknown award failure",
+                activityId: activity.id,
+                payload: { award_response: parsed },
+            });
         }
     }
 
     return { activitiesSynced, pointsAwarded, xpAwarded };
+}
+
+async function retryFailedAwards(
+    supabase: SupabaseClient,
+    connection: StravaConnection,
+    limit: number
+): Promise<{ retried: number; resolved: number; still_failing: number }> {
+    const { data, error } = await supabase
+        .from("strava_sync_failures")
+        .select("id, strava_activity_id, retry_count")
+        .eq("user_id", connection.user_id)
+        .is("resolved_at", null)
+        .eq("stage", "award_points")
+        .not("strava_activity_id", "is", null)
+        .order("created_at", { ascending: true })
+        .limit(limit);
+
+    if (error) {
+        throw new Error(`Failed to read sync failures: ${error.message}`);
+    }
+
+    const failures = data || [];
+    let retried = 0;
+    let resolved = 0;
+    let stillFailing = 0;
+
+    for (const failure of failures) {
+        const activityId = Number(failure.strava_activity_id);
+        if (!Number.isFinite(activityId) || activityId <= 0) {
+            continue;
+        }
+
+        retried += 1;
+
+        const { data: awardData, error: awardError } = await supabase.rpc(
+            "award_strava_activity_points",
+            { p_strava_activity_id: activityId }
+        );
+
+        const nowIso = new Date().toISOString();
+        const nextRetryCount = (failure.retry_count || 0) + 1;
+
+        if (awardError) {
+            stillFailing += 1;
+            await supabase
+                .from("strava_sync_failures")
+                .update({
+                    retry_count: nextRetryCount,
+                    last_retry_at: nowIso,
+                    error_message: awardError.message,
+                })
+                .eq("id", failure.id);
+            continue;
+        }
+
+        const parsed = (awardData || {}) as StravaAwardResult;
+        if (parsed.success || parsed.error === "Points already awarded") {
+            resolved += 1;
+            await supabase
+                .from("strava_sync_failures")
+                .update({
+                    resolved_at: nowIso,
+                    retry_count: nextRetryCount,
+                    last_retry_at: nowIso,
+                })
+                .eq("id", failure.id);
+            continue;
+        }
+
+        stillFailing += 1;
+        await supabase
+            .from("strava_sync_failures")
+            .update({
+                retry_count: nextRetryCount,
+                last_retry_at: nowIso,
+                error_message: parsed.error || "Unknown award failure",
+            })
+            .eq("id", failure.id);
+    }
+
+    return { retried, resolved, still_failing: stillFailing };
 }
 
 Deno.serve(async (req: Request) => {
@@ -241,13 +417,8 @@ Deno.serve(async (req: Request) => {
     const action = body?.action || "manual_sync";
     const perPage = clamp(Number(body?.per_page || 30), 1, 50);
     const daysBack = clamp(Number(body?.days_back || 21), 1, 90);
-
-    if (action !== "manual_sync") {
-        return new Response(
-            JSON.stringify({ success: false, error: "Unsupported action" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-    }
+    const maxPages = clamp(Number(body?.max_pages || 10), 1, 20);
+    const retryLimit = clamp(Number(body?.retry_limit || 50), 1, 200);
 
     const { data: connection, error: connectionError } = await supabase
         .from("strava_connections")
@@ -269,23 +440,68 @@ Deno.serve(async (req: Request) => {
         );
     }
 
+    if (action === "retry_failures") {
+        try {
+            const retryResult = await retryFailedAwards(supabase, connection as StravaConnection, retryLimit);
+            return new Response(
+                JSON.stringify({ success: true, ...retryResult }),
+                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to retry failures";
+            return new Response(
+                JSON.stringify({ success: false, error: message }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+    }
+
+    if (action !== "manual_sync") {
+        return new Response(
+            JSON.stringify({ success: false, error: "Unsupported action" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
     const validToken = await getValidAccessToken(supabase, connection as StravaConnection);
     if (!validToken) {
+        await logSyncFailure(supabase, {
+            userId: (connection as StravaConnection).user_id,
+            athleteId: (connection as StravaConnection).strava_athlete_id,
+            source: "manual_sync",
+            stage: "token_refresh",
+            message: "Failed to refresh Strava token",
+        });
+
         return new Response(
             JSON.stringify({ success: false, error: "Failed to refresh Strava token" }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 
-    const activities = await fetchRecentActivities(validToken, perPage, daysBack);
+    const activities = await fetchRecentActivities(validToken, perPage, daysBack, maxPages);
     if (!activities) {
+        await logSyncFailure(supabase, {
+            userId: (connection as StravaConnection).user_id,
+            athleteId: (connection as StravaConnection).strava_athlete_id,
+            source: "manual_sync",
+            stage: "fetch_activities",
+            message: "Could not fetch activities from Strava",
+            payload: { per_page: perPage, days_back: daysBack, max_pages: maxPages },
+        });
+
         return new Response(
             JSON.stringify({ success: false, error: "Could not fetch activities from Strava" }),
             { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
 
-    const { activitiesSynced, pointsAwarded, xpAwarded } = await syncActivities(supabase, user.id, activities);
+    const { activitiesSynced, pointsAwarded, xpAwarded } = await syncActivities(
+        supabase,
+        connection as StravaConnection,
+        activities,
+        "manual_sync"
+    );
 
     return new Response(
         JSON.stringify({
@@ -293,6 +509,8 @@ Deno.serve(async (req: Request) => {
             activities_synced: activitiesSynced,
             points_awarded: pointsAwarded,
             xp_awarded: xpAwarded,
+            activities_fetched: activities.length,
+            pages_scanned: maxPages,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -88,7 +88,7 @@ const XPLevelCard = ({ xpProgress }: { xpProgress: XPProgress }) => {
             </View>
 
             <Text style={styles.xpNote}>
-                XP resets monthly. Earn XP to unlock renewal discounts!
+                XP resets on the 1st of every month (UTC). Earn XP to unlock renewal discounts.
             </Text>
         </LinearGradient>
     );
